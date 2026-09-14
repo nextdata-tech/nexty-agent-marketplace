@@ -1,0 +1,47 @@
+{
+  "description": "A document attached to the wrong entity. Quarantined before mapping, because its quotes would substring-verify perfectly against the wrong source.",
+  "instruction": "Extract the candidate's employment facts from the landed submission text.\n\ncurrent_employer: the organisation the candidate currently works for, exactly\nas written.\n\nyears_experience: total years of professional experience, as an integer.\n\nCite the verbatim span each value rests on. Quote exactly.",
+  "target_fields": [
+    {
+      "name": "current_employer",
+      "value_type": "string",
+      "min_length": 2,
+      "max_length": 120,
+      "required": true,
+      "min_evidence": 1,
+      "description": "Current employer exactly as written in the submission."
+    },
+    {
+      "name": "years_experience",
+      "value_type": "int",
+      "minimum": 0,
+      "maximum": 60,
+      "required": true,
+      "min_evidence": 1,
+      "description": "Total professional years."
+    }
+  ],
+  "grain": {
+    "identity_fields": ["candidate_ref"],
+    "canonical_sort": ["candidate_ref"],
+    "duplicate_policy": "reject",
+    "source_locators": [],
+    "identity_bearing_inputs": ["candidate_ref"]
+  },
+  "cardinality": {
+    "min_rows": 2,
+    "max_rows": 2,
+    "expected_per_input": 1
+  },
+  "thresholds": {
+    "max_degrade_share": 0.25,
+    "max_error_rate": 0.0,
+    "max_unverified_share": 0.0,
+    "max_absent_share": 0.5,
+    "max_validation_retries": 2
+  },
+  "input_adapter": "landed_text",
+  "model": "claude-opus-5",
+  "effort": "medium",
+  "spec_version": "1"
+}

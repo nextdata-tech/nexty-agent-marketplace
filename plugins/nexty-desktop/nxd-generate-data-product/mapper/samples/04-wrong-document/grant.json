@@ -1,0 +1,15 @@
+{
+  "mapper_spec_id": "<derived>",
+  "provider": "anthropic",
+  "model": "claude-opus-5",
+  "purpose": "Extract employment facts from synthetic candidate submissions, one of which is filed against the wrong candidate.",
+  "input_fields": ["candidate_ref"],
+  "document_classes": ["candidate_submission"],
+  "pii_category": "pseudonymous",
+  "recurring": false,
+  "max_calls": 12,
+  "max_tokens": 200000,
+  "max_usd": 1.0,
+  "granted_by": "acceptance-suite",
+  "granted_at": "2026-07-29T00:00:00Z"
+}

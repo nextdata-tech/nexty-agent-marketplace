@@ -1,0 +1,20 @@
+{
+  "shot-1": {
+    "invoice_ref": {
+      "value": "INV-2044",
+      "evidence": [
+        {
+          "quote": "top line, left"
+        }
+      ]
+    },
+    "total_usd": {
+      "value": 90.0,
+      "evidence": [
+        {
+          "quote": "right column, after TOTAL"
+        }
+      ]
+    }
+  }
+}

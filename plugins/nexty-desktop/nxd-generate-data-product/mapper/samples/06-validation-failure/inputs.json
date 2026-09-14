@@ -1,0 +1,14 @@
+[
+  {
+    "input_id": "INC-4417",
+    "identity": {"incident_id": "INC-4417"},
+    "fields": {"incident_id": "INC-4417"},
+    "landed_text_file": "incident.txt",
+    "landed_text_model": "incident_report_text",
+    "extractor": "acceptance-suite-fixture",
+    "extractor_version": "1",
+    "document_hash": "fixture-inc-4417-sha256-placeholder",
+    "page": 1,
+    "document_class": "incident_report"
+  }
+]

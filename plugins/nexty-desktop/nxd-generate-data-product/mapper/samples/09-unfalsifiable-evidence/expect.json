@@ -1,0 +1,6 @@
+{
+  "proves": "NEGATIVE — a media-direct spec that demands evidence is REFUSED before any model call. The twin of 07 with min_evidence: 1 instead of 0: the harness holds only pixels, so no atom it gets back can ever be checked, and an unfalsifiable quote must not discharge an evidence obligation. Refusing statically beats burning retries to rediscover a constant.",
+  "blocks": true,
+  "blocks_error_code": "spec_invalid",
+  "blocks_message_contains": "can never produce a checkable evidence atom"
+}

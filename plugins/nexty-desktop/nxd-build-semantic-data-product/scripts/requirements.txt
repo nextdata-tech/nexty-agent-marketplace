@@ -1,0 +1,4 @@
+# Optional dependencies for the local semantic profiler.
+duckdb
+pandas
+pyarrow

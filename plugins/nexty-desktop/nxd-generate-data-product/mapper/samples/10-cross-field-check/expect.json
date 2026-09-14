@@ -1,0 +1,16 @@
+{
+  "proves": "A cross-field arithmetic check catches a misread that EVERY per-field check passes: 30.00 is correctly typed, in range, and cited to a real span. Only 2 x 45.00 != 30.00 exposes it. The violation flows into the existing retry loop and the corrected re-read lands ok.",
+  "blocks": false,
+  "status_counts": {
+    "ok": 3,
+    "evidence_absent": 0,
+    "validation_failed": 0,
+    "error": 0,
+    "skipped": 0
+  },
+  "evidence_counts": {
+    "verified": 3,
+    "verify_failed": 0,
+    "evidence_unverified": 0
+  }
+}

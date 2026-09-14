@@ -1,0 +1,15 @@
+[
+  {
+    "input_id": "agr-1",
+    "identity": {"agreement_id": "AGR-2026-0041"},
+    "fields": {},
+    "media": [
+      {
+        "file": "agreement.pdf",
+        "media_type": "application/pdf",
+        "label": "supply-agreement"
+      }
+    ],
+    "document_class": "supply_agreement"
+  }
+]

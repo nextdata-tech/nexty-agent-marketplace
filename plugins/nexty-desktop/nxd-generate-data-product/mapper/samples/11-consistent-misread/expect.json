@@ -1,0 +1,16 @@
+{
+  "proves": "ADVERSARIAL / NEGATIVE CAPABILITY \u2014 a CONSISTENT misread defeats the cross-field check. quantity=1 (source says 2) with total=45.00 satisfies 1 x 45.00 == 45.00, so the arithmetic agrees and a wrong total lands ok with a VERIFIED citation. The substring check passes too, because the quote is a real span. This is the residual the design cannot close without a second reader (A2) \u2014 recorded so it is never mistaken for covered.",
+  "blocks": false,
+  "status_counts": {
+    "ok": 3,
+    "evidence_absent": 0,
+    "validation_failed": 0,
+    "error": 0,
+    "skipped": 0
+  },
+  "evidence_counts": {
+    "verified": 3,
+    "verify_failed": 0,
+    "evidence_unverified": 0
+  }
+}

@@ -1,0 +1,15 @@
+[
+  {
+    "input_id": "shot-1",
+    "identity": {"screenshot_id": "shot-1"},
+    "fields": {},
+    "media": [
+      {
+        "file": "invoice.png",
+        "media_type": "image/png",
+        "label": "invoice-summary"
+      }
+    ],
+    "document_class": "invoice_screenshot"
+  }
+]

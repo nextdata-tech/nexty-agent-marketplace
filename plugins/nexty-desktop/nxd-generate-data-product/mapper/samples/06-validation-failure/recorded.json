@@ -1,0 +1,64 @@
+{
+  "INC-4417": [
+    {
+      "impact_score": {
+        "value": 6,
+        "evidence": [
+          {
+            "quote": "the worst\noutage recorded on this platform",
+            "source_field_name": "landed_text"
+          }
+        ]
+      },
+      "had_staged_rollout": {
+        "value": false,
+        "evidence": [
+          {
+            "quote": "a configuration rollout with no staged canary",
+            "source_field_name": "landed_text"
+          }
+        ]
+      }
+    },
+    {
+      "impact_score": {
+        "value": 6,
+        "evidence": [
+          {
+            "quote": "This was a total loss of service",
+            "source_field_name": "landed_text"
+          }
+        ]
+      },
+      "had_staged_rollout": {
+        "value": false,
+        "evidence": [
+          {
+            "quote": "a configuration rollout with no staged canary",
+            "source_field_name": "landed_text"
+          }
+        ]
+      }
+    },
+    {
+      "impact_score": {
+        "value": 6,
+        "evidence": [
+          {
+            "quote": "No customer request\ncompleted during the window",
+            "source_field_name": "landed_text"
+          }
+        ]
+      },
+      "had_staged_rollout": {
+        "value": false,
+        "evidence": [
+          {
+            "quote": "a configuration rollout with no staged canary",
+            "source_field_name": "landed_text"
+          }
+        ]
+      }
+    }
+  ]
+}

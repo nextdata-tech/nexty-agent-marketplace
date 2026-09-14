@@ -1,0 +1,64 @@
+{
+  "description": "A real 2-page PDF sent as a native document block. The API extracts its text server-side, but the harness holds only base64 — so there is no local substring surface and every citation lands evidence_unverified. This is the fixture that shows the two-stage design's motivating case is NOT solved: the values are right, and nothing here can prove it.",
+  "instruction": "The attached document is a two-page supply agreement.\n\nExtract the following.\n\ncarrier_name: the legal name of the Carrier, exactly as written.\n\npayment_terms_days: the number of days after invoice date that payment is\ndue, as an integer.\n\ntermination_notice_days: the number of days' written notice required to\nterminate for convenience, as an integer.\n\nauto_renews: true if the agreement renews automatically after the initial\nterm, false otherwise.\n\nFor each value, quote the span of the document it rests on and name the page\nit appears on. Quote what the document says; do not paraphrase and do not\nreconstruct a sentence from memory.\n\nIf the document does not state a field, return the absent sentinel and cite\nnothing. An honest absence is preferred to an inferred value.",
+  "target_fields": [
+    {
+      "name": "carrier_name",
+      "value_type": "string",
+      "min_length": 3,
+      "max_length": 80,
+      "required": true,
+      "min_evidence": 0,
+      "description": "Legal name of the Carrier."
+    },
+    {
+      "name": "payment_terms_days",
+      "value_type": "int",
+      "minimum": 1,
+      "maximum": 365,
+      "required": true,
+      "min_evidence": 0,
+      "description": "Days after invoice date that payment falls due."
+    },
+    {
+      "name": "termination_notice_days",
+      "value_type": "int",
+      "minimum": 1,
+      "maximum": 365,
+      "required": true,
+      "min_evidence": 0,
+      "description": "Days of written notice to terminate for convenience."
+    },
+    {
+      "name": "auto_renews",
+      "value_type": "bool",
+      "required": true,
+      "min_evidence": 0,
+      "description": "Whether the agreement renews automatically."
+    }
+  ],
+  "grain": {
+    "identity_fields": ["agreement_id"],
+    "canonical_sort": ["agreement_id"],
+    "duplicate_policy": "reject",
+    "source_locators": [],
+    "identity_bearing_inputs": ["agreement_id"]
+  },
+  "cardinality": {
+    "min_rows": 1,
+    "max_rows": 1,
+    "expected_per_input": 1
+  },
+  "thresholds": {
+    "max_degrade_share": 0.0,
+    "max_error_rate": 0.0,
+    "max_unverified_share": 1.0,
+    "max_absent_share": 0.0,
+    "max_validation_retries": 2
+  },
+  "input_adapter": "document_blob",
+  "model": "claude-opus-5",
+  "effort": "medium",
+  "accepts_media": ["application/pdf"],
+  "spec_version": "1"
+}

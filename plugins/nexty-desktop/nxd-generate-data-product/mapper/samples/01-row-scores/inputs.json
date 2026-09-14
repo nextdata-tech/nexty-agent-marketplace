@@ -1,0 +1,28 @@
+[
+  {
+    "input_id": "TCK-1001",
+    "identity": {"ticket_id": "TCK-1001"},
+    "fields": {
+      "ticket_id": "TCK-1001",
+      "reported_by": "ops-oncall",
+      "body": "Checkout is returning 503 for every request since the 14:20 deploy. No orders are going through at all. Rolling back now."
+    },
+    "landed_text": "Checkout is returning 503 for every request since the 14:20 deploy. No orders are going through at all. Rolling back now.",
+    "landed_text_model": "support_tickets",
+    "extractor": "landed_column",
+    "extractor_version": "1"
+  },
+  {
+    "input_id": "TCK-1002",
+    "identity": {"ticket_id": "TCK-1002"},
+    "fields": {
+      "ticket_id": "TCK-1002",
+      "reported_by": "design-review",
+      "body": "The export button label is truncated to 'Expo' on narrow windows. Cosmetic only, the export itself works fine."
+    },
+    "landed_text": "The export button label is truncated to 'Expo' on narrow windows. Cosmetic only, the export itself works fine.",
+    "landed_text_model": "support_tickets",
+    "extractor": "landed_column",
+    "extractor_version": "1"
+  }
+]

@@ -1,0 +1,42 @@
+{
+  "CAND-0001": {
+    "current_employer": {
+      "value": "Blue Harbour Analytics",
+      "evidence": [
+        {
+          "quote": "Currently employed at Blue Harbour Analytics as a platform engineer",
+          "source_field_name": "landed_text"
+        }
+      ]
+    },
+    "years_experience": {
+      "value": 11,
+      "evidence": [
+        {
+          "quote": "Eleven\nyears of professional experience",
+          "source_field_name": "landed_text"
+        }
+      ]
+    }
+  },
+  "CAND-0002": {
+    "current_employer": {
+      "value": "Blue Harbour Analytics",
+      "evidence": [
+        {
+          "quote": "Currently employed at Blue Harbour Analytics as a platform engineer",
+          "source_field_name": "landed_text"
+        }
+      ]
+    },
+    "years_experience": {
+      "value": 11,
+      "evidence": [
+        {
+          "quote": "Eleven\nyears of professional experience",
+          "source_field_name": "landed_text"
+        }
+      ]
+    }
+  }
+}

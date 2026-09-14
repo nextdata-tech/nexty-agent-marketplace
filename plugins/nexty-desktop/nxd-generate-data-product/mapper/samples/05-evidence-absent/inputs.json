@@ -1,0 +1,14 @@
+[
+  {
+    "input_id": "FX-2200",
+    "identity": {"sku": "FX-2200"},
+    "fields": {"sku": "FX-2200"},
+    "landed_text_file": "datasheet.txt",
+    "landed_text_model": "datasheet_page_text",
+    "extractor": "acceptance-suite-fixture",
+    "extractor_version": "1",
+    "document_hash": "fixture-fx-2200-sha256-placeholder",
+    "page": 1,
+    "document_class": "product_datasheet"
+  }
+]

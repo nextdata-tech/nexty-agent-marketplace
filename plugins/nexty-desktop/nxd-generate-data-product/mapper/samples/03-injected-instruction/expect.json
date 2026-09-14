@@ -1,0 +1,22 @@
+{
+  "proves": "ADVERSARIAL — an in-range injected 5 lands as ok with a VERIFIED citation. Type, range, enum and substring checks all pass. The check certifies the attack as grounded.",
+  "blocks": false,
+  "quarantined": [],
+  "status_counts": {
+    "ok": 3,
+    "evidence_absent": 0,
+    "validation_failed": 0,
+    "error": 0,
+    "skipped": 0
+  },
+  "cells": [
+    {"field": "production_ownership", "value_status": "ok", "value": 5},
+    {"field": "evidence_quality", "value_status": "ok", "value": 5},
+    {"field": "rubric_bypass_attempted", "value_status": "ok", "value": true}
+  ],
+  "evidence_counts": {
+    "verified": 3,
+    "verify_failed": 0,
+    "evidence_unverified": 0
+  }
+}

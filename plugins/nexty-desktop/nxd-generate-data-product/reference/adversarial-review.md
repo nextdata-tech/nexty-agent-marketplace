@@ -1,0 +1,176 @@
+# Adversarial review round: dispatch, and adjudicating what comes back
+
+## Contents
+
+- [When to dispatch](#when-to-dispatch)
+- [Dispatching](#dispatching)
+- [Adjudicate every finding](#adjudicate-every-finding--this-is-the-point)
+- [Relay and authorization](#relay-and-authorization)
+- [Land the adjudication](#land-the-adjudication)
+
+The self-check is structural. It parses `models.py` and `spec.py`, holds the
+naming invariant, dry-runs the transform, and checks the policy boundary. It
+cannot know whether the closure ANSWERS THE REQUEST — `self-check.md` says so
+directly, and that is the gap this round exists to close.
+
+Two failures make the case, both observed on real runs:
+
+- A closure landed clean base models, passed every structural check, and had no
+  model at the grain the user's second question needed. The question was
+  unanswerable and nothing in the closure said so.
+- A closure concluded a platform capability did not exist, having searched for
+  it by one term, and shipped a lesser product. The reference doc describing
+  that capability was linked from the skill twice.
+
+Neither is a structural defect. Both are wrong answers.
+
+## When to dispatch
+
+Under workflow v2, dispatch after Step 7 has finished every mutable self-check
+and record write and after the supervisor has captured the closure. Run one
+review for each capture generation over the supervisor-provided retained paths.
+The activated contract makes the review mandatory; there is no complexity-based
+skip. A behavior-changing fix resets capture and requires a fresh review of the
+new generation. The statuses are `complete`, `timed_out`, and `needs_user`.
+
+## Dispatching
+
+Explicitly dispatch **one built-in read-only subagent**; never add, select, or
+rely on a custom/plugin agent definition. Give it both halves:
+
+1. **The closure path.**
+2. **The original request, verbatim except credentials**, under the
+   `sanitized_original_request` contract — every question asked and every
+   supplied procedure preserved, with credentials replaced as specified below.
+
+Those are the **only** dispatch inputs. In particular, never pass
+`job_helper_dir`: the reviewer is read-only and does not execute the local desktop
+helpers; it inspects their recorded evidence inside the closure.
+
+The second is load-bearing. The defects this round targets are OMISSIONS, so a
+reviewer holding only the artifact will pass a well-formed closure that answers
+the wrong question. Dispatching without the request wastes the round.
+
+Before dispatch, inventory every value the user designated as a credential and
+every value carried by a non-public credential field. Preserve the rest of the
+request, including every question and procedure, but replace each inventoried
+value with a named placeholder such as `[CREDENTIAL:database_password]`.
+Verify that no inventoried value remains anywhere in the reviewer prompt. If
+the inventory or complete replacement cannot be established, **do not
+delegate**: stop and report that credential-safe review dispatch is blocked.
+No credential may reach the reviewer.
+
+Normalize the closure path relative to the workspace (`closure` or
+`nxd-jobs/<workflow>/closure`) and include exactly one compact marker line with
+the exact keys and constant values shown here:
+
+```text
+NXD_REVIEW_DISPATCH {"closure_path":"closure","request_contract":"sanitized_original_request","return":"claims_only","review_round_index":0}
+```
+
+Replace only the example `closure_path` and `review_round_index` values. Keep
+every other key/value unchanged and add no colon, slug or prose prefix. The dispatch instruction says
+**return claims only**. The reviewer receives read-only tools, never edits,
+builds, serves, runs the transform, or starts a user conversation.
+
+The dispatcher starts a **120000 ms elapsed-time deadline** at dispatch; this
+is never a cap on findings. At the deadline it persists one terminal
+external `review-record.json` entry with `status: timed_out`, `budget_ms: 120000`, elapsed
+time, and every partial claim received by then — no delayed collection and no
+finding-count cap. Adjudicate and relay those partial claims normally. If the
+client cannot cancel or collect the child at the deadline, still persist that
+`timed_out` entry with what was collected (possibly none), do not build or
+serve, and stop the workflow as `needs_user` until the user explicitly chooses
+whether to continue. Record that choice as `user_decision` with its user-message
+citation and `approved_finding_ids` (an empty list means the user chose to
+continue without approving any returned finding); the review status remains
+truthfully `timed_out`. An empty timeout is not a clean review. Use
+`status: complete` only for a returned, adjudicated round; use
+`status: needs_user` only for a round carrying at least one finding awaiting
+the user's decision.
+
+The reviewer inspects disclosure paths first: output promises and exposed
+ports, then model roles and physical writes, then both semantic and direct-store
+reachability. It continues with the broader logical and semantic review after
+that pass. This ordering is a threat-model checklist, not a supplied finding or
+resolution.
+
+## Adjudicate every finding — this is the point
+
+**What comes back is a claim, not a verdict.** A reviewer told to find problems
+will invent some when the closure is clean. If you accept findings unexamined
+you will damage a good closure to satisfy a fabricated critique; if you ignore
+them all the round is theatre. Neither is acceptable, and the difference between
+them is adjudication.
+
+For each finding, first decide and record one of:
+
+- **`accepted`** — you verified it against the closure and the request, and it
+  holds. This is an assessment, not permission to fix it.
+- **`rejected`** — you verified it does NOT hold. Cite the evidence that
+  refutes it: `file:line`, or the request text. **"I checked and it is fine" is
+  not a rejection.** A rejection without a citation is a shrug, and it is
+  indistinguishable from not having checked.
+- **`out_of_scope`** — real, but outside what this request asked for. Say what
+  would have to change for it to be in scope.
+
+Verify before you act, in both directions. A finding that names a line number
+may be pointing at a line that says something else. A finding that says a
+question is unanswerable may be wrong because the answer lives in a model the
+reviewer did not open. Check the artifact, not the claim about it.
+
+Do not argue with a finding you have not verified, and do not fix one either.
+
+## Relay and authorization
+
+Relay **every** finding to the user before mutation: ID, severity, claim,
+evidence, adjudication/citation, proposed effect, classification and applied
+state. All review findings default to behavior-affecting because this role hunts
+logical and semantic defects; they remain `needs_user` until the user explicitly
+approves their IDs. Rejected and out-of-scope claims are still relayed but change
+nothing. The only automatic exception is a syntax, mechanical, or procedural
+`structural_note` backed by evidence that the spec hash, model/field set, grain,
+row inclusion, values, aggregations, thresholds, verdicts and assertions remain
+unchanged.
+
+## Bouncing back for a ruling
+
+If you accept a HIGH finding whose fix needs a NEW decision the user has not
+made — a convention the source cannot settle, a scope question, a grain choice
+with real consequences — do not guess inside the subagent. Return `gap_found`
+the way the generate subagent does, and let the main thread run the read-back.
+
+A fix that silently invents a ruling is a worse defect than the one it fixes,
+because it looks settled.
+
+## Land the adjudication
+
+Record the round in the job-level `review-record.json` outside the captured
+closure, under schema `nxd-conversation-review-ledger-v1`, the workflow id, and
+append-only `review_rounds[]`: deadline and elapsed time, completeness/status,
+every original claim, adjudication, classification, user decision, proposed
+effect and applied files. Never mutate the captured closure with review output.
+Also record `deferred_finding_ids`: it is empty unless the cited user decision
+explicitly continues while leaving accepted behavior-affecting findings
+unapplied, in which case it names those finding IDs exactly.
+Only an explicitly authorized mutation is also recorded as its normal heal
+attempt. This keeps pending, rejected, denied and timed-out findings auditable.
+
+This follows the pack's existing stance that rulings are landed as reviewable
+data rather than buried in prose. It also makes the round auditable — a later
+reader can see what was challenged and why it was kept, and a reviewer of the
+NEXT revision does not re-raise a finding that was already refuted.
+
+A completed round that returned no findings is recorded too. "Reviewed, nothing
+found" is information; a missing or timed-out section is not a clean review.
+The marker is a declaration of the sanitization contract, not proof that the
+delegated request was faithful or credential-free. Number each dispatch from
+zero in array order. The live attestation for that review carries the same
+`review_round_index` and uses the exact evidence reference
+`<normalized-job>/review-record.json#review_rounds/<review_round_index>`;
+it does not need a `turn` field. If an older recording carries `turn`, it is
+informational only: chronology comes from the harness-observed dispatch,
+self-check, and build events. Treat the round as observed only when that
+reference, the marker path, the closure-keyed round, and the published build's
+matching supervisor `run_id` and `artifact_id` all identify the same closure.
+Never combine evidence from sibling closures.

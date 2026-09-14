@@ -1,0 +1,54 @@
+{
+  "description": "Extract structured facts from landed contract text; every quote is substring-checked against the landed page text.",
+  "instruction": "Extract the following facts from the landed contract page text.\n\ncounterparty_name: the legal name of the party contracting with the supplier,\nexactly as written.\n\nnotice_period_days: the number of days' written notice required to terminate,\nas an integer.\n\nauto_renews: true if the agreement renews automatically absent notice, false if\nit expires at the end of the term.\n\nFor every field, cite the verbatim span of the page text the value rests on.\nQuote the span exactly as it appears — the harness checks that your quote is a\nliteral substring of the landed text, so a paraphrase will fail. If the page\ndoes not state a field, return the absent sentinel and cite nothing.",
+  "target_fields": [
+    {
+      "name": "counterparty_name",
+      "value_type": "string",
+      "min_length": 2,
+      "max_length": 120,
+      "required": true,
+      "min_evidence": 1,
+      "description": "Legal name exactly as written. LENGTH is enforced by the harness — this API's JSON Schema has no minLength."
+    },
+    {
+      "name": "notice_period_days",
+      "value_type": "int",
+      "minimum": 1,
+      "maximum": 365,
+      "required": true,
+      "min_evidence": 1,
+      "description": "Days of written notice required to terminate."
+    },
+    {
+      "name": "auto_renews",
+      "value_type": "bool",
+      "required": true,
+      "min_evidence": 1,
+      "description": "Whether the term renews automatically absent notice."
+    }
+  ],
+  "grain": {
+    "identity_fields": ["agreement_id"],
+    "canonical_sort": ["agreement_id"],
+    "duplicate_policy": "reject",
+    "source_locators": [],
+    "identity_bearing_inputs": ["agreement_id"]
+  },
+  "cardinality": {
+    "min_rows": 1,
+    "max_rows": 1,
+    "expected_per_input": 1
+  },
+  "thresholds": {
+    "max_degrade_share": 0.34,
+    "max_error_rate": 0.0,
+    "max_unverified_share": 0.0,
+    "max_absent_share": 0.5,
+    "max_validation_retries": 2
+  },
+  "input_adapter": "landed_text",
+  "model": "claude-opus-5",
+  "effort": "medium",
+  "spec_version": "1"
+}

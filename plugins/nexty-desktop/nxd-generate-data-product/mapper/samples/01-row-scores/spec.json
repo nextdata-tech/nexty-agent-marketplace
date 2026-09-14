@@ -1,0 +1,46 @@
+{
+  "description": "Score two synthetic support tickets against a landed rubric, citing the ticket body.",
+  "instruction": "Score each support ticket against the landed triage rubric.\n\nseverity_score: 1-5. 5 = production outage affecting all users. 4 = major\nfeature broken for many users. 3 = a workflow is degraded but a workaround\nexists. 2 = cosmetic or single-user annoyance. 1 = question or feature request,\nnothing broken.\n\ntriage_verdict: one of escalate, standard, backlog. Escalate at severity 4 or\nabove. Backlog only at severity 1.\n\nCite the verbatim span of the ticket body that the score rests on. Quote\nexactly. If the ticket body does not state enough to score a field, return the\nabsent sentinel rather than guessing.",
+  "target_fields": [
+    {
+      "name": "severity_score",
+      "value_type": "int",
+      "minimum": 1,
+      "maximum": 5,
+      "required": true,
+      "min_evidence": 1,
+      "description": "Severity on the landed 1-5 scale. The RANGE is enforced by the harness, not by the API."
+    },
+    {
+      "name": "triage_verdict",
+      "value_type": "string",
+      "enum": ["escalate", "standard", "backlog"],
+      "required": true,
+      "min_evidence": 1,
+      "description": "One of the landed verdict enum. The ENUM is enforced on the wire."
+    }
+  ],
+  "grain": {
+    "identity_fields": ["ticket_id"],
+    "canonical_sort": ["ticket_id"],
+    "duplicate_policy": "reject",
+    "source_locators": [],
+    "identity_bearing_inputs": ["ticket_id", "body"]
+  },
+  "cardinality": {
+    "min_rows": 2,
+    "max_rows": 2,
+    "expected_per_input": 1
+  },
+  "thresholds": {
+    "max_degrade_share": 0.2,
+    "max_error_rate": 0.0,
+    "max_unverified_share": 0.0,
+    "max_absent_share": 0.5,
+    "max_validation_retries": 2
+  },
+  "input_adapter": "landed_rows",
+  "model": "claude-opus-5",
+  "effort": "medium",
+  "spec_version": "1"
+}

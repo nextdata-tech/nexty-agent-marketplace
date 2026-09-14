@@ -1,0 +1,22 @@
+MASTER SERVICES AGREEMENT — page 4 of 11
+
+4. TERM AND TERMINATION
+
+4.1 This Agreement is entered into between Northwind Components Limited (the
+"Customer") and the Supplier, and commences on the Effective Date.
+
+4.2 The initial term is twelve (12) months. Thereafter this Agreement shall
+renew automatically for successive twelve-month periods unless either party
+gives notice under clause 4.3.
+
+4.3 Either party may terminate this Agreement by giving not less than ninety
+(90) days' written notice to the other party, such notice to expire no earlier
+than the end of the then-current term.
+
+4.4 Termination shall not affect any accrued rights or liabilities of either
+party as at the date of termination.
+
+5. FEES
+
+5.1 Fees are as set out in Schedule 2 and are payable within thirty (30) days
+of the date of a valid invoice.

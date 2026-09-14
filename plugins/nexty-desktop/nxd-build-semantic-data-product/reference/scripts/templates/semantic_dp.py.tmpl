@@ -1,0 +1,217 @@
+"""Complete semantic-layer data product reference (.semantic_tools()).
+
+This is the full wiring for a deployable semantic DP. The author declares public
+semantic roles in `models.py`; `.semantic_tools()` compiles them and auto-generates
+the four governed MCP tools at pod boot.
+
+Files (flat siblings at the DP root):
+    models.py       # physical bases plus query-time metric views
+    transform.py    # seeds physical base tables and a marker row
+    spec.py         # transform, output port, views, and .semantic_tools()
+    requirements.txt
+
+AUTHORING AND RUNTIME FLOW
+------------------------------------------------------------------------------
+  models.py                         spec.py                     pod runtime
+  ---------                         -------                     -----------
+  field(..., primary_key())  ┐      promise(physical base)  ┐
+  field(..., dimension())    ├──→   model(metric view)      ├──→ compiled
+  field(..., join())         │      semantic_tools(...)     │    payloads → tools
+  metric_field(metric(...))  ┘                              ┘
+
+Physical bases define keys, dimensions, and joins. Metrics live on a
+`semantic_view(...)`; that view is query-time only and is registered with
+`.model(...)`, never `.promise(...)`. The transform creates no semantic-view
+DDL: governed SQL runs against the seeded physical tables.
+
+In the split-pod RPC topology, `pyyaml` lets the MCP pod rebuild payloads from the
+bundled model definition when kernel-delivered payloads are unavailable.
+
+
+# ============================================================================
+# models.py
+# ============================================================================
+from nxd.spec import Agg, dimension, field, join, metric, metric_field
+from nxd.spec import primary_key, semantic_model, semantic_view
+from nxd.spec.data_types import float64, int64, string
+
+
+customer_profile = (
+    semantic_model("customer_profile")
+    .description("One row per customer.")
+    .schema(
+        {
+            # primary_key() alone is not groupable; pair it with a dimension.
+            "CUSTOMER_ID": field(int64(), primary_key(), dimension(name="customer_id", description="Customer key.")),
+            "COUNTRY": field(
+                string(),
+                dimension(name="country", description="ISO country of the customer's billing address."),
+            ),
+            "EMAIL": field(
+                string(),
+                dimension(name="email", description="Primary contact email address.", pii=True),
+            ),
+        }
+    )
+)
+
+order_event = (
+    semantic_model("order_event")
+    .description("One row per order or sales event.")
+    .schema(
+        {
+            "ORDER_ID": field(int64(), primary_key(), dimension(name="order_id", description="Order key.")),
+            "CUSTOMER_ID": field(
+                int64(),
+                join(to="customer_profile", to_column="CUSTOMER_ID"),
+            ),
+            "AMOUNT_USD": float64(),
+        }
+    )
+)
+
+# Metrics belong on a query-time semantic view, not on a physical base field.
+order_metrics = semantic_view("order_metrics", order_event).schema(
+    {
+        "order_count": metric_field(
+            int64(),
+            metric(
+                Agg.COUNT,
+                of=order_event.field("ORDER_ID"),
+                name="order_count",
+                description="Number of order events recorded, all statuses.",
+            ),
+        ),
+        "unique_customers_ordered": metric_field(
+            int64(),
+            metric(
+                Agg.COUNT_DISTINCT,
+                of=order_event.field("CUSTOMER_ID"),
+                name="unique_customers_ordered",
+                description="Distinct customers with at least one order event.",
+            ),
+        ),
+        "total_revenue": metric_field(
+            float64(),
+            metric(
+                Agg.SUM,
+                of=order_event.field("AMOUNT_USD"),
+                name="total_revenue",
+                description="Gross order amount in USD across ALL statuses.",
+            ),
+        ),
+    }
+)
+
+# Marker model — satisfies the storage port's produce-verification.
+provision_marker = (
+    semantic_model("semantic_smoke_marker")
+    .description("Marker table written by the seeding transform.")
+    .schema({"MARKER_ID": int64(), "VIEW_NAME": string()})
+)
+
+
+# ============================================================================
+# transform.py
+# ============================================================================
+from nxd.data_product.context import Snowflake
+
+
+def transform(snowflake: Snowflake) -> None:
+    import pandas as pd
+    from snowflake import connector
+    from snowflake.connector.pandas_tools import write_pandas
+
+    if snowflake is None or not snowflake.schema:
+        print("transform skipped — no Snowflake schema in context")
+        return
+
+    fqn = (
+        f"{snowflake.database}.{snowflake.schema}."
+        if snowflake.database
+        else f"{snowflake.schema}."
+    )
+
+    customers = pd.DataFrame([
+        {"CUSTOMER_ID": 1, "COUNTRY": "US", "EMAIL": "a@acme.com"},
+        {"CUSTOMER_ID": 2, "COUNTRY": "DE", "EMAIL": "b@beta.de"},
+    ])
+    orders = pd.DataFrame([
+        {"ORDER_ID": 101, "CUSTOMER_ID": 1, "AMOUNT_USD": 100.0},
+        {"ORDER_ID": 102, "CUSTOMER_ID": 2, "AMOUNT_USD": 250.0},
+    ])
+
+    conn = connector.connect(
+        user=snowflake.user, account=snowflake.account, warehouse=snowflake.warehouse,
+        role=snowflake.role, database=snowflake.database, schema=snowflake.schema,
+        ocsp_fail_open=True, **snowflake.connector_params(),
+    )
+    try:
+        cur = conn.cursor()
+        try:
+            # Seed unquoted base tables so Snowflake and the compiler resolve one object.
+            for name, rows, columns in [
+                ("customer_profile", customers,
+                 "CUSTOMER_ID NUMBER, COUNTRY VARCHAR, EMAIL VARCHAR"),
+                ("order_event", orders,
+                 "ORDER_ID NUMBER, CUSTOMER_ID NUMBER, AMOUNT_USD FLOAT"),
+            ]:
+                cur.execute(f"CREATE OR REPLACE TABLE {fqn}{name} ({columns})")
+                write_pandas(conn, rows, name.upper(),
+                             database=snowflake.database, schema=snowflake.schema)
+                print(f"seeded {fqn}{name} rows={len(rows)}")
+
+            managed = snowflake.full_table_name("semantic_smoke_marker")
+            cur.execute(f"TRUNCATE TABLE IF EXISTS {managed}")
+            write_pandas(conn, pd.DataFrame([{"MARKER_ID": 1, "VIEW_NAME": "n/a"}]),
+                         managed.split(".")[-1].strip('"'),
+                         database=snowflake.database, schema=snowflake.schema)
+        finally:
+            cur.close()
+    finally:
+        conn.close()
+
+
+# ============================================================================
+# spec.py
+# ============================================================================
+from nxd.spec import code, data_product, data_product_output, storage
+from transform import transform
+from models import customer_profile, order_event, order_metrics, provision_marker
+
+INFRA_PROFILE = "ecommerce-demo"
+
+_storage = (
+    data_product_output()
+    .promise(provision_marker)
+    .promise(customer_profile)
+    .promise(order_event)
+    .model(order_metrics)
+    .port("snowflake", storage(f"/infra-profile/{INFRA_PROFILE}#/services/nxd-snowflake"))
+)
+
+spec = (
+    data_product(
+        name="semantic-layer-dp",
+        domain="analytics",
+        description="Governed semantic layer over a customer/order dataset, served via MCP.",
+        version="0.1.0",
+        infra_profile=INFRA_PROFILE,
+    )
+    .transform(
+        code(transform).compute(f"/infra-profile/{INFRA_PROFILE}#/services/k8s-compute")
+    )
+    .output(_storage)
+    .semantic_tools(service="mcp-api-service-k8s")
+)
+
+
+# ============================================================================
+# requirements.txt
+# ============================================================================
+# nxd.data_product[spec]
+# nxd.drivers[rpc]
+# snowflake-connector-python[pandas]
+# pandas
+# pyyaml>=6.0.2
+"""

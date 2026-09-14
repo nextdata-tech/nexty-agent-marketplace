@@ -1,0 +1,21 @@
+{
+  "FX-2200": {
+    "unit_weight_grams": {
+      "value": 410,
+      "evidence": [
+        {
+          "quote": "Shipping weight    410 g per unit",
+          "source_field_name": "landed_text"
+        }
+      ]
+    },
+    "warranty_months": {
+      "value": "__not_stated__",
+      "evidence": []
+    },
+    "certification": {
+      "value": "__not_stated__",
+      "evidence": []
+    }
+  }
+}

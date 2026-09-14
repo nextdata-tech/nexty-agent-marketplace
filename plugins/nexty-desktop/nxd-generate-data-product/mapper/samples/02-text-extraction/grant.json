@@ -1,0 +1,15 @@
+{
+  "mapper_spec_id": "<derived>",
+  "provider": "anthropic",
+  "model": "claude-opus-5",
+  "purpose": "Extract term and termination facts from landed contract page text for the field-mapper acceptance suite.",
+  "input_fields": ["agreement_id", "page_label"],
+  "document_classes": ["commercial_agreement"],
+  "pii_category": "none",
+  "recurring": false,
+  "max_calls": 12,
+  "max_tokens": 200000,
+  "max_usd": 1.0,
+  "granted_by": "acceptance-suite",
+  "granted_at": "2026-07-29T00:00:00Z"
+}

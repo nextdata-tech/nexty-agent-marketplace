@@ -1,0 +1,17 @@
+[
+  {
+    "input_id": "MSA-2291-p04",
+    "identity": {"agreement_id": "MSA-2291"},
+    "fields": {
+      "agreement_id": "MSA-2291",
+      "page_label": "page 4 of 11"
+    },
+    "landed_text_file": "page-04.txt",
+    "landed_text_model": "contract_page_text",
+    "extractor": "acceptance-suite-fixture",
+    "extractor_version": "1",
+    "document_hash": "fixture-msa-2291-sha256-placeholder",
+    "page": 4,
+    "document_class": "commercial_agreement"
+  }
+]

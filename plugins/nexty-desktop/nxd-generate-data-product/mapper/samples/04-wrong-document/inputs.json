@@ -1,0 +1,28 @@
+[
+  {
+    "input_id": "CAND-0001",
+    "identity": {"candidate_ref": "CAND-0001"},
+    "fields": {"candidate_ref": "CAND-0001"},
+    "landed_text_file": "submission-a.txt",
+    "landed_text_model": "submission_page_text",
+    "extractor": "acceptance-suite-fixture",
+    "extractor_version": "1",
+    "document_hash": "fixture-cand-0001-sha256-placeholder",
+    "page": 1,
+    "document_class": "candidate_submission",
+    "asserted_entity": {"candidate_ref": "CAND-0001"}
+  },
+  {
+    "input_id": "CAND-0002",
+    "identity": {"candidate_ref": "CAND-0002"},
+    "fields": {"candidate_ref": "CAND-0002"},
+    "landed_text_file": "submission-b.txt",
+    "landed_text_model": "submission_page_text",
+    "extractor": "acceptance-suite-fixture",
+    "extractor_version": "1",
+    "document_hash": "fixture-cand-0001-sha256-placeholder",
+    "page": 1,
+    "document_class": "candidate_submission",
+    "asserted_entity": {"candidate_ref": "CAND-0001"}
+  }
+]

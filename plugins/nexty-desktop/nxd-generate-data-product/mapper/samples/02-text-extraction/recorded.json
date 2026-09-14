@@ -1,0 +1,62 @@
+{
+  "MSA-2291-p04": [
+    {
+      "counterparty_name": {
+        "value": "Northwind Components Limited",
+        "evidence": [
+          {
+            "quote": "between Northwind Components Limited (the\n\"Customer\") and the Supplier",
+            "source_field_name": "landed_text"
+          }
+        ]
+      },
+      "notice_period_days": {
+        "value": 90,
+        "evidence": [
+          {
+            "quote": "not less than ninety\n(90) days' written notice",
+            "source_field_name": "landed_text"
+          }
+        ]
+      },
+      "auto_renews": {
+        "value": true,
+        "evidence": [
+          {
+            "quote": "the agreement rolls over each year unless cancelled",
+            "source_field_name": "landed_text"
+          }
+        ]
+      }
+    },
+    {
+      "counterparty_name": {
+        "value": "Northwind Components Limited",
+        "evidence": [
+          {
+            "quote": "between Northwind Components Limited (the\n\"Customer\") and the Supplier",
+            "source_field_name": "landed_text"
+          }
+        ]
+      },
+      "notice_period_days": {
+        "value": 90,
+        "evidence": [
+          {
+            "quote": "not less than ninety\n(90) days' written notice",
+            "source_field_name": "landed_text"
+          }
+        ]
+      },
+      "auto_renews": {
+        "value": true,
+        "evidence": [
+          {
+            "quote": "shall\nrenew automatically for successive twelve-month periods",
+            "source_field_name": "landed_text"
+          }
+        ]
+      }
+    }
+  ]
+}

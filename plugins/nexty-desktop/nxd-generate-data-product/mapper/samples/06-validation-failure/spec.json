@@ -1,0 +1,45 @@
+{
+  "description": "An out-of-range value the API cannot reject. Retries exhaust, the value is DISCARDED, the cell lands validation_failed.",
+  "instruction": "Score the incident report against the landed severity rubric.\n\nimpact_score: 1-5. 5 = total loss of service. 1 = no user-visible impact.\n\nhad_staged_rollout: true if the report describes a staged or canary rollout,\nfalse if the change went out unstaged.\n\nCite the verbatim span each value rests on.\n\nThe score scale has exactly five points. There is no 6, no 10, and no 0 — a\nscore outside 1-5 is not a stronger statement, it is an invalid one.",
+  "target_fields": [
+    {
+      "name": "impact_score",
+      "value_type": "int",
+      "minimum": 1,
+      "maximum": 5,
+      "required": true,
+      "min_evidence": 1,
+      "description": "Impact on the landed 1-5 scale. This API's JSON Schema has no `minimum`/`maximum`, so the RANGE is enforced by validate.py and is exactly where the retry budget is spent."
+    },
+    {
+      "name": "had_staged_rollout",
+      "value_type": "bool",
+      "required": true,
+      "min_evidence": 1,
+      "description": "Whether the change was staged. Scores cleanly — its presence is what isolates the degrade to one cell instead of tripping the zero-ok floor."
+    }
+  ],
+  "grain": {
+    "identity_fields": ["incident_id"],
+    "canonical_sort": ["incident_id"],
+    "duplicate_policy": "reject",
+    "source_locators": [],
+    "identity_bearing_inputs": ["incident_id"]
+  },
+  "cardinality": {
+    "min_rows": 1,
+    "max_rows": 1,
+    "expected_per_input": 1
+  },
+  "thresholds": {
+    "max_degrade_share": 0.5,
+    "max_error_rate": 0.0,
+    "max_unverified_share": 0.0,
+    "max_absent_share": 0.5,
+    "max_validation_retries": 2
+  },
+  "input_adapter": "landed_text",
+  "model": "claude-opus-5",
+  "effort": "medium",
+  "spec_version": "1"
+}

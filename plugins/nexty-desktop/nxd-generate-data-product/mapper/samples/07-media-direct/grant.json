@@ -1,0 +1,19 @@
+{
+  "mapper_spec_id": "<derived>",
+  "provider": "anthropic",
+  "model": "claude-opus-5",
+  "purpose": "Read an invoice reference and total from a synthetic screenshot, to exercise the media-direct path where no substring surface exists.",
+  "input_fields": [
+    "screenshot_id"
+  ],
+  "document_classes": [
+    "invoice_screenshot"
+  ],
+  "pii_category": "none",
+  "recurring": false,
+  "max_calls": 12,
+  "max_tokens": 200000,
+  "max_usd": 2.0,
+  "granted_by": "acceptance-suite",
+  "granted_at": "2026-07-30T00:00:00Z"
+}

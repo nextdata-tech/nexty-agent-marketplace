@@ -1,0 +1,22 @@
+{
+  "shot-1": {
+    "invoice_ref": {
+      "value": "ABC-1023",
+      "evidence": [
+        {
+          "quote": "top line of the image, left-aligned above the rule",
+          "source_field_name": "invoice-summary"
+        }
+      ]
+    },
+    "total_usd": {
+      "value": 90.0,
+      "evidence": [
+        {
+          "quote": "third text row, right-hand column, following the TOTAL label",
+          "source_field_name": "invoice-summary"
+        }
+      ]
+    }
+  }
+}

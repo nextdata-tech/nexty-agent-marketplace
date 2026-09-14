@@ -1,0 +1,13 @@
+[
+  {
+    "input_id": "line-1",
+    "identity": {
+      "line_id": "line-1"
+    },
+    "fields": {
+      "line_id": "line-1"
+    },
+    "landed_text": "INVOICE LINE\nItem: widget\nQty 2 AT 45.00\nLINE TOTAL  90.00\n",
+    "document_class": "invoice_line"
+  }
+]

@@ -1,0 +1,62 @@
+{
+  "line-1": [
+    {
+      "quantity": {
+        "value": 2.0,
+        "evidence": [
+          {
+            "quote": "Qty 2 AT 45.00",
+            "source_field_name": "landed_text"
+          }
+        ]
+      },
+      "unit_price": {
+        "value": 45.0,
+        "evidence": [
+          {
+            "quote": "Qty 2 AT 45.00",
+            "source_field_name": "landed_text"
+          }
+        ]
+      },
+      "total_usd": {
+        "value": 30.0,
+        "evidence": [
+          {
+            "quote": "LINE TOTAL  90.00",
+            "source_field_name": "landed_text"
+          }
+        ]
+      }
+    },
+    {
+      "quantity": {
+        "value": 2.0,
+        "evidence": [
+          {
+            "quote": "Qty 2 AT 45.00",
+            "source_field_name": "landed_text"
+          }
+        ]
+      },
+      "unit_price": {
+        "value": 45.0,
+        "evidence": [
+          {
+            "quote": "Qty 2 AT 45.00",
+            "source_field_name": "landed_text"
+          }
+        ]
+      },
+      "total_usd": {
+        "value": 90.0,
+        "evidence": [
+          {
+            "quote": "LINE TOTAL  90.00",
+            "source_field_name": "landed_text"
+          }
+        ]
+      }
+    }
+  ]
+}

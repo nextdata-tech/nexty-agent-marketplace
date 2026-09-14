@@ -1,0 +1,57 @@
+{
+  "description": "A SECOND MODEL catches a stable single-model misread, and both readings are REAL: on this image (656x272, plainly legible, TOTAL $90.00) live claude-haiku-4-5 reads 99.0 on three runs out of three while live claude-sonnet-5 reads 90.0. The primary's value is typed, in range, cited, and STABLE, so no retry and no review staleness would ever surface it. The disagreement discards it for a human instead of landing a coin flip.",
+  "instruction": "The attached image is a screenshot of one invoice summary line.\n\nRead the following from the image.\n\ninvoice_ref: the invoice reference exactly as printed.\n\ntotal_usd: the total amount in US dollars, as a number without the currency\nsymbol.\n\nFor each value, describe where on the image you read it \u2014 which line, which\ncolumn. You cannot quote a verbatim span, because there is no text layer to\nquote from: you are looking at pixels. Describe the region instead, and do not\ninvent a quotation to satisfy the format.\n\nIf a value is not legible in the image, return the absent sentinel rather than\nguessing at it. An illegible field is a finding.",
+  "target_fields": [
+    {
+      "name": "invoice_ref",
+      "value_type": "string",
+      "min_length": 3,
+      "max_length": 32,
+      "required": true,
+      "min_evidence": 0,
+      "description": "Invoice reference as printed in the image."
+    },
+    {
+      "name": "total_usd",
+      "value_type": "float",
+      "minimum": 0.0,
+      "maximum": 1000000.0,
+      "required": true,
+      "min_evidence": 0,
+      "description": "Total in USD, read from the image."
+    }
+  ],
+  "grain": {
+    "identity_fields": [
+      "screenshot_id"
+    ],
+    "canonical_sort": [
+      "screenshot_id"
+    ],
+    "duplicate_policy": "reject",
+    "source_locators": [],
+    "identity_bearing_inputs": [
+      "screenshot_id"
+    ]
+  },
+  "cardinality": {
+    "min_rows": 1,
+    "max_rows": 1,
+    "expected_per_input": 1
+  },
+  "thresholds": {
+    "max_degrade_share": 1.0,
+    "max_error_rate": 0.0,
+    "max_unverified_share": 1.0,
+    "max_absent_share": 0.0,
+    "max_validation_retries": 2
+  },
+  "input_adapter": "document_blob",
+  "model": "claude-haiku-4-5-20251001",
+  "effort": "low",
+  "accepts_media": [
+    "image/png"
+  ],
+  "spec_version": "1",
+  "corroboration_model": "claude-sonnet-5"
+}

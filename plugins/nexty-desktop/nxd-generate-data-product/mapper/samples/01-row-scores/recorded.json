@@ -1,0 +1,42 @@
+{
+  "TCK-1001": {
+    "severity_score": {
+      "value": 5,
+      "evidence": [
+        {
+          "quote": "No orders are going through at all",
+          "source_field_name": "body"
+        }
+      ]
+    },
+    "triage_verdict": {
+      "value": "escalate",
+      "evidence": [
+        {
+          "quote": "Checkout is returning 503 for every request",
+          "source_field_name": "body"
+        }
+      ]
+    }
+  },
+  "TCK-1002": {
+    "severity_score": {
+      "value": 2,
+      "evidence": [
+        {
+          "quote": "Cosmetic only, the export itself works fine",
+          "source_field_name": "body"
+        }
+      ]
+    },
+    "triage_verdict": {
+      "value": "standard",
+      "evidence": [
+        {
+          "quote": "The export button label is truncated",
+          "source_field_name": "body"
+        }
+      ]
+    }
+  }
+}

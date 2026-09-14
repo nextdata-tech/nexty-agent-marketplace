@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
+  <title>Customer health — release 17</title>
+  <style>
+    :root { color-scheme: light dark; font-family: ui-sans-serif, system-ui, sans-serif; line-height: 1.45; }
+    body { max-width: min(980px, 100%); margin: 2rem auto; padding: 0 1rem; background: Canvas; color: CanvasText; overflow-wrap: anywhere; }
+    * { box-sizing: border-box; } .scroll-x { overflow-x: auto; }
+    h1 { margin-bottom: 0; } h2 { margin-top: 2rem; border-bottom: 1px solid color-mix(in srgb, CanvasText 25%, transparent); }
+    .muted { color: color-mix(in srgb, CanvasText 65%, transparent); } .mono, code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .badge { display:inline-block; border:1px solid color-mix(in srgb, CanvasText 35%, transparent); border-radius:.25rem; padding:.05rem .35rem; margin:.05rem; font-size:.85em; }
+    .pii { font-weight:600; } table { width:100%; border-collapse:collapse; } th,td { border-bottom:1px solid color-mix(in srgb, CanvasText 20%, transparent); padding:.45rem; text-align:left; vertical-align:top; }
+    .fields { display:grid; gap:.65rem; } .field { border:1px solid color-mix(in srgb, CanvasText 20%, transparent); border-radius:.35rem; padding:.7rem; }
+    .field h4 { margin:0 0 .35rem; } .field p { margin:.25rem 0; } .type { font-weight:400; margin-left:.6rem; overflow-wrap:anywhere; }
+    details { margin-top: 1rem; padding:.75rem; border:1px solid color-mix(in srgb, CanvasText 25%, transparent); } dt { font-family:ui-monospace,monospace; } dd { margin:0 0 .6rem; overflow-wrap:anywhere; }
+  </style>
+</head>
+<body>
+  <header>
+    <p class="muted mono">Published data product release</p>
+    <h1>Customer health &lt;script&gt;alert(1)&lt;/script&gt;</h1>
+    <p>Governed customer health metrics. The display text is escaped.</p>
+    <p><span class="badge">v1.4.0</span> <span class="badge">domain: revenue</span></p>
+  </header>
+
+  <section aria-labelledby="overview"><h2 id="overview">Model overview</h2>
+    <table><thead><tr><th>Model</th><th>Description</th><th>Grain and roles</th></tr></thead><tbody>
+      <tr><td class="mono">customers</td><td>One row per customer.</td><td>primary key: <code>customer_id</code>; metric: <code>customer_count</code>; dimension: <code>contact_email</code></td></tr>
+      <tr><td class="mono">orders</td><td>One row per order.</td><td>primary key: <code>order_id</code>; metrics: <code>order_count</code>, <code>revenue</code>, <code>average_order_value</code></td></tr>
+      <tr><td class="mono">support_tickets</td><td><span class="muted">"" · empty</span></td><td>primary key: <code>ticket_id</code>; metric: <code>ticket_count</code>; dimension: <code>opened_at</code></td></tr>
+    </tbody></table>
+  </section>
+
+  <section aria-labelledby="schema"><h2 id="schema">Complete schema</h2>
+    <h3 class="mono">customers</h3><p>One row per customer.</p>
+    <div class="fields">
+      <article class="field"><h4><code>customer_id</code><span class="type"><code>string</code></span></h4><p>Stable customer identifier.</p><p><strong>Roles:</strong> <span class="badge">primary_key</span><span class="badge">metric: customer_count / count_distinct</span></p></article>
+      <article class="field"><h4><code>email</code><span class="type"><code>string</code></span></h4><p>Contact address.</p><p><strong>Semantic tags:</strong> <span class="badge pii">classification: pii</span></p><p><strong>Roles:</strong> <span class="badge pii">PII</span><span class="badge">dimension: contact_email</span></p></article>
+      <article class="field"><h4><code>loyalty_points</code><span class="type"><code>int64</code></span></h4><p>Current loyalty balance.</p><p><strong>Constraints:</strong> <span class="badge">min: 0</span><span class="badge">nullable: false</span></p></article>
+      <article class="field"><h4><code>profile</code><span class="type"><code>{&quot;struct&quot;:{&quot;fields&quot;:[{&quot;name&quot;:&quot;timezone&quot;,&quot;data-type&quot;:&quot;string&quot;},{&quot;name&quot;:&quot;segment&quot;,&quot;data-type&quot;:&quot;string&quot;}]}}</code></span></h4><p>Customer profile details.</p></article>
+    </div>
+    <h3 class="mono">orders</h3><p>One row per order.</p>
+    <div class="fields">
+      <article class="field"><h4><code>order_id</code><span class="type"><code>string</code></span></h4><p>Order identifier.</p><p><strong>Roles:</strong> <span class="badge">primary_key</span><span class="badge">metric: order_count / count_distinct</span></p></article>
+      <article class="field"><h4><code>customer_id</code><span class="type"><code>string</code></span></h4><p>Customer foreign key.</p><p><strong>Roles:</strong> <span class="badge">join: customers.customer_id / many_to_one</span></p></article>
+      <article class="field"><h4><code>amount_usd</code><span class="type"><code>{&quot;decimal128&quot;:{&quot;precision&quot;:18,&quot;scale&quot;:2}}</code></span></h4><p>Gross order amount.</p><p><strong>Roles:</strong> <span class="badge">metric: revenue / sum</span><span class="badge">metric: average_order_value / avg</span></p></article>
+    </div>
+    <h3 class="mono">support_tickets</h3><p class="muted">"" · empty</p>
+    <div class="fields">
+      <article class="field"><h4><code>ticket_id</code><span class="type"><code>string</code></span></h4><p>Ticket identifier.</p><p><strong>Roles:</strong> <span class="badge">primary_key</span><span class="badge">metric: ticket_count / count_distinct</span></p></article>
+      <article class="field"><h4><code>customer_id</code><span class="type"><code>string</code></span></h4><p>Customer reference (no join declared).</p></article>
+      <article class="field"><h4><code>opened_at</code><span class="type"><code>timestamp</code></span></h4><p class="muted">null · not declared</p><p><strong>Roles:</strong> <span class="badge">dimension</span></p></article>
+    </div>
+  </section>
+
+  <section aria-labelledby="joins"><h2 id="joins">Joins</h2><p><code>orders.customer_id</code> → <code>customers.customer_id</code> · many_to_one</p><p class="muted"><code>support_tickets.customer_id</code> shares a column name with the models above, but the registry declares no join for it — so none is drawn.</p></section>
+  <section aria-labelledby="ports"><h2 id="ports">Output ports</h2>
+    <p><strong>Output-level models:</strong> <code>orders</code> <span class="muted">(metadata: null · not declared)</span></p>
+    <div class="fields">
+      <article class="field"><h3 class="mono">analytics</h3><p><strong>Service:</strong> <code>output</code></p><p><strong>Models:</strong><br><code>customers</code> <span class="muted">(metadata: null · not declared)</span><br><code>orders</code> <span class="muted">(metadata: null · not declared)</span></p><p><strong>Promises:</strong> <code>model: [orders]</code>; <code>freshness</code> on <code>[orders]</code>: freshness &lt; 24h</p></article>
+      <article class="field"><h3 class="mono">empty-declaration</h3><p><strong>Service:</strong> <code>empty</code></p><p><strong>Models:</strong> <span class="muted">[] · none declared</span></p><p><strong>Promises:</strong> <span class="muted">null · not declared</span></p></article>
+    </div>
+  </section>
+  <section aria-labelledby="evidence"><h2 id="evidence">Evidence</h2><table><thead><tr><th>Dataset</th><th>Table</th><th>Published row count</th></tr></thead><tbody><tr><td><code>main</code></td><td><code>customers</code></td><td>24</td></tr><tr><td><code>main</code></td><td><code>orders</code></td><td>42</td></tr></tbody></table><p>Compiler evidence: <code>compiler-2f7d1a</code>.</p></section>
+  <details><summary>Release provenance</summary><dl><dt>workflow</dt><dd>customer/health</dd><dt>publish_seq</dt><dd>17</dd><dt>trust</dt><dd>artifact_verified</dd><dt>definition_id</dt><dd>definition-1f6c</dd><dt>artifact_id</dt><dd>artifact-7aa9</dd><dt>run_id</dt><dd>run-39c0</dd><dt>published_at_unix_ms</dt><dd>1785260400000</dd></dl></details>
+  <details><summary>Diagnostics</summary><dl><dt>resources</dt><dd><code>nxd://data-products/customer%2Fhealth/current</code>; <code>nxd://data-products/customer%2Fhealth/releases/17/verified.json</code>; <code>nxd://data-products/customer%2Fhealth/releases/17/outputs</code></dd><dt>schema</dt><dd>nxd-desktop-verified-v1</dd><dt>validation</dt><dd>passed: equality, roles, joins, port references, escaping</dd></dl></details>
+</body>
+</html>

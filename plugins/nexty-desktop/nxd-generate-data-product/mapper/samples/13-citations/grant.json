@@ -1,0 +1,19 @@
+{
+  "mapper_spec_id": "<derived>",
+  "provider": "anthropic",
+  "model": "claude-opus-5",
+  "purpose": "Prove the citations evidence path end to end on a real PDF: cited_text returns with a page location and lands api_cited.",
+  "input_fields": [
+    "agreement_id"
+  ],
+  "document_classes": [
+    "supply_agreement"
+  ],
+  "pii_category": "none",
+  "recurring": false,
+  "max_calls": 12,
+  "max_tokens": 200000,
+  "max_usd": 2.0,
+  "granted_by": "acceptance-suite",
+  "granted_at": "2026-07-30T00:00:00Z"
+}

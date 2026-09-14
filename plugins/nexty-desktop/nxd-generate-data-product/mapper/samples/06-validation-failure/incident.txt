@@ -1,0 +1,7 @@
+INCIDENT REPORT — INC-4417
+
+Every region lost the write path for fifty-one minutes. No customer request
+completed during the window. This was a total loss of service, the worst
+outage recorded on this platform.
+
+Contributing factor: a configuration rollout with no staged canary.

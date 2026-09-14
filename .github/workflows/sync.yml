@@ -1,0 +1,39 @@
+name: sync desktop skills
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 * * * *"
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: check out marketplace
+        uses: actions/checkout@v4
+
+      - name: check out source skills
+        uses: actions/checkout@v4
+        with:
+          repository: nextdata-tech/nexty-agent-skills
+          token: ${{ secrets.NEXTY_AGENT_SKILLS_TOKEN }}
+          path: .source/nexty-agent-skills
+          submodules: recursive
+
+      - name: synchronize Desktop skills
+        run: bash scripts/sync-from-source.sh .source/nexty-agent-skills
+
+      - name: commit synchronized marketplace
+        run: |
+          git config user.name "nexty-marketplace-sync"
+          git config user.email "nexty-marketplace-sync@users.noreply.github.com"
+          git add .claude-plugin plugins
+          if git diff --cached --quiet; then
+            echo "marketplace is already current"
+            exit 0
+          fi
+          git commit -m "chore: sync nexty desktop skills"
+          git push

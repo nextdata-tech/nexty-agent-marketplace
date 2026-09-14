@@ -1,0 +1,22 @@
+{
+  "proves": "a silent source lands evidence_absent with ALL typed slots null — never a string sentinel in a numeric column, never the scale minimum, and the build still lands",
+  "blocks": false,
+  "quarantined": [],
+  "status_counts": {
+    "ok": 1,
+    "evidence_absent": 2,
+    "validation_failed": 0,
+    "error": 0,
+    "skipped": 0
+  },
+  "cells": [
+    {"field": "unit_weight_grams", "value_status": "ok", "value": 410},
+    {"field": "warranty_months", "value_status": "evidence_absent", "value": null},
+    {"field": "certification", "value_status": "evidence_absent", "value": null}
+  ],
+  "evidence_counts": {
+    "verified": 1,
+    "verify_failed": 0,
+    "evidence_unverified": 0
+  }
+}

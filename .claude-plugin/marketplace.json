@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-marketplace-manifest.json",
+  "name": "nexty-desktop",
+  "owner": {
+    "name": "Nextdata"
+  },
+  "description": "Nextdata AI skills for local Nexty Desktop data-product workflows.",
+  "plugins": [
+    {
+      "name": "nexty-desktop",
+      "source": "./plugins/nexty-desktop",
+      "strict": false,
+      "displayName": "Nexty Desktop",
+      "description": "Build, serve, query, refine, and export local data products through the Nexty Desktop supervisor.",
+      "version": "0.49.3",
+      "author": {
+        "name": "Nextdata"
+      }
+    }
+  ]
+}

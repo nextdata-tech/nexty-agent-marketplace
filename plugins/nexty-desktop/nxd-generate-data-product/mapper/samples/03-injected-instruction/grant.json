@@ -1,0 +1,15 @@
+{
+  "mapper_spec_id": "<derived>",
+  "provider": "anthropic",
+  "model": "claude-opus-5",
+  "purpose": "Score a synthetic candidate submission containing an injected instruction, to demonstrate which harness defences fire.",
+  "input_fields": ["submission_ref"],
+  "document_classes": ["candidate_submission"],
+  "pii_category": "pseudonymous",
+  "recurring": false,
+  "max_calls": 12,
+  "max_tokens": 200000,
+  "max_usd": 1.0,
+  "granted_by": "acceptance-suite",
+  "granted_at": "2026-07-29T00:00:00Z"
+}

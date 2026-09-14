@@ -1,0 +1,40 @@
+{
+  "proves": "the citations twin of 08, and the pair is the proof. Same PDF, same four fields, same quotes — but evidence_mode='citations' makes the API return the spans it read, so each model quote is checked against a span a second party extracted and lands api_cited instead of evidence_unverified. 08 blocks at max_unverified_share 0.0; this fixture LANDS at the same ceiling. api_cited is NOT verified: it is verified-equivalent for gating (neither trips the unverified ceiling) but distinct in the audit trail, because an API citation cannot be re-run offline from text_hash + offsets the way a substring check can. The spans and the answer are one real opus-5 response, not an invention.",
+  "blocks": false,
+  "quarantined": [],
+  "status_counts": {
+    "ok": 4,
+    "evidence_absent": 0,
+    "validation_failed": 0,
+    "error": 0,
+    "skipped": 0
+  },
+  "cells": [
+    {
+      "field": "carrier_name",
+      "value_status": "ok",
+      "value": "Calder Freight Systems Ltd"
+    },
+    {
+      "field": "payment_terms_days",
+      "value_status": "ok",
+      "value": 45
+    },
+    {
+      "field": "termination_notice_days",
+      "value_status": "ok",
+      "value": 60
+    },
+    {
+      "field": "auto_renews",
+      "value_status": "ok",
+      "value": true
+    }
+  ],
+  "evidence_counts": {
+    "verified": 0,
+    "verify_failed": 0,
+    "evidence_unverified": 0,
+    "api_cited": 4
+  }
+}

@@ -1,0 +1,58 @@
+{
+  "agr-1": {
+    "carrier_name": {
+      "value": "Calder Freight Systems Ltd",
+      "evidence": [
+        {
+          "quote": "This Agreement is made between Calder Freight Systems Ltd",
+          "source_field_name": "carrier_name"
+        }
+      ]
+    },
+    "payment_terms_days": {
+      "value": 45,
+      "evidence": [
+        {
+          "quote": "Payment is due within forty-five (45) days of invoice date.",
+          "source_field_name": "payment_terms_days"
+        }
+      ]
+    },
+    "termination_notice_days": {
+      "value": 60,
+      "evidence": [
+        {
+          "quote": "by giving not less than sixty (60) days’ written notice.",
+          "source_field_name": "termination_notice_days"
+        }
+      ]
+    },
+    "auto_renews": {
+      "value": true,
+      "evidence": [
+        {
+          "quote": "this Agreement shall renew automatically for successive twelve-month periods unless terminated under clause 3.1.",
+          "source_field_name": "auto_renews"
+        }
+      ]
+    },
+    "__citations__": [
+      {
+        "text": "PARTIES\r\n1.1 This Agreement is made between Calder Freight Systems Ltd\r\n(the \"Carrier\") and the Shipper identified in Schedule A.\r\n",
+        "page": 1
+      },
+      {
+        "text": "Payment is due\r\nwithin forty-five (45) days of invoice date.",
+        "page": 1
+      },
+      {
+        "text": "TERMINATION\r\n3.1 Either party may terminate this Agreement for convenience\r\nby giving not less than sixty (60) days’ written notice.\r\n",
+        "page": 2
+      },
+      {
+        "text": "3.2 On expiry of the initial term this Agreement shall renew\r\nautomatically for successive twelve-month periods unless\r\nterminated under clause 3.1.\r\n",
+        "page": 2
+      }
+    ]
+  }
+}

@@ -1,0 +1,56 @@
+{
+  "description": "A genuinely silent source. Absence lands as evidence_absent with all typed slots null — never as a low score, never as a string sentinel in a numeric column.",
+  "instruction": "Extract the following from the landed product datasheet text.\n\nunit_weight_grams: shipping weight of one unit in grams, as an integer.\n\nwarranty_months: length of the manufacturer warranty in months, as an integer.\n\ncertification: the safety certification the datasheet names, exactly as\nwritten.\n\nCite the verbatim span each value rests on. If the datasheet does not state a\nfield, return the absent sentinel for that field and cite nothing. An honest\nabsence is always preferred to an inferred value: do not derive a warranty\nlength from an industry norm, and do not read a weight off a similar product.",
+  "target_fields": [
+    {
+      "name": "unit_weight_grams",
+      "value_type": "int",
+      "minimum": 1,
+      "maximum": 100000,
+      "required": true,
+      "min_evidence": 1,
+      "description": "Shipping weight of one unit, grams."
+    },
+    {
+      "name": "warranty_months",
+      "value_type": "int",
+      "minimum": 0,
+      "maximum": 240,
+      "required": false,
+      "min_evidence": 1,
+      "description": "Warranty length in months. Optional — many datasheets are silent, and silence is a finding, not a fault."
+    },
+    {
+      "name": "certification",
+      "value_type": "string",
+      "min_length": 2,
+      "max_length": 60,
+      "required": false,
+      "min_evidence": 1,
+      "description": "Named safety certification, verbatim."
+    }
+  ],
+  "grain": {
+    "identity_fields": ["sku"],
+    "canonical_sort": ["sku"],
+    "duplicate_policy": "reject",
+    "source_locators": [],
+    "identity_bearing_inputs": ["sku"]
+  },
+  "cardinality": {
+    "min_rows": 1,
+    "max_rows": 1,
+    "expected_per_input": 1
+  },
+  "thresholds": {
+    "max_degrade_share": 0.34,
+    "max_error_rate": 0.0,
+    "max_unverified_share": 0.0,
+    "max_absent_share": 0.75,
+    "max_validation_retries": 2
+  },
+  "input_adapter": "landed_text",
+  "model": "claude-opus-5",
+  "effort": "medium",
+  "spec_version": "1"
+}

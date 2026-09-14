@@ -1,0 +1,14 @@
+[
+  {
+    "input_id": "SYN-8842",
+    "identity": {"submission_ref": "SYN-8842"},
+    "fields": {"submission_ref": "SYN-8842"},
+    "landed_text_file": "candidate-brief.txt",
+    "landed_text_model": "submission_page_text",
+    "extractor": "acceptance-suite-fixture",
+    "extractor_version": "1",
+    "document_hash": "fixture-syn-8842-sha256-placeholder",
+    "page": 1,
+    "document_class": "candidate_submission"
+  }
+]

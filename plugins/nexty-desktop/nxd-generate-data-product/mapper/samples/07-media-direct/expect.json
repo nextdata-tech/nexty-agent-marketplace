@@ -1,0 +1,33 @@
+{
+  "proves": "media-direct: an image with no landed text behind it produces correct values whose evidence is evidence_unverified, never verified. The substring check is not weakened, it is inapplicable \u2014 and the harness says so at preflight rather than in the results.",
+  "blocks": false,
+  "quarantined": [],
+  "status_counts": {
+    "ok": 2,
+    "evidence_absent": 0,
+    "validation_failed": 0,
+    "error": 0,
+    "skipped": 0
+  },
+  "cells": [
+    {
+      "field": "invoice_ref",
+      "value_status": "ok",
+      "value": "ABC-1023"
+    },
+    {
+      "field": "total_usd",
+      "value_status": "ok",
+      "value": 90.0
+    }
+  ],
+  "evidence_counts": {
+    "verified": 0,
+    "verify_failed": 0,
+    "evidence_unverified": 2
+  },
+  "unfalsifiable_cells": [
+    "invoice_ref",
+    "total_usd"
+  ]
+}

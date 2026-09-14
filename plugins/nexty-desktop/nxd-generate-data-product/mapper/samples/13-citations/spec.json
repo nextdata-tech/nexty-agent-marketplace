@@ -1,0 +1,73 @@
+{
+  "description": "The citations twin of 08. Same PDF, same fields, but evidence_mode='citations': the API extracts cited_text from the document server-side, so a quote that has no local substring surface can still be checked against a span the API itself pulled out. Every field therefore demands evidence (min_evidence: 1) and the unverified ceiling is 0.0 -- settings 08 cannot meet, because there the same quotes land evidence_unverified and nothing can prove them. What lands here is api_cited, NOT verified: an API extraction is a second party's reading of the bytes, but it is not a check this harness can re-run offline from text_hash + offsets.",
+  "instruction": "The attached document is a two-page supply agreement.\n\nExtract the following.\n\ncarrier_name: the legal name of the Carrier, exactly as written.\n\npayment_terms_days: the number of days after invoice date that payment is\ndue, as an integer.\n\ntermination_notice_days: the number of days' written notice required to\nterminate for convenience, as an integer.\n\nauto_renews: true if the agreement renews automatically after the initial\nterm, false otherwise.\n\nFor each value, the quote MUST be a verbatim run of characters copied from\nthe document itself -- the exact words on the page. Do NOT describe where\nthe text is; do not write 'page 1, clause 2.1' or name a heading. A quote\nthat describes a location instead of reproducing the text cannot be\nchecked against the document and will be rejected.\n\nIf the document does not state a field, return the absent sentinel and cite\nnothing. An honest absence is preferred to an inferred value.",
+  "target_fields": [
+    {
+      "name": "carrier_name",
+      "value_type": "string",
+      "min_length": 3,
+      "max_length": 80,
+      "required": true,
+      "min_evidence": 1,
+      "description": "Legal name of the Carrier."
+    },
+    {
+      "name": "payment_terms_days",
+      "value_type": "int",
+      "minimum": 1,
+      "maximum": 365,
+      "required": true,
+      "min_evidence": 1,
+      "description": "Days after invoice date that payment falls due."
+    },
+    {
+      "name": "termination_notice_days",
+      "value_type": "int",
+      "minimum": 1,
+      "maximum": 365,
+      "required": true,
+      "min_evidence": 1,
+      "description": "Days of written notice to terminate for convenience."
+    },
+    {
+      "name": "auto_renews",
+      "value_type": "bool",
+      "required": true,
+      "min_evidence": 1,
+      "description": "Whether the agreement renews automatically."
+    }
+  ],
+  "grain": {
+    "identity_fields": [
+      "agreement_id"
+    ],
+    "canonical_sort": [
+      "agreement_id"
+    ],
+    "duplicate_policy": "reject",
+    "source_locators": [],
+    "identity_bearing_inputs": [
+      "agreement_id"
+    ]
+  },
+  "cardinality": {
+    "min_rows": 1,
+    "max_rows": 1,
+    "expected_per_input": 1
+  },
+  "thresholds": {
+    "max_degrade_share": 0.0,
+    "max_error_rate": 0.0,
+    "max_unverified_share": 0.0,
+    "max_absent_share": 0.0,
+    "max_validation_retries": 2
+  },
+  "input_adapter": "document_blob",
+  "model": "claude-opus-5",
+  "effort": "medium",
+  "accepts_media": [
+    "application/pdf"
+  ],
+  "spec_version": "1",
+  "evidence_mode": "citations"
+}

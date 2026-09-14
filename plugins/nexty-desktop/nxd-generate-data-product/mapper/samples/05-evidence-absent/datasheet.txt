@@ -1,0 +1,17 @@
+PRODUCT DATASHEET — SKU FX-2200
+
+Overview
+
+The FX-2200 is a sealed inline flow sensor for low-viscosity fluids.
+
+Specifications
+
+  Body material      316 stainless steel
+  Connection         G1/2 male
+  Operating range    0.5 - 40 L/min
+  Shipping weight    410 g per unit
+
+Notes
+
+Consult the installation guide for orientation requirements. Specifications are
+subject to change without notice.
