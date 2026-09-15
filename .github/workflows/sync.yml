@@ -23,6 +23,9 @@ jobs:
           path: .source/nexty-agent-skills
           submodules: recursive
 
+      - name: test synchronization
+        run: bash scripts/test-sync-from-source.sh
+
       - name: synchronize Desktop skills
         run: bash scripts/sync-from-source.sh .source/nexty-agent-skills
 
