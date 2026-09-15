@@ -16,6 +16,10 @@ repository by `.github/workflows/sync.yml`. The workflow copies only the
 Desktop skill directories listed in `.claude-plugin/marketplace.json`, then
 commits changes to this public repository.
 
+The generated plugin uses Claude's conventional layout:
+`plugins/nexty-desktop/skills/<skill>/SKILL.md`. Its plugin manifest intentionally
+omits a custom `skills` path so Claude can discover the standard directory.
+
 The sync workflow needs a repository secret named
 `NEXTY_AGENT_SKILLS_TOKEN`. It must be able to read
 `nextdata-tech/nexty-agent-skills`.
