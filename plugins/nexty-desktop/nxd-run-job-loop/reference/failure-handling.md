@@ -61,9 +61,8 @@ is nothing to retry: fix the code.
    structural check cannot execute the supervisor — a closure can pass it in
    full and still fail when the supervisor validates or admits it. In workflow
    v2, a `start_requirement` or `start_run` error is **not** presumptive
-   evidence of a bad machine. Treat it as yours by default. The legacy
-   `build_data_product` error has the same default only in an explicitly
-   feature-off/non-enrolled compatibility runtime.
+   evidence of a bad machine. Treat it as yours by default and use the
+   supervisor's returned operation and requirement evidence to classify it.
 2. **The transform dry-run covers `transform/main.py` only.** A green dry-run
    says nothing about `spec.py` or `models.py`, and its own `unverified:` list is
    its declared blind spot for dynamic constructs. Carry those lines into the
@@ -149,9 +148,7 @@ A failed workflow-v2 supervisor operation returns an operation or requirement
 status plus an error payload. Treat the payload as the **outermost** frame — it
 may still be a generic timeout or "transform execution failed" wording that
 says nothing about which stage died. Do not classify from it, and do not retry
-on it. A failed `build_data_product` returns the same kind of outer error only
-in an explicitly feature-off/non-enrolled compatibility runtime; the legacy
-steps below do not describe enrolled v2 construction.
+on it.
 
 1. **For workflow v2, call `mcp__nxd-desktop__inspect_workflow` once**, passing
    the failed workflow and the current operation/requirement identity returned
@@ -160,11 +157,12 @@ steps below do not describe enrolled v2 construction.
    runtime, so it is safe while another session builds. **Once**, not in a loop:
    it reads recorded workflow evidence, so a second identical call cannot
    return anything new.
-2. **For feature-off/non-enrolled compatibility only, call
-   `mcp__nxd-desktop__inspect_run` once**, passing the failed `run_id`. It returns
-   that run's status plus the bounded, path-redacted child failure diagnostic —
-   the actual exception from inside the transform. Omit `run_id` only to list
-   recent failed-run summaries when you do not have one.
+2. **If the admitted operation returns a `run_id`, call
+   `mcp__nxd-desktop__inspect_run` once**, passing that failed `run_id`. It
+   returns the run's durable status plus the bounded, path-redacted child
+   failure diagnostic — the actual exception from inside the transform. Omit
+   `run_id` only to list recent failed-run summaries when the supervisor directs
+   that recovery path.
 3. **Classify by the stage it died in**, using the ladder above — never by
    matching the exception text. If no operation or run identity is available,
    say that; do not substitute the outer error string for the diagnostic you

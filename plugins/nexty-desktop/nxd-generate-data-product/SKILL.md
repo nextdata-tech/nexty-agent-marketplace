@@ -14,7 +14,7 @@ allowed-tools:
   - Task
 metadata:
   author: nextdata
-  version: 0.49.3
+  version: 0.49.4
 ---
 
 # nxd-generate-data-product skill
@@ -455,7 +455,7 @@ capture contract; `build-record.json` remains generated, never hand-authored.
 
 ### Step 6b — Defer adversarial review to the job loop after capture
 
-Under workflow-v2, the legacy Step 7 self-check is an optional agent-side
+Under workflow-v2, the Step 7 self-check is an optional agent-side
 evidence phase, not a shellless gate. If the helper runtime and tools exist, the agent may run the
 closure-root self-check, lock verification, structural checks, and connector
 checks described in the reference docs. Record them as optional evidence only;

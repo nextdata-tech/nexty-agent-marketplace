@@ -17,10 +17,11 @@
 The `nxd-desktop` server exposes two different surfaces, and they answer
 different questions:
 
-- **Tools** (`mcp__nxd-desktop__…`) are *actions*: check, build, resume, list,
-  inspect, describe, query, export. Most take locks, boot runtimes, or mint
-  bearers. `check_data_product` is a compatibility no-lock, no-publish check;
-  it is not the workflow-v2 construction admission boundary.
+- **Tools** (`mcp__nxd-desktop__…`) are *actions*: check, prepare/advance,
+  resume, list, inspect, describe, query, and export. Most take locks, boot
+  runtimes, or mint bearers. `check_data_product` is a read-only, no-lock,
+  no-publish preflight; it is not the workflow-v2 construction admission
+  boundary.
 - **Resources** (`nxd://…`) are *read-only documents* projected from the pinned
   artifact bytes of a published release. Reading one takes no lock, boots
   nothing, and cannot disturb a running instance.
@@ -29,32 +30,28 @@ Reach for a resource when you want to know **what a published product
 declares** — its identity, its model registry, its output ports. Reach for a
 tool when you want to *do* something or when you need live runtime state.
 
-## Preflight before build
+## Preflight before construction
 
 For a new local construction, first call `get_workflow_capabilities` and follow
-the strict workflow-v2 sequence in [workflow-v2.md](workflow-v2.md) when the
-runtime advertises execution. Do not use this preflight, a direct supervisor
-CLI, or `build_data_product` to bypass v2 capture, retained review, and
+the workflow-v2 sequence in [workflow-v2.md](workflow-v2.md). Do not use this
+preflight or a direct supervisor CLI to bypass capture, retained review, and
 admission. A false or unavailable v2 capability is a blocker for that
-construction; it is not permission to silently take a legacy path.
+construction.
 
 `mcp__nxd-desktop__check_data_product` and its host-local equivalent
 (`nxd-desktop-supervisor check --definition <dir> --workflow <workflow> --json`)
-remain valid only for an explicitly feature-off/non-enrolled compatibility
-runtime or for inspecting an already-authored closure outside an enrolled v2
-construction. They are read-only checks: they publish nothing, open no run, and
-take no supervisor ownership lock.
+remain useful for inspecting an authored closure before construction. They are
+read-only checks: they publish nothing, open no run, and take no supervisor
+ownership lock. They never replace workflow-v2 capture, review, or admission.
 
-This compatibility preflight and the supervisor's trusted capture checks are
-complementary gates, not two names for the same check. The preflight is the
-host-owned admission decision for the exact definition and workflow: it runs
-structure, runtime, contract, and semantic checks in the supervisor's
-environment before a legacy compatibility build. For workflow-v2, capture
-materializes the approved blueprint, typed proposal snapshot, lock, build
-record, and trusted `self_check.py`, then verifies them. Agent-side Step 7 checks
-may provide optional evidence when tools exist; they do not create or replace
-the supervisor-owned record. A green local check does not admit or publish a
-product.
+This preflight and the supervisor's trusted capture checks are complementary
+gates, not two names for the same check. The preflight runs structure, runtime,
+contract, and semantic checks in the supervisor's environment before workflow
+admission. Workflow-v2 capture additionally materializes the approved
+blueprint, typed proposal snapshot, lock, build record, and trusted
+`self_check.py`, then verifies them. Agent-side checks may provide optional
+evidence when tools exist; they do not create or replace the supervisor-owned
+record. A green local check does not admit or publish a product.
 
 The result reports:
 
@@ -140,10 +137,8 @@ durable move is:
 
 Or just re-read `resources/list`, which always advertises the current seq.
 
-In a feature-off/non-enrolled compatibility runtime, rebuilding through
-`build_data_product` with the same `workflow` advances `publish_seq`. In an
-enrolled v2 workflow, follow the returned v2 actions instead. After any rebuild,
-discard cached URIs.
+After a workflow-v2 reconstruction or publication, discard cached URIs and
+re-read the current release resource before addressing release-scoped URIs.
 
 ## What each document carries
 
@@ -228,16 +223,15 @@ content.
 
 - **`resource_not_found` naming a newer `current_publish_seq`** — the release
   was superseded. Re-read `current` (or `resources/list`) and retry against the
-  current seq. Not an error state; a rebuild happened.
+  current seq. Not an error state; the release was superseded.
 - **`artifact_unavailable`** — the published data was garbage-collected or
-  failed integrity checks. The server marks this **not retryable**: on an
-  enrolled v2 workflow, reset and reconstruct through the returned v2 actions;
-  on an explicitly feature-off/non-enrolled compatibility runtime, rebuild with
-  `build_data_product` from the source definition. Re-reading won't help.
+  failed integrity checks. The server marks this **not retryable**: preserve the
+  closure, reset or create the workflow through the returned v2 actions, and
+  recapture it. Re-reading won't help.
 - **`workflow_not_found`** — nothing published under that workflow. The error
   carries `available_workflows`; `list_data_products` shows what exists, or
-  a fresh v2 workflow creates a new product. Only a feature-off/non-enrolled
-  compatibility runtime may use `build_data_product` for that new product.
+  a fresh v2 workflow creates a new product. Do not substitute a direct build
+  or direct construction path.
 
 Report a read failure as what it is. Never substitute a shape inferred from the
 source definition for a resource read and present it as the published product.

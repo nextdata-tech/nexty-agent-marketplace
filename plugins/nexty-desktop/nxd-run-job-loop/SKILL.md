@@ -13,7 +13,7 @@ allowed-tools:
   - Task
 metadata:
   author: nextdata
-  version: 0.49.3
+  version: 0.49.4
 ---
 
 # nxd-run-job-loop skill
@@ -75,8 +75,8 @@ Choose this order before invoking any runtime command:
    This is the supported route for Claude Desktop and Claude Cowork. Read-only `nxd://`
    **resources** — with tool bridges where a client exposes none — expose what a
    release *declares*: [reference/catalog-resources.md](reference/catalog-resources.md).
-2. **No construction fallback.** Direct CLI build/check commands and the legacy
-   MCP build/validation tools do not substitute for the v2 admission path.
+2. **No construction fallback.** Direct CLI commands and local substitutes do
+   not replace the v2 admission path.
 3. **Otherwise stop.** Report that no usable v2 desktop runtime is connected
    and give the provisioning/connection recovery action.
 
@@ -202,8 +202,8 @@ only its returned revision, invalidation epoch, requirement identities and
 `next_actions`. Do not present an approval prompt or ask for approval until
 `prepare_workflow` succeeds. Then present the prepared echo-back and relay the user's exact
 approval through the returned `session_decision` action. A capability blocker or
-failed prepare/consent action stops construction; it does not route to a legacy
-tool or a local substitute.
+failed prepare/consent action stops construction; it does not bypass supervisor
+admission with a direct tool or local substitute.
 
 The successful returned `session_decision` action is the generation gate.
 Invoke **nxd-generate-data-product** after that gate succeeds to assemble
@@ -264,7 +264,7 @@ user-facing workflow handle. Never expose temporary, scratch, or
 supervisor-owned staging paths. The bearer never
 persists, so a later session reattaches to an admission-linked publication by
 **workflow id** (`list_data_products` → `resume_data_product`); if no valid
-publication remains, start a fresh v2 construction rather than a legacy rebuild
+  publication remains, start a fresh v2 construction rather than a direct rebuild
 ([reference/context-and-resume.md](reference/context-and-resume.md)). The durable
 record a later session reads is **generated, never hand-written**: supervisor capture materializes and verifies `dp-blueprint.approved.md`, `dp-blueprint.proposal.approved.json`, `dp-blueprint.lock.json`, and the trusted `self_check.py`; it also records `build-record.json` carrying what happened —
 stages, attempts, concessions, blockers, the read-back. Conversation review
@@ -290,7 +290,7 @@ admission and publication. Use the exact envelopes in
 [reference/workflow-v2.md](reference/workflow-v2.md); never reuse stale action
 parameters. A successful `start_run` response is the supervisor's proof of
 admission, publication, and the serving endpoint. A failed or unavailable
-action is a blocker; do not retry through legacy build/validation tools, local
+  action is a blocker; do not retry through direct build/validation commands, local
 files, SQLite, raw SQL, pandas, or another database.
 
 ### Step 4a — Render the pinned static artifact
@@ -366,7 +366,7 @@ exit: `healed`, `healed_with_concessions`, `caps_exhausted`, `blocked`,
   Step 2/3 and use `reset_workflow` while the v2 construction is still pending.
   The currently enrolled operation scope is new-build only; after publication,
   a behavior-changing revision is unsupported and must be reported instead of
-  routed through a legacy rebuild. After a later supported fresh publication,
+  routed through a direct rebuild. After a later supported fresh publication,
   discard cached artifact resources and current file, render the new release,
   then re-describe before mapping again. If the loop doesn't
   converge within the caps, keep the attempt history in the build record and
@@ -468,7 +468,8 @@ current owners.
   per data product.** In a fresh session with no endpoint, `list_data_products` →
   `resume_data_product` → static artifact recovers a published workflow in
   seconds with a fresh bearer; `list_data_products` remains discovery only. An
-  unavailable artifact does not authorize legacy reconstruction; current v2
+unavailable artifact does not authorize reconstruction outside workflow-v2;
+current v2
   enrollment supports only a fresh workflow build
   ([reference/context-and-resume.md](reference/context-and-resume.md)).
 - **Keep workflow-v2 authoring on the main thread.** Pass the returned `capture`

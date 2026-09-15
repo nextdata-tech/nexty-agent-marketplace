@@ -137,45 +137,55 @@ The grant above remains the **standalone field-mapper harness** contract:
 required before the harness dispatches a model call. It is not, by itself, a
 Desktop supervisor authorization.
 
-In a Desktop build, `contracts/mapper_grant.json`, a mapper request file, and
-their fields are **untrusted scope proposals**. The supervisor derives the
-actual mapper subject from the definition and is the only component that
-can turn that subject into an approval. An agent must not author `approved`,
+The public Desktop construction surface is now workflow-v2 only. The current
+trusted generator-validation path supports non-mapper closures only and rejects
+mapper closures before admission with `validation/mapper_closure_unsupported`;
+formal mapper requirements are likewise reported as `workflow/unsupported_mapper`.
+Do not describe a separate Desktop mapper build, mapper-status tool, or
+approval route as available. Use this section for the standalone harness
+contract, or report the Desktop mapper closure as unsupported until a workflow-v2
+mapper handler is shipped.
+
+If a future Desktop mapper handler is supported, `contracts/mapper_grant.json`,
+a mapper request file, and their fields are **untrusted scope proposals**. The
+supervisor derives the actual mapper subject from the definition and is the only
+component that can turn that subject into an approval. An agent must not author `approved`,
 `granted_by`, receipt, signature, or approval-id claims in an attempt to make a
 proposal authoritative; those claims are rejected rather than treated as user
 consent. A green Phase G proves only that the static harness grant check found a
 binding artifact. It is not proof of human authorization in Desktop.
 
-The current NXD Desktop mapper path uses a supervisor-owned loopback review
-surface and a native OS presence decision. Before it creates a writer, state
-database, run, or provider client, the supervisor:
+That future handler would use a supervisor-owned loopback review surface and a
+native OS presence decision. Before it creates a writer, state database, run,
+or provider client, the supervisor would:
 
-1. freezes and pins the candidate definition;
-2. derives the mapper subject and content manifest from the actual frozen bytes;
-3. creates an opaque request ID and token-free loopback status URL;
-4. delivers a one-time browser capability out of band in the URL fragment;
-5. renders the supervisor-derived scope and receives approve/decline from the
+1. freeze and pin the candidate definition;
+2. derive the mapper subject and content manifest from the actual frozen bytes;
+3. create an opaque request ID and token-free loopback status URL;
+4. deliver a one-time browser capability out of band in the URL fragment;
+5. render the supervisor-derived scope and receive approve/decline from the
    browser; and
-6. requires a fresh supervisor-owned OS dialog decision.
+6. require a fresh supervisor-owned OS dialog decision.
 
 Only the matching browser capability, OS decision, subject, manifest, and
 budget can produce one-use admission. The MCP peer never receives the
 capability. The browser click alone is insufficient. The OS dialog is local
 presence confirmation, not cryptographic proof of the user's identity.
 
-The supervisor does not currently use MCP form elicitation for this path: its
-MCP `initialize` request/context is not an admission input. Do not require
-protocol `2025-06-18` form elicitation or claim that the approval surface has
-no second step. A second LLM turn is not an approval mechanism.
+The current supervisor has no Desktop mapper admission handler, so it does not
+currently use MCP form elicitation for this path. If a future handler is added,
+its MCP `initialize` request/context would not be an admission input. Do not
+require protocol `2025-06-18` form elicitation or claim that the approval
+surface has no second step. A second LLM turn is not an approval mechanism.
 
-An accepted request admits that exact subject for the current supervisor
-session. An unchanged retry reuses that session approval without another
-interaction; a changed spec or proposed scope gets a new subject and must be
-confirmed again. The supervisor re-derives the subject immediately before
-admission, so a definition changed while it was open fails with
+For the documented handler contract, an accepted request admits that exact
+subject for the current supervisor session. An unchanged retry reuses that
+session approval without another interaction; a changed spec or proposed scope
+gets a new subject and must be confirmed again. The supervisor re-derives the
+subject immediately before admission, so a definition changed while it was open fails with
 `mapper_subject_changed` rather than running under the earlier confirmation.
 
-**Every non-accept outcome fails closed.** Browser decline, OS decline,
+**Every non-accept outcome would fail closed.** Browser decline, OS decline,
 cancelled or expired requests, malformed or failed transport, binding mismatch,
 and any unsupported approval-surface state return
 `kind: mapper_approval_required` with `run_admitted: false`. Their

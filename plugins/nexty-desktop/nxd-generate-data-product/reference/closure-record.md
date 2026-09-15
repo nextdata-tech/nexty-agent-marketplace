@@ -139,15 +139,10 @@ The plan this closure was built from is `dp-blueprint.approved.md`, bound by
 
 ## Reopen
 
-Reattach first. A rebuild is the fallback, taken only when the published
-artifact is genuinely gone.
-
-For an enrolled workflow on a runtime with workflow-v2 execution enabled, use
-the returned v2 actions and never call `build_data_product` for new
-construction. The legacy rebuild shown below is compatibility-only for an
-explicitly feature-off or non-enrolled runtime. If a new construction is
-v2-capable but a capability or enrollment check fails, stop and report that
-blocker rather than bypassing capture and review.
+Reattach first. If the published artifact is genuinely gone, reconstruct it
+through the returned workflow-v2 actions. Do not call a removed builder or use a
+direct CLI as a construction fallback. If the supervisor cannot provide a
+capability, capture, review, or admission action, stop and report that blocker.
 
 For a multi-source CSV/file closure that uses directory companion declarations,
 use a desktop supervisor with directory-companion support before step 1. Do not
@@ -156,14 +151,15 @@ fall back to an undeclared export root.
 1. `list_data_products` — is this workflow published, and is `artifact_status`
    `available`?
 2. `resume_data_product(workflow="<workflow-id>")` — reattaches to the published
-   artifact in seconds and returns a fresh endpoint and bearer, with no rebuild.
-   In a feature-off/non-enrolled compatibility runtime, fallback only on
-   `collected` / `artifact_unavailable`:
-   `build_data_product(definition="<abs path to this dir>", workflow="<workflow-id>")`
-   — a full rebuild, sound because this closure is deterministic and embeds its
-   source.
-3. `describe_models` — with the endpoint and bearer the resume (or rebuild) returned.
-4. `run_semantic_query` — same endpoint and bearer.
+   artifact in seconds and returns a fresh endpoint and bearer, with no
+   reconstruction.
+3. If the artifact is unavailable, call `get_workflow_capabilities`, prepare a
+   fresh workflow using the closure and blueprint, and follow the returned
+   `advance_workflow` actions through capture, review, validation, admission,
+   and publication.
+4. `describe_models` — with the endpoint and bearer returned by resume or the
+   successful workflow admission.
+5. `run_semantic_query` — same endpoint and bearer.
 
 ## Credentials (omit this section entirely when there are none)
 

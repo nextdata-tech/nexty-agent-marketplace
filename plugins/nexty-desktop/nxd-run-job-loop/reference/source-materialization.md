@@ -115,15 +115,10 @@ differ only in where the secret comes to rest.
 ## Host path handoff
 
 Materialize the source at the host-visible, absolute path explicitly returned or
-exposed by the file-writing tool. For a new construction on an enrolled
-workflow-v2 runtime, pass that path only through the supervisor's returned
-`capture` action after consent and generation self-check; never invoke
-`build_data_product` as a shortcut around that sequence. Never derive a
-definition path from an opaque attachment ID, a tool-internal ID, or a Linux
-workspace path. If no host-visible path is available, stop and explain that the
-local build cannot reach the materialized definition yet.
-
-The legacy `build_data_product` path is retained only for an explicitly
-feature-off or non-enrolled compatibility runtime. It still requires the same
-host-visible absolute path, but it does not make that runtime evidence of the
-workflow-v2 consent, capture, review, or admission contract.
+exposed by the file-writing tool. For a new construction, pass that path only
+through the supervisor's returned `capture` action after consent and generation
+self-check. Never use a direct command or local substitute to bypass that
+sequence. Never derive a definition path from an opaque attachment ID, a
+tool-internal ID, or a Linux workspace path. If no host-visible path is
+available, stop and explain that the local build cannot reach the materialized
+definition yet.

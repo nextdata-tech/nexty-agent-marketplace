@@ -29,7 +29,8 @@ The v3 authoring boundary checks the Markdown structure and the typed proposal's
 Transform and reference-Model procedure interpretation. It does not interpret
 the business contents of an opaque procedure body, so the read-back remains a
 user-facing review of those contents rather than a claim that the validator
-proved them. Existing v2 closure evidence is verified through the legacy path.
+proved them. Existing v2 closure evidence is verified through the workflow-v2
+capture and admission path.
 
 **A fully specified procedure** still gets read back and confirmed, but expect
 one short turn. **No procedure in the request** means this gate does not fire —

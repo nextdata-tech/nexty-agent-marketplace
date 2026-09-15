@@ -1,9 +1,8 @@
 # Supervisor workflow v2 construction
 
-Use the supervisor workflow API for every new local construction when the
-connected runtime advertises v2 execution. This path owns consent, capture,
-review evidence, validation, admission, and publication; do not fall back to
-legacy build or validation tools.
+Use the supervisor workflow API for every new local construction. This path
+owns consent, capture, review evidence, validation, admission, and publication;
+do not fall back to a direct CLI or local substitute.
 
 ## Contents
 
@@ -18,10 +17,10 @@ legacy build or validation tools.
 
 Before starting construction, call `get_workflow_capabilities`. Continue only
 when its structured response has `execution_enabled: true` and no unavailable
-condition. A false or unavailable capability is a blocker. Do not call
-`build_data_product`, `validate_data_product`, or a direct supervisor CLI as a
-fallback for this construction path, and do not infer capability from a tool
-catalog, a binary, or a previous session.
+condition. A false or unavailable capability is a blocker. Do not use a direct
+supervisor CLI or local substitute as a fallback for this construction path,
+and do not infer capability from a tool catalog, a binary, or a previous
+session.
 
 ## Prepare the prose blueprint
 

@@ -951,18 +951,18 @@ _register_table(
 
 # --- domain `pin.` — stage s4_pin -------------------------------------------
 # `pin.build_failed` is owner: agent BY CONSTRUCTION, not by evidence. Phase A
-# cannot execute the builders, so a closure can pass it in full and still fail
-# when the supervisor pins it. Stage 4 masquerades as environment.
+# cannot execute supervisor admission, so a closure can pass it in full and
+# still fail when the supervisor pins it. Stage 4 masquerades as environment.
 _register_table(
     "s4_pin",
     (
         ("pin.build_failed", "error", "agent", "none", False,
-         "build_data_product returned an error — a code fault Phase A cannot see"),
+         "workflow admission returned an error — a code fault Phase A cannot see"),
         ("pin.spec_compile_error", "error", "agent", "none", False,
-         "the supervisor could not compile the spec (origin unbound — inspect_run "
-         "is characterized but not wired; see design note §1.8.2)"),
+         "the supervisor could not compile the spec (origin unbound — inspect the "
+         "workflow operation for the bounded diagnostic)"),
         ("pin.no_endpoint", "error", "agent", "none", False,
-         "the build returned no endpoint"),
+         "workflow admission returned no endpoint"),
     ),
 )
 

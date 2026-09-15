@@ -1030,18 +1030,18 @@ add it explicitly rather than assuming it's already covered.
   lives in these attributes, not in a companion file; everything the transform
   reads at run time is an attribute on the `api-source` service.
 
-  **Every api-source closure using this desktop-supervisor compatibility path still needs
+  **Every api-source closure using the desktop-supervisor workflow-v2 path still needs
   `csv-source-path` and a non-empty `data/` tree before the desktop supervisor
   will stage an api-only closure.** This is a staging preflight requirement, not an
   api-source contract: the API connector does not read the placeholder as
-  source data. If that preflight is the path being exercised, it pins the
+  source data. When this workflow-v2 preflight is exercised, it pins the
   directory before the connector runtime runs, so the closure must satisfy it
   even though it has no landed reference data.
 
   In two consecutive live `crm-pipeline` runs — one hand-authored and one
-  through this skill — the supervisor spent a check cycle on this preflight
-  before any Python ran. If the kernel stops pinning a CSV directory for
-  api-only closures, remove this compatibility block.
+  through this skill — the supervisor spent a check cycle on this staging
+  preflight before any Python ran. If the kernel stops pinning a CSV directory
+  for api-only closures, remove this block.
 
   Ship the `csv-source-path` file holding the relative export root, exactly as a
   CSV closure does, and put at least one `.csv` under that root. Three findings
@@ -1060,7 +1060,7 @@ add it explicitly rather than assuming it's already covered.
 
   An empty `csv-source-path` file is its own finding (`structure/csv_source_invalid`),
   so blanking it is not a way out. For a closure with no landed reference data,
-  use a **flat** compatibility placeholder, not a model-shaped directory:
+  use a **flat** staging placeholder, not a model-shaped directory:
 
   ```sh
   printf 'data\n' > csv-source-path
@@ -1074,9 +1074,10 @@ add it explicitly rather than assuming it's already covered.
   declares a CSV connector: the closure still names only `api-source` in
   `.secrets([...])`, and there is still no `csv-source` service in the profile.
 
-  > This documents a supervisor requirement that contradicts the api-source
-  > contract, not a design intent. If the kernel stops pinning a CSV directory
-  > for api-only closures, delete this block rather than the placeholder advice.
+  > This documents a supervisor staging requirement that is separate from the
+  > api-source contract, not a design intent. If the kernel stops pinning a CSV
+  > directory for api-only closures, delete this block rather than the
+  > placeholder advice.
 
   For 2+ API sources, add one labeled service per
   instance instead (`api-source-<label>` / label-prefixed attribute keys such
@@ -1118,10 +1119,10 @@ sidecar channel this file spends a section rejecting. Report Phase B as **not ru
 In a workflow-v2-capable enrolled runtime, the supervisor's returned
 `start_requirement` action performs the authoritative validation before
 `start_run`; do not use a local check as a construction fallback.
-`check_data_product` remains the compatibility verification path only for an
-explicitly feature-off/non-enrolled runtime: it pins and compiles the real
-closure under the supervisor's own interpreter, which is stronger evidence
-than the dry run it replaces.
+`check_data_product` remains a read-only verification path: it pins and compiles
+the real closure under the supervisor's own interpreter, which is stronger
+evidence than the dry run it complements. It does not replace workflow-v2
+capture, review, or admission.
 
 ### Two ways a probe lies
 

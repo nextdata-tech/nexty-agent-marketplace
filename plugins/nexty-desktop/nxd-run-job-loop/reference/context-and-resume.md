@@ -16,11 +16,11 @@ task-scheduling half — routing, step order, caps, fan-out — lives in
 [scheduling.md](scheduling.md).
 
 This file covers reattachment, not a way around construction controls. For a
-new local construction on a runtime that advertises workflow-v2 execution,
+new local construction, follow the workflow-v2 execution sequence,
 follow [workflow-v2.md](workflow-v2.md) and its returned capability, consent,
 capture, retained-review, and admission actions. A false or unavailable
-capability is a blocker for that construction, not permission to call a legacy
-builder.
+capability is a blocker for that construction, not permission to bypass the
+supervisor-owned sequence.
 
 ## What persists, what dies
 
@@ -132,9 +132,8 @@ cross-session catalog and a fast re-serve; use them:
 2. **Resume.** If the workflow appears with `artifact_status: available`, call
    `mcp__nxd-desktop__resume_data_product` with that `workflow` id (pass it
    verbatim). It reuses the durable published artifact and returns a fresh
-   `semantic_endpoint` plus a session `bearer_token` — the same shape the
-   compatibility `build_data_product` path returns — in seconds, with **no**
-   regeneration. Then
+   `semantic_endpoint` plus a session `bearer_token` — the same shape workflow
+   admission returns — in seconds, with **no** regeneration. Then
    render the pinned release with `nxd-render-static-artifact` before describing or
    querying it. Every ruling encoded when the product was built is preserved.
 3. **Describe, then answer.** Call `mcp__nxd-desktop__describe_models` with the
@@ -154,13 +153,12 @@ If it returns `workflow_not_found`, nothing is published under that id — the
 error data lists the `available_workflows`; pick one, call `list_data_products`
 to re-check, or treat it as a fresh build.
 
-## When resume is not possible — rebuild fallback
+## When resume is not possible — reconstruct through workflow-v2
 
-Rebuild is the fallback, not the default. Reach for it only when the published
-artifact is genuinely gone. On an enrolled workflow-v2 runtime, reset and
-reconstruct through the v2 sequence instead of bypassing capture and review.
-The `build_data_product` command in this section is retained only for an
-explicitly feature-off or non-enrolled compatibility runtime:
+Reconstruction is needed only when the published artifact is genuinely gone.
+Preserve the closure and blueprint, then use the workflow-v2 sequence to
+capture, review, validate, admit, and publish again. Never use a direct CLI,
+removed builder, or local substitute to bypass those supervisor-owned steps.
 
 - `list_data_products` reports the workflow as `collected` (the published data
   was garbage-collected) or `release_unreadable` (the durable record is
@@ -168,22 +166,14 @@ explicitly feature-off or non-enrolled compatibility runtime:
 - `resume_data_product` returns `artifact_unavailable` (garbage-collected or
   failed integrity revalidation).
 
-In those cases, rebuild from the closure with the **same** definition path and
-the **same** workflow id:
-
-```
-build_data_product(definition="<abs path to the closure>", workflow="<workflow-id>")
-```
-
-Use that legacy command only after confirming the runtime is feature-off or the
-workflow is not enrolled in v2; it must not be used to bypass an enrolled
-workflow's construction actions. Reusing the workflow id is what makes this a
-reopen of one product rather than
-the creation of a second one. Rebuild is sound because the closure is
-deterministic and embeds its own copy of the source: the rebuilt product carries
-identical rulings and identical rows, including any landed decisions model. It
-costs a full build; use [user-facing-language.md](user-facing-language.md) for
-the user-facing wording.
+In those cases, call `get_workflow_capabilities`, then `prepare_workflow` and
+follow the returned `advance_workflow` actions. If a pending workflow has a
+current revision, reset it with the supervisor-returned requirement identity
+before recapturing; never invent a request, revision, or admission identity.
+If the supervisor cannot create or reset the workflow, report that blocker
+instead of attempting a direct construction. The closure remains the source
+for the fresh capture, and the new publication must be re-described before
+querying.
 
 If the closure path itself is gone, say so and treat the request as a fresh
 build from source — do not guess a definition path or probe the filesystem for

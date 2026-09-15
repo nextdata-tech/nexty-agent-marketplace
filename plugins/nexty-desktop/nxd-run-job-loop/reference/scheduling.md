@@ -30,9 +30,9 @@ smallest path that can give an honest answer:
 |---|---|
 | **Explicit deployed/platform product** — the user names a remote DP, cluster, or platform endpoint | Hand off to `nxd-query-data-product`. Do not create a local replacement. |
 | **Existing local product with endpoint/token but no workflow id** | Explicit query-only exception: state that the static artifact is unavailable, then call `describe_models` and answer through `run_semantic_query`. |
-| **Existing local product, but no endpoint/token** — the typical new session, since the bearer is per-session and never persisted | **Reattach, don't rebuild.** Use `list_data_products` for discovery only, then `resume_data_product`, render the release with `nxd-render-static-artifact`, then describe/query. A fresh endpoint and bearer arrive in seconds with no regeneration. Rebuild is the fallback only when the published artifact is gone. |
+| **Existing local product, but no endpoint/token** — the typical new session, since the bearer is per-session and never persisted | **Reattach, don't rebuild.** Use `list_data_products` for discovery only, then `resume_data_product`, render the release with `nxd-render-static-artifact`, then describe/query. A fresh endpoint and bearer arrive in seconds with no regeneration. If the published artifact is genuinely gone, reconstruct only through `get_workflow_capabilities` → `prepare_workflow` → the returned `advance_workflow` actions. |
 | **Endpoint + bearer + workflow** | Render the pinned static artifact first, then describe/query. The artifact is release-scoped and does not consume the bearer. |
-| **Share / hand off a product** — the user wants to give it to another person or machine | Call `mcp__nxd-desktop__export_data_product` with the same `definition` path used to build it. Read-only and on demand — not part of the build/query loop. It zips the closure, strips credentials fail-closed, and emits a guided `IMPORT.md` for the recipient to rebuild. Full playbook: [handoff-export.md](handoff-export.md). |
+| **Share / hand off a product** — the user wants to give it to another person or machine | Call `mcp__nxd-desktop__export_data_product` with the same `definition` path used to build it. Read-only and on demand — not part of the build/query loop. It zips the closure, strips credentials fail-closed, and emits a guided `IMPORT.md` for the recipient to reconstruct through workflow-v2. Full playbook: [handoff-export.md](handoff-export.md). |
 | **In-scope source data** — attached/exported CSVs, another local file (JSON/JSONL/Parquet), a connected workspace folder, pasted tabular data, a spreadsheet, an accessible live database connection, or an off-mesh REST API the user describes | Preserve the source, infer a model, generate a local closure when no suitable local product exists, then answer through the supervisor. An ordinary single file source may be copied unchanged into the generated closure's required export layout; a database or API source is described (host/URL, credentials-availability, table/endpoint list), never fabricated, and its connection details pass through to generation exactly as the user gave them — **a live credential stays in the owning main thread and is injected host-side**. Never modify a supplied original. |
 | **No product and no source** | Ask one concise question naming the missing thing: the local data file/folder or an existing product to query. Do not manufacture a dataset, create a throwaway database, or probe Cowork uploads/workspaces with Bash in hope of finding one. |
 | **Trivial, non-durable calculation** — for example, arithmetic over values pasted in the request, with no request to analyze or reuse data | Answer directly. Do not start a supervisor or build a product. |
@@ -67,7 +67,7 @@ doing so:
 - A **model/DP-level** fix (missing metric, wrong grain, a new derived model)
   re-runs Steps 2/3 → 4 → 4a → 5 with the **same** workflow id.
 
-After any same-workflow rebuild discard cached resource URIs and the former
+After any same-workflow reconstruction discard cached resource URIs and the former
 current artifact file, render the new publish sequence in Step 4a, then
 re-`describe_models` before mapping again — never map against a remembered catalog.
 
@@ -83,7 +83,7 @@ non-convergence rather than looping forever or giving up silently:
   needs a column/grain that does not exist yet (a filtered figure, a ratio, a
   monthly rollup, a classification). The latter is a **derived model**, not a
   query tweak: go back to Step 2/3, have `nxd-generate-data-product` materialize the
-  ruling, rebuild through MCP with the **same** workflow id. Cap at **~3
+  ruling, reconstruct through workflow-v2 with the **same** workflow id. Cap at **~3
   regenerate cycles total**.
 - **Environmental retry** — a failure the closure cannot fix, evidenced by a
   supervisor-reported error. Cap at **~3 retries**. It consumes neither of the
@@ -116,7 +116,7 @@ once.
 The supervisor enforces the same shape from its side: a session serves **one
 workflow at a time**. Building or resuming a *different* workflow replaces the
 current endpoint, so any earlier endpoint from this session stops answering.
-Resuming or rebuilding the **same** workflow id is the regenerate/reopen
+Resuming or reconstructing the **same** workflow id is the regenerate/reopen
 primitive and returns the same product.
 
 ## Subagent fan-out
