@@ -17,6 +17,7 @@ not a second document that a user is expected to author or inspect.
 from __future__ import annotations
 
 import argparse
+import copy
 import dataclasses
 import hashlib
 import json
@@ -929,6 +930,31 @@ def locked_decision_inventory(proposal: Any) -> tuple[dict[str, Any], ...]:
         and item.get("status") == "locked"
     ]
     return tuple(sorted(decisions, key=lambda item: str(item["id"])))
+
+
+def lock_decisions_for_approval(proposal: Any) -> dict[str, Any]:
+    """Project a validated candidate into the post-consent locked snapshot.
+
+    This changes only the typed Decision lifecycle field.  The supervisor
+    invokes it after recording subject-bound user consent; it is not an
+    authorization operation and must never be used to alter the retained
+    pre-consent proposal.
+    """
+    if not isinstance(proposal, dict):
+        raise ValueError("the typed proposal must be a JSON object")
+    projected = copy.deepcopy(proposal)
+    payload = projected.get("proposal")
+    if not isinstance(payload, dict) or not isinstance(payload.get("decisions"), list):
+        raise ValueError("the typed proposal must contain a decisions list")
+    for index, decision in enumerate(payload["decisions"]):
+        if not isinstance(decision, dict):
+            raise ValueError(f"decision {index} must be an object")
+        status = decision.get("status")
+        if status == "proposed":
+            decision["status"] = "locked"
+        elif status != "locked":
+            raise ValueError(f"decision {index} has an unsupported status")
+    return projected
 
 
 def canonical_terms(payload: Any) -> list[dict[str, Any]]:

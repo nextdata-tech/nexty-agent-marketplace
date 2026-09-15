@@ -32,8 +32,12 @@ artifact with that source's label.
 
 ## Attached or workspace file
 
-Make an exact byte-for-byte copy into the generated connector export. Do not
-rewrite delimiter, encoding, headers, or rows.
+Before asking the user for a path or claiming that no source exists, inspect all
+supplied attachments, declared workspace artifacts, source profiles, and
+reference files. Resolve the in-scope source from those declared inputs when it
+is present; ask only about a real missing or ambiguous source. Make an exact
+byte-for-byte copy into the generated connector export. Do not rewrite
+delimiter, encoding, headers, or rows.
 
 ## Pasted table
 

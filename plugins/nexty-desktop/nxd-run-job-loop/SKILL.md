@@ -13,7 +13,7 @@ allowed-tools:
   - Task
 metadata:
   author: nextdata
-  version: 0.49.4
+  version: 0.49.5
 ---
 
 # nxd-run-job-loop skill
@@ -92,7 +92,7 @@ are mandatory anyway whenever the session registry exposes them.
 
 ### Step 1 — Gather intent, sources, questions, and output needs
 
-Establish the following (ask the user for whatever is missing):
+Establish the following (ask the user for whatever is missing). Before asking for a path or claiming no source exists, inspect supplied attachments, declared workspace artifacts, source profiles, and reference files; use a discovered in-scope source and ask only for a genuine gap.
 
 - **Intent** — what the data product is about, in the user's words.
 - **Sources** — where the in-scope local data lives. Preserve each source exactly; if it
@@ -213,15 +213,15 @@ the executable closure inputs — `spec.py`, `models.py`, `infra-profile.yaml`,
 `dp-blueprint.md`, inferred model, and connector config. Pass every source, its
 label and provenance, plus the resolved absolute `job_helper_dir`. The generator
 compiles the approved plan; it does not re-derive it, author supervisor YAML, or open a new policy turn. Follow its connector references and `reference/dlt.md` for the exact closure shape.
+The typed-v3 proposal sent to `prepare_workflow` is the consent candidate: every Decision is included in the exact echo-back and may remain `status: proposed` until the user approves. The supervisor's trusted materializer projects those Decisions to `locked` only after the subject-bound `session_decision`; `locked` is an approval-derived snapshot state, not authorization by itself. Do not change the proposal after prepare or consent; any change requires a new proposal binding and fresh approval.
 The typed v3 contract inventory is executable handoff, not optional metadata: every
 Input expectation and Output promise must become exactly one closure verifier and
 one matching `custom(...)` wiring at its declared attachment and phase. Preserve
 the contract id, attachment, model, phase, guarantee, rule, and fields exactly;
 ordinary `.promise(model)` never satisfies a custom contract.
 Copy exact parser coordinates for every source span (a `###` subsection `.text`
-range excludes its heading but may include separator blank lines); use
-`validation_issue.expected_source_span` on a mismatch and never trim or widen
-the range or alter the typed value.
+range excludes its heading but may include separator blank lines). A
+`v3.provenance.span_mismatch` must use structured `validation_issue.expected_source_span`; if the MCP host exposes only error text, parse the safe `validation_issue=...` JSON suffix and copy exactly its four numeric coordinates. Never guess, split, trim, widen, or alter typed values.
 Under the shellless v2 contract, the agent must not run lock write, hand-author reserved v3 metadata, or copy a checker into the closure before capture. The supervisor owns capture-time materialization and verification of those reserved surfaces. If helper tools exist, agent-side self-check and lock checks are optional evidence only and are never execution authority. Generation starts only after the supervisor records the approval. Steps 2–3
 stay on the main thread for an activated workflow-v2 session. Do not delegate
 semantic inference, closure generation, or any workflow MCP action to a child;

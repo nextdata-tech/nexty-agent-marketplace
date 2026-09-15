@@ -75,8 +75,20 @@ blueprint edit and validate the exact proposal before calling `prepare_workflow`
 
 If `prepare_workflow` returns `v3.provenance.span_mismatch` with a structured
 `validation_issue.expected_source_span`, replace only that path's coordinates
-with the returned four integers and retry the exact proposal. Treat the hint as
-coordinates, not permission to widen the span or alter the typed value.
+with the returned four integers and retry the exact proposal. If the MCP host
+renders only error text, parse the safe `validation_issue=...` JSON suffix and
+copy exactly its four numeric coordinates. Never guess, split, trim, widen, or
+alter typed values; the hint is coordinates, not permission to change the typed
+value.
+
+If the typed path differs from the parser path, resolve it through the proposal's
+`anchors` map (`source_path` → `target_path`) and use the trusted parser's
+source-map span for the resolved source path. A missing source mapping or more
+than one anchor for the same typed target is an error: stop and repair the
+proposal from a fresh parser/source-map result; never guess a span. After any
+repair, round-trip the complete JSON, re-run strict proposal validation, and
+send a new globally unique `request_id` because the payload changed. Reuse a
+`request_id` only when replaying the byte-for-byte identical request.
 
 Omit `source_hash` from the caller-authored object. The supervisor inserts or
 replaces it with the canonical hash of the retained Markdown before validating
@@ -87,6 +99,13 @@ Use the returned `revision`, `invalidation_epoch`, requirement identities,
 subjects, and `next_actions` as the current state. The response is a durable
 snapshot, not approval. Do not invent requirement ids, subjects, revisions, or
 epochs from the contract or from local files.
+
+The typed proposal is the consent candidate: every typed-v3 Decision must be
+covered by the exact echo-back and may remain `status: proposed` during prepare.
+After the supervisor records the subject-bound `session_decision`, its trusted
+materializer projects proposed Decisions to `locked` in the approved closure
+snapshot. `locked` is an approval-derived snapshot state, not authorization by
+itself; do not change the proposal after consent.
 
 ## Relay consent and capture
 
@@ -124,7 +143,11 @@ prepare. Generate the closure only after this action succeeds. Under the
 shellless contract, do not run `dp_diagnostics.py lock write`, hand-author
 reserved v3 metadata, or copy a checker into the closure before capture. Follow
 the returned `next_actions` and call the indicated `capture` action with the
-generated closure's host-visible authoring root. Capture is the supervisor's
+generated closure's host-visible authoring root. Immediately before capture, run
+the generator's [pre-capture audit](../../nxd-generate-data-product/reference/pre-capture-audit.md)
+against the approved proposal and closure. Batch same-round mechanical
+corrections before recapturing; do not spend one capture generation per
+individual correction. Capture is the supervisor's
 retained, sealed input for all later work: it materializes and verifies
 `dp-blueprint.approved.md`, `dp-blueprint.proposal.approved.json`,
 `dp-blueprint.lock.json`, and the trusted `self_check.py`. Agent-authored copies

@@ -188,6 +188,22 @@ producing the identical error:
 Fix the cause, or escalate it as a blocker. "Retrying unchanged would not help"
 is itself a finding worth stating.
 
+### Repair a deterministic contract-inventory rejection once
+
+When workflow-v2 capture or preflight returns
+`closure.contract_inventory_mismatch`, allow one bounded mechanical repair of
+the generated closure only when the approved proposal's semantics are
+unchanged. Preserve the approval, typed proposal, Terms, contract identifiers,
+attachments, phases, delivery, anchors, and all approved values; repair only
+the missing, extra, or unwired generated inventory and then recapture and run a
+fresh review for that generation. This is not a new approval.
+
+If the repair changes semantics, Terms, contracts, delivery, or any typed
+proposal content, stop, reset the workflow, and obtain fresh user approval
+before generating again. An ambiguous operator reply is not approval. Use no
+unbounded repair loop: after the single bounded attempt, report the mismatch
+and stop or ask for the decision the workflow requires.
+
 ### Say whether the model was contacted
 
 For a mapper build, the user's first real question is whether it spent money and
