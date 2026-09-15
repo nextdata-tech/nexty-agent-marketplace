@@ -19,6 +19,8 @@ commits changes to this public repository.
 The generated plugin uses Claude's conventional layout:
 `plugins/nexty-desktop/skills/<skill>/SKILL.md`. Its plugin manifest intentionally
 omits a custom `skills` path so Claude can discover the standard directory.
+The sync workflow pushes generated changes to the protected repository's
+`automation/nexty-desktop-skills` branch for review through a pull request.
 
 The sync workflow needs a repository secret named
 `NEXTY_AGENT_SKILLS_TOKEN`. It must be able to read
