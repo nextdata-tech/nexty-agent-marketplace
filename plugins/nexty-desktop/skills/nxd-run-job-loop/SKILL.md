@@ -13,7 +13,7 @@ allowed-tools:
   - Task
 metadata:
   author: nextdata
-  version: 0.49.5
+  version: 0.50.0
 ---
 
 # nxd-run-job-loop skill
@@ -311,13 +311,13 @@ natural-language translation is yours to do. For each question:
 
 1. **Describe the served catalog first.** Call `mcp__nxd-desktop__describe_models`
    with the endpoint/token returned by the build (or supplied for an existing
-   local product) — the declared vocabulary is canonical, don't guess concept
-   names from source columns.
-2. **Map the NL question to a selection.** Pick the measure(s)/dimension(s) that
-   answer it — reuse the question→concept mapping approach from
-   **nxd-query-data-product**'s semantic-layer section. Restate the selection
-   before running and, if it is ambiguous against the declared concepts, ask
-   rather than silently picking.
+   local product) — the response is the complete catalog for this local closure;
+   use its canonical vocabulary, never guessed source-column names. Do not apply mesh-sized catalog narrowing here.
+2. **Map the NL question to a selection.** Pick the measure(s)/dimension(s) that answer it, then consult the shared [semantic intent foundation](../nxd-semantic-query-intent/SKILL.md)
+   and [intent-gate reference](../nxd-semantic-query-intent/reference/semantic-intent-validation.md).
+   Run coverage over every model in the complete local `describe_models` catalog; apply the critic, echo, and clarify/abstain rather than silently picking. Keep
+   platform mesh/domain narrowing and cross-DP query-system behavior out of this local path;
+   join-reachable models within this closure remain eligible.
 3. **Check the question fits the MCP grammar.**
    `mcp__nxd-desktop__run_semantic_query` accepts `measures[]`, `dimensions[]`,
    ANDed `filters[]`, `order_by[]` and `limit` — no `OR`, no measure-level
