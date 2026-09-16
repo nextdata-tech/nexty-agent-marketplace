@@ -14,7 +14,7 @@ allowed-tools:
   - Task
 metadata:
   author: nextdata
-  version: 0.50.2
+  version: 0.50.3
 ---
 
 # nxd-generate-data-product skill
@@ -375,7 +375,7 @@ Raise `RuntimeError` carrying actual-vs-expected. An itemized exclusion means a
 totality alone can pass while every monetary answer is overstated — both, with
 worked code, in [reference/derived-models.md](reference/derived-models.md).
 
-**Other connector types**: Step 3 is identical except the `readers=[...]` body and `secrets[...]` key — take those from `reference/` (`file-source.md`, `database-source.md`, `api-source.md`); when an API returns a metadata envelope, select its row array with the resource endpoint's `data_selector` before landing. Steps 3a/3b are connector-independent.
+**Other connector types**: Step 3 is identical except the `readers=[...]` body and `secrets[...]` key — take those from `reference/` (`file-source.md`, `database-source.md`, `api-source.md`); when an API returns a metadata envelope, select its row array with the resource endpoint's `data_selector` before landing. For a credentialed REST API, `auth_type = secrets.get("auth_type")` is mandatory: branch on it to assemble structured `client_config["auth"]` from the flat `secrets` fields and raise for unsupported non-`None` values; never hard-code only the scheme today's profile uses. Steps 3a/3b are connector-independent.
 
 ### Step 4 — `spec.py`: models + transform + the `duckdb` output port
 
