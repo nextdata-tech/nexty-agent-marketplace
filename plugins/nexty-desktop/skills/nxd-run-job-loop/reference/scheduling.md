@@ -219,18 +219,23 @@ paths. The owning/main thread must dispatch that one conversation child (a
 `general-purpose` subagent is acceptable); it must not load
 `nxd-review-closure` with `Skill` and review inline, and the supervisor never
 launches the reviewer. The child prompt carries only the retained review inputs
-and sanitized request, tells the child to load the reviewer skill, and includes
-the canonical dispatch marker in [workflow-v2.md](workflow-v2.md). There is no
-complexity-based skip or mutable-path duplicate.
+and sanitized request plus the caller-supplied hard review budget, tells the
+child to load the reviewer skill, and includes the canonical dispatch marker in
+[workflow-v2.md](workflow-v2.md). There is no complexity-based skip or mutable-
+path duplicate.
 
 Preserve every user question and supplied procedure under the
 `sanitized_original_request` contract, inventory and replace every credential,
 and stop if complete sanitization cannot be established. The reviewer returns
 claims only and never edits, builds, serves, transforms, or talks to the user.
-The exact marker, 120-second deadline, external `review-record.json` ledger,
+The exact marker and current workflow-v2 120-second deadline, external `review-record.json` ledger,
 bounded `report_requirement` projection, remediation loop, and wire fields are
 canonical in [workflow-v2.md](workflow-v2.md) and
 [adversarial-review.md](../../nxd-generate-data-product/reference/adversarial-review.md).
+The reviewer must front-load high-value checks, reserve time to return complete
+or partial claims, and may emit one concise progress checkpoint when the Agent
+runtime forwards intermediate text. Progress does not extend or reset the
+absolute deadline.
 
 An accepted behavior-changing finding requires reset, local correction, optional
 agent-side evidence when tools exist, recapture, and one fresh review for the new generation. Evidence
