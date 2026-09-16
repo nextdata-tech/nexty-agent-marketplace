@@ -31,7 +31,8 @@ and record write and after the supervisor has captured the closure. Run one
 review for each capture generation over the supervisor-provided retained paths.
 The activated contract makes the review mandatory; there is no complexity-based
 skip. A behavior-changing fix resets capture and requires a fresh review of the
-new generation. The statuses are `complete`, `timed_out`, and `needs_user`.
+new generation. A returned, adjudicated round is recorded as `complete`; an
+interrupted child remains pending for the user or runtime that owns it.
 
 ## Dispatching
 
@@ -61,33 +62,35 @@ delegate**: stop and report that credential-safe review dispatch is blocked.
 No credential may reach the reviewer.
 
 Normalize the closure path relative to the workspace (`closure` or
-`nxd-jobs/<workflow>/closure`) and include exactly one compact marker line with
-the exact keys and constant values shown here:
+`nxd-jobs/<workflow>/closure`) and use this complete prompt block. Replace only
+the angle-bracketed values with the exact `review_input` paths and the fully
+sanitized request. Keep both retained-path lines exactly once, keep exactly one
+nonblank `Sanitized original request:` line, and include the marker exactly
+once. The prompt must tell the child to load and follow `nxd-review-closure`,
+and must give it the retained capture root, retained blueprint path, and the
+original request under the existing sanitized-request contract:
 
 ```text
+retained_capture_root: <exact retained_capture_root from review_input>
+retained_blueprint_path: <exact retained_blueprint_path from review_input>
+Load and follow nxd-review-closure.
+Sanitized original request: <complete request with credentials replaced>
 NXD_REVIEW_DISPATCH {"closure_path":"closure","request_contract":"sanitized_original_request","return":"claims_only","review_round_index":0}
 ```
 
-Replace only the example `closure_path` and `review_round_index` values. Keep
-every other key/value unchanged and add no colon, slug or prose prefix. The dispatch instruction says
-**return claims only**. The reviewer receives read-only tools, never edits,
-builds, serves, runs the transform, or starts a user conversation.
+Replace only the example `closure_path` and `review_round_index` values in the
+marker. Keep every other key/value unchanged and add no colon, slug or prose
+prefix. Invoke the child inline with `run_in_background: false` when the
+installed `Agent`/`Task` schema exposes that field; otherwise omit it, and
+never set it to `true`. Load `nxd-review-closure` and **return claims only**.
+The reviewer receives read-only tools, never edits, builds, serves, runs the
+transform, or starts a user conversation.
 
-The dispatcher starts a **120000 ms elapsed-time deadline** at dispatch; this
-is never a cap on findings. At the deadline it persists one terminal
-external `review-record.json` entry with `status: timed_out`, `budget_ms: 120000`, elapsed
-time, and every partial claim received by then — no delayed collection and no
-finding-count cap. Adjudicate and relay those partial claims normally. If the
-client cannot cancel or collect the child at the deadline, still persist that
-`timed_out` entry with what was collected (possibly none), do not build or
-serve, and stop the workflow as `needs_user` until the user explicitly chooses
-whether to continue. Record that choice as `user_decision` with its user-message
-citation and `approved_finding_ids` (an empty list means the user chose to
-continue without approving any returned finding); the review status remains
-truthfully `timed_out`. An empty timeout is not a clean review. Use
-`status: complete` only for a returned, adjudicated round; use
-`status: needs_user` only for a round carrying at least one finding awaiting
-the user's decision.
+The Desktop workflow records only a returned, adjudicated review round. Do not
+invent a timeout record, a review verdict, or claims when a client-side review
+child cannot return; keep the workflow pending for the user or runtime that
+actually owns that interruption. An incomplete child result is not a clean
+review and never justifies a second reviewer for the same capture generation.
 
 The reviewer inspects disclosure paths first: output promises and exposed
 ports, then model roles and physical writes, then both semantic and direct-store
