@@ -7,17 +7,17 @@ allowed-tools:
   - Grep
 metadata:
   author: nextdata
-  version: 0.49.5
+  version: 0.50.0
 ---
 
 # Review a generated closure — adversarially
 
 This role is loaded by exactly one built-in `Agent` or `Task` conversation
 subagent dispatched by the owning job loop after capture. The owning/main thread
-may load orchestration guidance, but must not invoke this skill with `Skill` to
-conduct the review inline, and the supervisor/MCP never launches the reviewer.
-The main thread receives the child's claims and remains responsible for the
-external ledger, user adjudication, and `report_requirement` relay.
+must not invoke this skill with `Skill` to conduct the review inline, and the
+supervisor/MCP must not launch the reviewer. The main thread receives the
+child's claims and remains responsible for the external ledger, user
+adjudication, and `report_requirement` relay.
 
 You are reviewing a closure someone else authored. Your job is to find what is
 **wrong with it as an answer to the request**, not what is wrong with it as a
