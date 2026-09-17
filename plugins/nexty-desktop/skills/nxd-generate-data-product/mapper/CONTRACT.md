@@ -282,8 +282,10 @@ projection (design §2). `mapper_review_outcomes` is a replace-loaded audit
 projection of the durable reviews for the current published population.
 
 Column type names are the `nxd.spec` types (`string()`, `int64()`, `float64()`,
-`bool()`, `timestamp()`), since these land as base models through the normal dlt
-reader loop.
+`bool()`, `timestamp(unit=DurationUnit.Microseconds)`), since these land as
+base models through the normal dlt reader loop. In a generated `models.py`,
+import `DurationUnit` from `nxd.core.yaml_schemas` and pass the unit explicitly;
+`timestamp()` is not a valid zero-argument constructor.
 
 ### 2.1 `mapper_proposals`
 
@@ -298,7 +300,7 @@ every build** — it is this run's output, not durable state.
 | `value_int` | `int64()` | **yes** | | ditto |
 | `value_float` | `float64()` | **yes** | | ditto |
 | `value_bool` | `bool()` | **yes** | | ditto |
-| `value_timestamp` | `timestamp()` | **yes** | | ditto |
+| `value_timestamp` | `timestamp(unit=DurationUnit.Microseconds)` | **yes** | | ditto |
 | `value_type` | `string()` | no | | Which slot is authoritative: `string`\|`int`\|`float`\|`bool`\|`timestamp`. Populated even when the value is null, so the resolver knows the column's type without consulting the spec. |
 | `value_hash` | `string()` | no | | `sha256` over the canonical value encoding (§5). Stable for null: the null-of-type digest, not the empty string. |
 | `value_status` | `string()` | no | | The enum in §3. |
@@ -344,13 +346,13 @@ tradeoff recorded, in open question 5.
 | `override_value_int` | `int64()` | **yes** | | ditto |
 | `override_value_float` | `float64()` | **yes** | | ditto |
 | `override_value_bool` | `bool()` | **yes** | | ditto |
-| `override_value_timestamp` | `timestamp()` | **yes** | | ditto |
+| `override_value_timestamp` | `timestamp(unit=DurationUnit.Microseconds)` | **yes** | | ditto |
 | `override_value_type` | `string()` | **yes** | | Non-null iff `verdict = overridden`. |
 | `bound_value_hash` | `string()` | **yes** | | The `value_hash` this review examined. Null iff `verdict = overridden` **and** the reviewer is overriding an absent proposal. |
 | `bound_input_snapshot_id` | `string()` | no | | The `input_snapshot_id` in force when reviewed. |
 | `bound_mapper_spec_id` | `string()` | no | | The `mapper_spec_id` in force when reviewed. |
 | `reviewer` | `string()` | no | | Identity. `human` or a named reviewer; never a model name — a model does not review. |
-| `reviewed_at` | `timestamp()` | no | | Supplied by the reviewer's tooling, not by the transform. Not `now()` at build time. |
+| `reviewed_at` | `timestamp(unit=DurationUnit.Microseconds)` | no | | Supplied by the reviewer's tooling, not by the transform. Not `now()` at build time. |
 | `note` | `string()` | **yes** | | Free text, reviewer-authored. |
 
 Uniqueness: `review_id`. **Not** `(target_row_key, field)` — a later review of the
@@ -395,7 +397,7 @@ published projection and retains both sides of the binding for diagnosis.
 | `effective_value_hash` | `string()` | yes | Hash published for the cell when a resolution row exists. |
 | `winner_review_id` | `string()` | yes | Winning review for an applied or superseded decision. |
 | `reviewer` | `string()` | no | Original reviewer identity. |
-| `reviewed_at` | `timestamp()` | no | Original review timestamp. |
+| `reviewed_at` | `timestamp(unit=DurationUnit.Microseconds)` | no | Original review timestamp. |
 
 `applied` means the valid review was the winner, including a human rejection
 that intentionally nulls the effective cell. `ignored` means the binding was

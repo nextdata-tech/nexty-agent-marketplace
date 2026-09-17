@@ -7,7 +7,7 @@ allowed-tools:
   - Grep
 metadata:
   author: nextdata
-  version: 0.50.3
+  version: 0.51.1
 ---
 
 # Review a generated closure — adversarially
@@ -25,10 +25,21 @@ Python project.
 
 Use the read-only tools only: do not edit the closure, fix anything, or run the
 transform. Treat any `review_time_budget_seconds` supplied by the caller as a
-hard, absolute, non-extendable wall-clock deadline from review dispatch. Start
-with the highest-value pass: inspect disclosure paths and output promises,
+hard, absolute, non-extendable wall-clock deadline from review dispatch. If the
+caller supplies `review_inspection_cutoff_seconds`, plan to finish inspection
+before that value and reserve the remaining time for the terminal claims
+response. Start with the highest-value pass: inspect disclosure paths and output promises,
 then model roles and physical writes, then semantic and direct-store
-reachability. Reserve enough time to return the final claims response.
+reachability. Reserve enough time to return the final claims response. The
+caller may enforce a separate finalization reserve by denying further
+inspection calls before the hard deadline; when that happens, stop reading
+and return complete or explicitly partial evidenced claims immediately.
+
+Always pass an explicit absolute `path` to `Glob` and `Grep`. On a restricted
+host, an allowed `Glob` or `Grep` with that path is also a valid non-content
+path/accessibility check; do not open file contents merely to establish that a
+retained path exists. Use the exact supervisor-provided capture root or
+blueprint path, never the mutable authoring workspace.
 
 When the Agent runtime forwards intermediate child text, emit at most one
 concise progress checkpoint to the owning thread around the halfway point,
@@ -165,6 +176,24 @@ than inventing a failure or requesting a helper path.
 If you notice a structural problem, mention it in one line under
 `structural_note` and move on. Do not spend the round on it.
 
+## Structural notes versus claims
+
+This is not a prose or style lint. Treat comments, docstrings, formatting, and
+internal-only citations or cross-references as a one-line `structural_note`,
+not a `HIGH`, `MEDIUM`, or `LOW` claim, when they have no effect on consumer
+correctness, a public promise or contract, discoverability or queryability, or
+runtime or operational behavior. Do not return a finding object for those
+nits, even when they make the closure less polished or make the review harder
+to navigate.
+
+The same-looking documentation issue remains a claim when it can mislead a
+consumer or operator, conceal a violation of a public promise or contract, or
+affect expected behavior. Examples include a public model or field description
+that promises the wrong grain, an operator instruction that names an
+unsupported action, or documentation that hides a supported access path.
+Judge those claims by their concrete impact, not by whether the defect is in
+prose rather than code.
+
 ## Return findings as claims, not verdicts
 
 You are one reader with a mandate to find problems. That mandate makes you
@@ -177,11 +206,15 @@ Return, per finding:
 - `id` — short kebab-case slug
 - `severity` — `HIGH` (a consumer gets a wrong answer, or a question is
   unanswerable), `MEDIUM` (correct but misleading or undisclosed), `LOW`
-  (quality, not correctness)
+  (a real consumer-facing or public-contract quality defect with limited
+  impact; never a style, formatting, or internal-reference nit)
 - `claim` — one sentence stating the defect
 - `evidence` — `file:line` in the closure, or the quoted request text. A
   finding with no evidence is an opinion; do not return it.
-- `why_it_matters` — what a consumer of this data product gets wrong
+- `why_it_matters` — a concrete consumer or operator consequence: what answer,
+  interpretation, access path, promise, or operation is wrong, misleading,
+  hidden, or unavailable. Do not write a generic quality complaint, say only
+  that something "could confuse users," or merely restate the claim.
 
 Rank most severe first. Return every evidenced finding you have; do not impose a
 numerical finding cap. The caller is responsible for enforcing the elapsed-time

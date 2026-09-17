@@ -31,6 +31,10 @@ the blueprint before consent, then call `prepare_workflow` with the inline
 `typed_proposal` object, before the approval turn and before generating the
 closure:
 
+The following request-envelope sketch is intentionally abbreviated and is not
+a complete request. Do not copy it as the `typed_proposal`; copy the complete
+typed proposal object from `dp-blueprint.proposal.json` instead.
+
 ```json
 {
   "request_id": "prepare-<workflow>-<unique>",
@@ -63,6 +67,49 @@ input expectation cannot execute on the CSV-first runtime; never emit it as
 decorative unwired code. Wire output promises when their runtime is supported,
 and do not invent contracts from inferred schema facts.
 
+The `proposal` payload is a closed v3 object, not a free-form entity summary. It
+must contain exactly `intent`, `questions`, `scope`, `terms`, `inputs`,
+`models`, `transform`, `outputs`, `decisions`, `open_questions`, `delivery`,
+and `contracts`. Frontmatter-only `name` and `workflow` must not be added to
+this payload. Use these exact item shapes (with no legacy aliases or extra
+keys):
+
+```json
+{
+  "intent": "Provide a queryable order summary.",
+  "questions": [{"id": "order-count", "question": "How many accepted orders are there?"}],
+  "scope": "Use the declared orders input and exclude refunded rows.",
+  "terms": [{"id": "accepted-order", "name": "Accepted order", "definition": "An order that is not refunded.", "priority": "P3"}],
+  "inputs": [{"id": "orders", "expectations": [{"id": "orders-rows", "model": "orders", "guarantee": "Each accepted input row has an order identifier.", "rule": "Reject rows without an order identifier.", "fields": ["order_id"]}]}],
+  "models": [{"id": "orders", "fields": ["order_id"]}],
+  "transform": [{"id": "exclude-refunds", "operation": "filter"}],
+  "outputs": [{"id": "accepted-orders", "promises": [{"id": "accepted-orders-rows", "model": "orders", "guarantee": "Every output row is an accepted order.", "rule": "Exclude refunded rows.", "fields": ["order_id"]}]}],
+  "decisions": [{"id": "refund-rule", "target": "orders", "ruling": "Exclude refunded rows.", "status": "proposed"}],
+  "open_questions": [{"id": "late-orders", "question": "Should late-arriving orders be included?", "blocking": false}],
+  "delivery": {"kind": "semantic_query", "profile": "desktop-local", "port": "duckdb", "provenance": "platform_fixed"},
+  "contracts": [
+    {"id": "orders-rows", "attachment": "input:orders", "model": "orders", "phase": "pre_transform", "guarantee": "Each accepted input row has an order identifier.", "rule": "Reject rows without an order identifier.", "fields": ["order_id"]},
+    {"id": "accepted-orders-rows", "attachment": "output:accepted-orders", "model": "orders", "phase": "post_transform", "guarantee": "Every output row is an accepted order.", "rule": "Exclude refunded rows.", "fields": ["order_id"]}
+  ]
+}
+```
+
+When a term priority is omitted, materialize the platform default as `P3` with
+`platform_fixed` provenance and disclose that default; an explicitly written
+priority uses `explicit` provenance.
+
+Input expectation and output promise source entries each have exactly `id`,
+`model`, `guarantee`, `rule`, and `fields`. Compiled contracts each have exactly
+`id`, `attachment`, `model`, `phase`, `guarantee`, `rule`, and `fields`; copy the
+source entry's `id`, model, guarantee, rule, and fields unchanged. Input
+contracts use `attachment: "input:<input-id>"` and `phase: "pre_transform"`;
+output contracts use `attachment: "output:<output-id>"` and
+`phase: "post_transform"`. A phase is not an attachment, so never use
+`post_transform` as one. Decision items are exactly `id`, `target`, `ruling`,
+and `status`, where status is `proposed` or `locked`. Do not emit
+legacy `name`, `rationale`, or `text` keys for these items, or put an output id
+in place of the `output:<output-id>` attachment.
+
 Source spans are exact coordinates from the trusted parser, not approximate
 Markdown locations. Copy all four integers (`line_start`, `line_end`,
 `offset_start`, and `offset_end`) from the parser's source map for the matching
@@ -72,6 +119,20 @@ may include separator blank lines. Do not trim or widen that range. An anchor
 maps the parser source path to a typed proposal path; omit it when the paths
 already match. Do not calculate spans from memory; rerun the parser after every
 blueprint edit and validate the exact proposal before calling `prepare_workflow`.
+
+Treat source paths as opaque strings. Copy the exact parser key returned by the
+source map, including the `v3:` prefix; do not independently slugify, snake-case,
+or otherwise normalize it. The parser may normalize Markdown subsection ids to
+underscores while typed proposal ids are hyphenated. Keep the two namespaces
+distinct: when they differ, set `anchors` from the parser key to the typed key,
+for example `v3:decisions[current_definition].text` →
+`v3:decisions[current-definition].text`. For that anchored entry,
+`provenance`, `source_spans`, and `echo.coverage` must use the target path
+`v3:decisions[current-definition].text`, as required by the validator; the
+source path remains in `anchors` so the validator can resolve its trusted span.
+Without an anchor, use the exact parser path directly. A missing `v3:` prefix
+or independently normalized id is a provenance/path failure, not a reason to
+relax validation.
 
 If `prepare_workflow` returns `v3.provenance.span_mismatch` with a bounded
 `prepare_recovery_id`, call `inspect_prepare_recovery` with that opaque id.
@@ -256,6 +317,54 @@ of the returned review action, then take `review_input` from the matching
 `RequirementView`. Never
 take a `review_input` from another requirement, infer one from its array
 position, or substitute the mutable authoring root. Use only that matching view.
+
+Treat the matching `review_input` as an opaque, generation-bound handoff. On a
+host without a runner-owned review guard, the owning thread must perform a
+**non-content path/accessibility check** for both exact retained paths using
+the session's allowed read-only host filesystem mechanism (a metadata/stat or
+equivalent path-access check, not a content read). On a shellless host, an
+allowed `Glob` or `Grep` call with an explicit absolute `path` is an acceptable
+equivalent; do not omit that `path` or use a content read as a substitute. On
+a host with a runner-owned guard, do not issue a separate owning-thread check:
+the guard performs and repeats it immediately before accepting the child
+dispatch. Check that the exact `retained_capture_root` is an existing directory
+and that the exact `retained_blueprint_path` is an existing regular readable
+file. Resolve both paths for containment and verify that each remains inside
+the session's allowed host-visible roots on the same host surface that the
+child can read; reject missing paths, stale paths, inaccessible paths, and
+symlink/realpath escapes. Establish freshness from the exact path pair on the
+current matching `RequirementView` and its current requirement/generation
+binding, never from a filename, timestamp, attachment id, or a path discovered
+elsewhere. Do not open either path or inspect its contents as part of this
+precondition.
+
+In the eval/live runner, the run-scoped review guard performs this metadata
+check when capture is received and repeats it immediately before accepting the
+child dispatch. The owning thread does not need to inspect retained content to
+establish availability. A host runtime without that guard must provide an
+equivalent metadata/stat check; if no non-content mechanism is available, stop
+with the incomplete blocker instead of using a content read or a fallback.
+
+For the nxd desktop workflow-v2 supervisor, the runner maps its `data-dir` to
+two retained-input roots: `<data-dir>/captures` for captured closure content
+and `<data-dir>/blueprints` for approved blueprint content. The adapter exposes
+only those roots to the reviewer. If the supervisor returns paths outside them,
+or the roots are unavailable, the handoff fails closed with a distinct
+configuration/availability diagnostic; never create or use a fallback root.
+
+If either check fails, stop before dispatch and report an explicit incomplete
+blocker, for example: `INCOMPLETE — retained capture handoff blocked:
+<retained_capture_root|retained_blueprint_path> is <missing|stale|outside the
+allowed host-visible roots|inaccessible> for requirement <id>, generation
+<generation>; no reviewer was dispatched.` Leave the review requirement
+pending and do not send a clear, findings, rejected, or indeterminate
+`report_requirement`. Never substitute an older capture, scratch or fallback
+path, the mutable authoring root, or a path belonging to another requirement.
+On a guarded host, this is terminal for the current session: the runner permits
+the owning thread to stop with the incomplete blocker, but does not permit a
+retry or a tool that could replace the captured handoff. A new session must
+obtain a fresh supervisor capture.
+
 The owning/main thread owns the complete workflow-v2 sequence: it performs
 semantic inference and closure generation, captures the closure, dispatches the
 review child, and relays every workflow action. Do not delegate Steps 2–3,
@@ -277,20 +386,32 @@ retained_capture_root: <exact retained_capture_root from review_input>
 retained_blueprint_path: <exact retained_blueprint_path from review_input>
 Load and follow nxd-review-closure.
 Sanitized original request: <complete request with credentials replaced>
-review_time_budget_seconds: 120
+review_time_budget_seconds: 300
+review_inspection_cutoff_seconds: 240
 NXD_REVIEW_DISPATCH {"closure_path":"closure","request_contract":"sanitized_original_request","return":"claims_only","review_round_index":0}
 ```
 
-The `120` value above is the current workflow-v2 runner policy; a caller with
-another enforced budget must substitute that value in the same field.
+The `300` and `240` values above are the current workflow-v2 runner policy; a
+caller with another enforced budget must substitute those values in the same
+fields. The inspection cutoff is advisory to callers that do not provide a
+runner-owned guard, but when present it preserves time for the terminal claims
+response.
+Keep both retained-path values byte-for-byte identical to the paths that passed
+the pre-dispatch check; do not rebase, shorten, normalize, or replace them for
+the child. The check proves handoff availability only; it is not review
+evidence and does not authorize the main thread to inspect the retained
+capture.
 Treat `review_time_budget_seconds` as a hard absolute budget from accepted
-dispatch, not a suggestion. Front-load disclosure paths and output promises,
-then model roles and physical writes, then semantic and direct-store
-reachability. Reserve time to return claims. If the Agent runtime forwards
-intermediate child text, allow one concise progress checkpoint to the owning
-thread around halfway through the budget; it is informational and does not
-extend or reset the deadline. Stop reading before expiry and return complete
-or partial evidenced claims; never wait for another message.
+dispatch, not a suggestion. A runner-owned guard may deny further Read, Glob,
+and Grep calls at `review_inspection_cutoff_seconds` so the finalization reserve
+remains available for the terminal claims response. Front-load disclosure paths
+and output promises, then model roles and physical writes, then semantic and
+direct-store reachability. If the Agent runtime forwards intermediate child
+text, allow one concise progress checkpoint to the owning thread around
+halfway through the budget; it is informational and does not extend or reset
+the deadline. The cutoff likewise does not extend or reset the hard deadline.
+Stop reading at the cutoff and return complete or explicitly
+partial evidenced claims; never wait for another message.
 
 Invoke the child inline with `run_in_background: false` when the installed
 `Agent`/`Task` schema exposes that field; otherwise omit the field, and never
@@ -303,6 +424,12 @@ silently turn those claims into a verdict. The child may read and return claims,
 but it must not edit, build, serve, transform, start a supervisor operation, or
 talk to the user. A timeout or partial child result does not justify dispatching
 a second reviewer for the same capture generation.
+
+After a review completes, the owning thread may use Bash for ordinary
+remediation work before a reset and fresh capture. The runner guard rejects
+owner Read/Glob/Grep/Write/Edit/NotebookEdit operations and shell commands that
+target the retained capture or blueprint roots; those supervisor-retained
+inputs remain immutable.
 
 Keep the rich review ledger in
 `…/nxd-jobs/<workflow>/review-record.json`, adjacent to the blueprint and
