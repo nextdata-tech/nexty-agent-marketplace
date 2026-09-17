@@ -87,11 +87,14 @@ main thread, which is also a transcript. So prefer a route where you never see
 the value:
 
 1. **The user writes it.** Generate the closure with a placeholder in each slot,
-   then name the slots and the `infra-profile.yaml` path and ask the user to fill
-   them in directly. That file is already `0600`, gitignored and marked
-   `SENSITIVE` — it is the surface designed to hold the value. Wait for their
-   confirmation, then run the connectivity check. This is the human-boundary form
-   of the subagent's placeholder + `credential_slots` hand-back.
+   then name the slots and ask the user to fill them in directly. Give them a
+   runnable command that opens the file rather than only its path, per
+   [user-facing-language.md](user-facing-language.md) § Asking the user to open a
+   file; a non-technical user handed a path alone is stuck before they start.
+   That file is already `0600`, gitignored and marked `SENSITIVE` — it is the
+   surface designed to hold the value. Wait for their confirmation, then run the
+   connectivity check. This is the human-boundary form of the subagent's
+   placeholder + `credential_slots` hand-back.
 2. **An environment variable already visible to your own tooling.** This route is
    narrower than it sounds. A variable the user exports in their interactive
    shell *after* the session starts is not visible to your tool calls, which run

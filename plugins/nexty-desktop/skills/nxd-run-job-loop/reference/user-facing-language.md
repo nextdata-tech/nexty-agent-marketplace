@@ -14,6 +14,7 @@ existing references.
 - [Templates and cases](#templates-and-cases)
 - [Meaningful progress](#meaningful-progress)
 - [Approval or clarification](#approval-or-clarification)
+- [Asking the user to open a file](#asking-the-user-to-open-a-file)
 - [Declined or cancelled approval](#declined-or-cancelled-approval)
 - [Blocker](#blocker)
 - [Retry](#retry)
@@ -84,6 +85,34 @@ raw error into a bracket.
 
 Ask for approval only after the user can understand the proposed choice. A
 technical delivery question is not approval.
+
+### Asking the user to open a file
+
+> Your API key has to come from you, so I've left a placeholder for it. Run this
+> to open the file:
+>
+> ```
+> open -e /Users/you/nxd-jobs/orders/infra-profile.yaml
+> ```
+>
+> Find the line `auth_token: REPLACE_ME`, put your key where `REPLACE_ME` is,
+> save, and tell me when you're done.
+
+**Never leave the user to find or open the file themselves.** Naming a path
+assumes they know how to reach it, which editor opens a `.yaml`, and that they
+are comfortable in a terminal. Give a runnable command on its own line so it can
+be clicked or copied with no other knowledge:
+
+- macOS: `open -e <absolute path>`. The `-e` forces TextEdit, rather than
+  whichever application happens to claim the extension; a `.yaml` can otherwise
+  open in Xcode or in nothing at all.
+- Linux: `xdg-open <absolute path>`.
+- To show it in a file browser instead of opening it: `open -R <absolute path>`.
+
+Then name the exact field to change and what to change it to, and say to save and
+come back. The command carries a path, never a secret, so it is safe in
+transcript. This applies to every file the user is asked to edit, not only
+credential files.
 
 ### Declined or cancelled approval
 

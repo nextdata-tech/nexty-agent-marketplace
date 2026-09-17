@@ -36,7 +36,8 @@ same edit, or the check will reject valid code.
 ## Data types (`nxd.spec.data_types`)
 
 All zero-argument unless noted; import what you need, e.g.
-`from nxd.spec.data_types import string, number, boolean, date32`.
+`from nxd.core.yaml_schemas import DurationUnit` and
+`from nxd.spec.data_types import string, number, boolean, date32, timestamp`.
 
 | Constructor | Notes |
 |---|---|
@@ -51,9 +52,17 @@ All zero-argument unless noted; import what you need, e.g.
 | `list(value_type)`, `list_view(value_type)`, `large_list(value_type)`, `large_list_view(value_type)`, `map(key_type, value_type)`, `dictionary(key_type, value_type)`, `struct(fields)` | Complex/nested types — `value_type`/`fields` are `Field` instances from `nxd.core.yaml_schemas` |
 | `variant()` | Free-form semi-structured data (arbitrary JSON keys); wire-equivalent to `struct([])` |
 
-The desktop closure pattern only ever needs `string()`, `number()`,
-`boolean()`, `date32()` — the rest exist for the k8s/cloud topology's richer
-source types.
+`timestamp` is **not** a zero-argument constructor. Always pass an explicit
+`DurationUnit`, for example
+`timestamp(unit=DurationUnit.Milliseconds)`. Choose the unit from the source
+precision; an API value encoded as RFC3339 still needs this model-level unit.
+`timestamp()` raises `TypeError` during supervisor spec compilation, before the
+transform runs.
+
+The desktop closure pattern usually needs `string()`, `number()`, `boolean()`,
+`date32()`, and — when the source has date-time fields —
+`timestamp(unit=DurationUnit.Milliseconds)`. The other constructors exist for
+the k8s/cloud topology's richer source types.
 
 **Inferred type → constructor** (what Step 2 places from the inferred model):
 
@@ -63,6 +72,7 @@ source types.
 | int, number, double, float | `number()` |
 | bool | `boolean()` |
 | date | `date32()` |
+| timestamp / datetime | `timestamp(unit=DurationUnit.Milliseconds)` (choose the unit required by the source precision) |
 
 ## Semantic role builders (`nxd.spec`)
 

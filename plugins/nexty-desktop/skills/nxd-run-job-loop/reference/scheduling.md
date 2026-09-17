@@ -228,7 +228,9 @@ Preserve every user question and supplied procedure under the
 `sanitized_original_request` contract, inventory and replace every credential,
 and stop if complete sanitization cannot be established. The reviewer returns
 claims only and never edits, builds, serves, transforms, or talks to the user.
-The exact marker and current workflow-v2 120-second deadline, external `review-record.json` ledger,
+The exact marker and current workflow-v2 300-second deadline, with a
+runner-enforced 240-second inspection cutoff and finalization reserve,
+external `review-record.json` ledger,
 bounded `report_requirement` projection, remediation loop, and wire fields are
 canonical in [workflow-v2.md](workflow-v2.md) and
 [adversarial-review.md](../../nxd-generate-data-product/reference/adversarial-review.md).

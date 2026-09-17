@@ -4,6 +4,7 @@
 
 - [When to dispatch](#when-to-dispatch)
 - [Dispatching](#dispatching)
+- [Fresh retained-capture handoff](#fresh-retained-capture-handoff)
 - [Adjudicate every finding](#adjudicate-every-finding--this-is-the-point)
 - [Relay and authorization](#relay-and-authorization)
 - [Land the adjudication](#land-the-adjudication)
@@ -61,6 +62,54 @@ the inventory or complete replacement cannot be established, **do not
 delegate**: stop and report that credential-safe review dispatch is blocked.
 No credential may reach the reviewer.
 
+## Fresh retained-capture handoff
+
+Treat `retained_capture_root` and `retained_blueprint_path` as the supervisor's
+authoritative, fresh inputs for the current capture generation. Select
+`review_input` only from the `RequirementView` whose `requirement_id` matches the
+review action in the current `next_actions[]`. Carry that view's requirement
+identity, generation, subject digest, and dependency digest through the review
+relay. A path from an earlier supervisor response or another requirement is
+stale even when it still exists on disk.
+
+On a host without a runner-owned review guard, the owning thread must perform a
+**non-content path/accessibility check** for both exact retained paths with the
+session's allowed read-only host filesystem mechanism (a metadata/stat or
+equivalent path-access check, not a content read). On a shellless host, an
+allowed `Glob` or `Grep` call with an explicit absolute `path` is the supported
+equivalent; do not omit that `path` or open file contents merely to establish
+accessibility. On a host with a runner-owned guard, do not issue a separate
+owning-thread check: the guard performs and repeats it immediately before
+accepting the child dispatch. Confirm that:
+
+1. `retained_capture_root` is an existing directory.
+2. `retained_blueprint_path` is an existing regular readable file.
+3. The resolved paths remain inside the session's allowed host-visible roots on
+   the same host surface available to the read-only child; reject symlink or
+   realpath escapes.
+4. Both values are byte-for-byte the current matching `review_input` values and
+   are bound to the current capture generation; do not infer freshness from a
+   filename, timestamp, attachment id, or directory name.
+
+The eval/live runner's review guard also limits the child to these exact
+retained inputs. A host runtime without that guard must provide an equivalent
+metadata/stat mechanism. Do not use a content read as a substitute for this
+precondition.
+
+Do not open either retained path or inspect its contents during this
+precondition. If the read-only mechanism cannot establish every check, treat
+the handoff as blocked. Report an explicit incomplete blocker such as
+`INCOMPLETE — retained capture handoff blocked: <field> is
+<missing|stale|outside the allowed host-visible roots|inaccessible> for
+requirement <id>, generation <generation>; no reviewer was dispatched.` Leave
+the requirement pending, send no review verdict, and never substitute an older
+capture, scratch or fallback path, the mutable authoring root, or a path from
+another requirement. This path check proves availability only; it is not review
+evidence and does not authorize inline review.
+On a guarded host, the runner permits the owning thread to stop with this
+incomplete blocker but does not permit a retry or any tool that could replace
+the captured handoff. Obtain a fresh supervisor capture in a new session.
+
 Normalize the closure path relative to the workspace (`closure` or
 `nxd-jobs/<workflow>/closure`) and use this complete prompt block. Replace only
 the angle-bracketed values with the exact `review_input` paths and the fully
@@ -75,12 +124,16 @@ retained_capture_root: <exact retained_capture_root from review_input>
 retained_blueprint_path: <exact retained_blueprint_path from review_input>
 Load and follow nxd-review-closure.
 Sanitized original request: <complete request with credentials replaced>
+review_time_budget_seconds: 300
+review_inspection_cutoff_seconds: 240
 NXD_REVIEW_DISPATCH {"closure_path":"closure","request_contract":"sanitized_original_request","return":"claims_only","review_round_index":0}
 ```
 
 Replace only the example `closure_path` and `review_round_index` values in the
-marker. Keep every other key/value unchanged and add no colon, slug or prose
-prefix. Invoke the child inline with `run_in_background: false` when the
+marker. Keep both retained-path values byte-for-byte identical to the values
+that passed the pre-dispatch check; never rebase, shorten, normalize, or replace
+them for the child. Keep every other key/value unchanged and add no colon, slug
+or prose prefix. Invoke the child inline with `run_in_background: false` when the
 installed `Agent`/`Task` schema exposes that field; otherwise omit it, and
 never set it to `true`. Load `nxd-review-closure` and **return claims only**.
 The reviewer receives read-only tools, never edits, builds, serves, runs the
