@@ -249,8 +249,25 @@ class RefreshingSession(requests.Session):
             self._set_header(
                 request.headers, "Authorization", f"Bearer {self._token}"
             )
-            response = super().send(request, **send_kwargs)
-            if response.status_code == 401:
+            hook_error = None
+            try:
+                response = super().send(request, **send_kwargs)
+            except requests.exceptions.HTTPError as error:
+                # dlt installs a response hook that may call raise_for_status
+                # before requests.Session.send returns. Keep the same bounded
+                # retry policy for that path, but do not turn unrelated HTTP
+                # errors (or errors without a response) into retryable ones.
+                response = getattr(error, "response", None)
+                if response is None:
+                    raise
+                status_code = getattr(response, "status_code", None)
+                if status_code not in {401, 429}:
+                    raise
+                hook_error = error
+            else:
+                status_code = response.status_code
+
+            if status_code == 401:
                 if refreshed:
                     response.close()
                     raise RuntimeError("request remained unauthorized after one refresh")
@@ -259,7 +276,7 @@ class RefreshingSession(requests.Session):
                 refreshed = True
                 rewind()
                 continue
-            if response.status_code == 429 and not rate_retried:
+            if status_code == 429 and not rate_retried:
                 delay = self._retry_delay(
                     response.headers.get("Retry-After"), self._max_retry_after_s
                 )
@@ -268,6 +285,12 @@ class RefreshingSession(requests.Session):
                 rate_retried = True
                 rewind()
                 continue
+            if hook_error is not None:
+                # A response-hook exception means dlt will not receive the
+                # response object. Close it before propagating the terminal
+                # hook error so an exhausted retry cannot leak its connection.
+                response.close()
+                raise hook_error
             return response
 
 
