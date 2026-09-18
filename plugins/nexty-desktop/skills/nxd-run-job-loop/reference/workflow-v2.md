@@ -147,6 +147,34 @@ the path named by the mismatch. The legacy
 consumers, but it is only a location hint: even when it is present, regenerate
 the complete proposal.
 
+### Classify admission failures before recovery
+
+A failed `prepare_workflow` is a pre-admission result, not an admitted workflow
+state. Do not call `inspect_workflow` after a rejection unless admission
+actually created a workflow; its absence is expected for a proposal that failed
+trusted validation. Classify the returned details first:
+
+- A bounded `prepare_recovery_id` is the only source for a retained complete
+  parser map. Inspect it immediately, verify that it belongs to the unchanged
+  final blueprint, and regenerate the whole proposal from that map.
+- A stable `v3.provenance.source_map_unavailable` or
+  `v3.provenance.source_map_oversized` code means the map was not retained.
+  Obtain a fresh parser result; do not infer coordinates from error prose or
+  retry the old payload.
+- A proposal rejection without a `prepare_recovery_id` likewise has no retained
+  map to inspect. Discard the proposal, reread the final blueprint, obtain a
+  fresh parser/source-map result through the installed authoring flow, and
+  regenerate the complete proposal with a new request id. Do not call
+  `inspect_workflow` or resubmit the rejected payload.
+- A typed field-reference failure means the proposal and its contract inventory
+  disagree. Remove an absent field from the contract/model shape, or declare it
+  in the model when the user actually requires it. Custom contracts cannot
+  express redaction by naming absent fields or by using an empty field list.
+
+In every branch, an edit invalidates all parsed spans. Re-read the final
+blueprint, regenerate every proposal section, strictly validate the complete
+replacement, and send a fresh request id before retrying.
+
 ### Recovering a rejected proposal
 
 Treat recovery as a whole-proposal replacement, never as a repair to the path
