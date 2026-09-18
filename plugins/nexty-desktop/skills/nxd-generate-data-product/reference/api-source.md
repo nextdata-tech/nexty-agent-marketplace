@@ -435,6 +435,14 @@ requests.exceptions.HTTPError: 401 Client Error: Unauthorized for url: ...
 
 **What works** is the complete refresh-aware session in [`../scripts/api_source_refresh_session.py`](../scripts/api_source_refresh_session.py). It overrides `send()`, the single chokepoint used by dlt `RESTClient`, and supports the flat `base_url`, `auth_refresh_path`, and `auth_token` profile attributes described above.
 
+One dlt detail matters here: dlt may install a response hook that calls
+`raise_for_status()` before `requests.Session.send()` returns. The shipped
+recipe handles both forms — a returned 401/429 response and an
+`requests.exceptions.HTTPError` carrying a 401/429 response — with the same
+bounded refresh or retry policy. It re-raises errors without a response and
+HTTP errors for other statuses; do not replace this with a broad exception
+catch or an unbounded retry loop.
+
 The script is shipped as a source recipe, not as a runtime dependency of a generated closure. Copy its source into the generated self-contained transform, or copy and adapt its `_headers_from`, `RefreshingSession`, and `make_rest_api_config` definitions there. Do not import it from the installed skill tree: the closure must still work after handoff to the supervisor. Keep the generated transform resource list and auth/profile wiring around the copied implementation.
 
 The session is attached at `config["client"]["session"]`, which is the
