@@ -409,41 +409,15 @@ def check_kwargs(call, name, where):
            any(k.arg == "column" for k in call.keywords):
             bad("struct.metric_of_and_column",
                 f"{where}: metric() takes of= or column=, never both", where)
-    # Annotation reach, both graded as failures. A description on the WRAPPER
-    # is an attribute description: it lands in data_model and never reaches
-    # describe_models, so the author believes they documented the concept and
-    # did not. A MISSING description is the same defect by omission — and it
-    # is the one the benchmark actually measured, so warning here while the
-    # eval checks fail it would leave the only mechanical gate green on
-    # precisely the defect this guidance exists to prevent.
-    if name in ("field", "metric_field") and any(
-            k.arg == "description" and desc_str(k.value) for k in call.keywords):
-        # A wrapper description is a legal attribute description (it reaches
-        # the structural data_model block). The defect is using it INSTEAD of
-        # the role's, so only fail when the roles carry none — otherwise this
-        # would block a legal API call that is not the mistake.
-        roles = [a for a in call.args[1:] if isinstance(a, ast.Call)]
-        for kw in call.keywords:          # documented roles=[...] form
-            if kw.arg == "roles" and isinstance(kw.value, (ast.List, ast.Tuple)):
-                roles += [e for e in kw.value.elts if isinstance(e, ast.Call)]
-        describable = [r for r in roles if call_name(r) in ("dimension", "metric")]
-        if not any(any(k.arg == "description" and desc_str(k.value)
-                       for k in r.keywords) for r in describable):
-            # Point at a fix that exists. With no dimension/metric role there
-            # is nowhere to move the text to — primary_key()/join() take no
-            # description — so the only remedy is to delete it.
-            remedy = ("move it inside dimension(...) / metric(...)"
-                      if describable else
-                      "primary_key()/join() take no description — drop it")
-            bad("struct.description_unreachable",
-                f"{where}: description= on {name}() never reaches "
-                f"describe_models and the role carries none — {remedy}", where)
-    if name in ("dimension", "metric") and not any(
-            k.arg == "description" and desc_str(k.value)
-            for k in call.keywords):
-        bad("struct.role_no_description",
-            f"{where}: {name}() has no description= — it reaches "
-            f"describe_models as a bare name the agent cannot choose on", where)
+    # Annotation reach is NOT decided per call. The platform resolves a
+    # dimension/metric description from the ROLE when it declares one and from
+    # the FIELD otherwise, so a description on the wrapper reaches
+    # describe_models and `struct.description_unreachable` no longer describes a
+    # real defect — the code stays registered (the diagnostic registry is
+    # frozen) and is never emitted. What remains is whether the CONCEPT is
+    # documented at all, which only the whole schema entry can answer, since the
+    # tuple form carries its description outside any call. See
+    # `documents_concept` and its caller.
 
 def check_dtype(node, where):
     """A call in dtype position must be a known data-type constructor."""
@@ -453,6 +427,29 @@ def check_dtype(node, where):
             bad("struct.unknown_dtype",
                 f"{where}: unknown data type '{n}()' — not in the pinned "
                 f"nxd.spec.data_types surface", where)
+
+def describable_roles(entry):
+    """Every dimension()/metric() call inside one schema entry."""
+    return [sub for sub in ast.walk(entry)
+            if isinstance(sub, ast.Call)
+            and call_name(sub) in ("dimension", "metric")]
+
+def documents_concept(entry):
+    """True when this schema entry documents its concept for describe_models.
+
+    Three authored forms do it, and the platform reads all three: a
+    `field(..., description=...)` / `metric_field(..., description=...)`
+    keyword, the string element of the tuple form, and a role's own
+    `description=` (deprecated upstream, still honoured and still first).
+    """
+    if isinstance(entry, ast.Call) and call_name(entry) in ("field", "metric_field"):
+        if any(k.arg == "description" and desc_str(k.value) for k in entry.keywords):
+            return True
+    if isinstance(entry, ast.Tuple) and any(desc_str(e) for e in entry.elts):
+        return True
+    return any(any(k.arg == "description" and desc_str(k.value)
+                   for k in role.keywords)
+               for role in describable_roles(entry))
 
 def walk_roles(node, where, *, in_view):
     """Validate every role/dtype/Agg reference inside one schema entry."""
@@ -593,6 +590,15 @@ def parse_models(src, path):
                 if isinstance(v, ast.Tuple) and v.elts:
                     check_dtype(v.elts[0], where)
                 walk_roles(v, where, in_view=in_view)
+                # One check per ENTRY, not per role call: the description may sit
+                # on the field, on the role, or (tuple form) on neither call.
+                if describable_roles(v) and not documents_concept(v):
+                    bad("struct.role_no_description",
+                        f"{where}: this dimension/metric carries no description "
+                        f"on its field or its role — it reaches describe_models "
+                        f"as a bare name the agent cannot choose on. Write it "
+                        f"once on the field: field(..., description=...) / "
+                        f"metric_field(..., description=...)", where)
                 field_roles = {call_name(sub) for sub in ast.walk(v)}
                 if not in_view and "primary_key" in field_roles \
                         and "dimension" not in field_roles:

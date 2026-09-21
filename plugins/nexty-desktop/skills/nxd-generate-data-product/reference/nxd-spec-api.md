@@ -82,7 +82,7 @@ which return an `AttributeSpec` (a full column) already carrying the role blob.
 - **`primary_key()`** — no arguments. The entity-key role.
 
   **Pair it with a `dimension(...)` on the same field.** Roles compose —
-  `field(string(), primary_key(), dimension(name=..., description=...))` is
+  `field(string(), primary_key(), dimension(name=...), description=...)` is
   accepted — and a key that carries only `primary_key()` is **not groupable**:
   it never appears in `describe_models`, so no query can return which entity a
   row belongs to. The product still builds, publishes and answers aggregate
@@ -95,7 +95,9 @@ which return an `AttributeSpec` (a full column) already carrying the role blob.
   join makes the two models connected by construction.
 - **`dimension(name=None, pii=False, label=None, description="")`** — a
   groupable/filterable column. `label` attaches a companion display column
-  (`label_column` in the compiled blob).
+  (`label_column` in the compiled blob). `description=` is **deprecated** here
+  and emits a `FutureWarning`: write it on the field instead, and the dimension
+  inherits it.
 
   **`name` is unique across the join-connected registry, not per model.** Two
   models that a `join()` relates may not both declare a dimension called
@@ -136,7 +138,9 @@ which return an `AttributeSpec` (a full column) already carrying the role blob.
   the other one as the key; a composite key needs every one of its columns.
 
 - **`metric(agg, of=None, name=None, description="", boolean=False, extra_dimensions=(), column=None)`**
-  — `agg` is an `Agg` value. `of` is a `FieldRef` (from `<model>.field("<col>")`)
+  — `agg` is an `Agg` value. `description=` is **deprecated** here and emits a
+  `FutureWarning`: write it on the enclosing `metric_field(...)` instead, and
+  the metric inherits it. `of` is a `FieldRef` (from `<model>.field("<col>")`)
   pointing at the base column being aggregated; mutually exclusive with the
   explicit `column=` override — pass one or neither, never both. Use
   `column="*"` only for `COUNT(*)`. For `Agg.EXPRESSION`, omit both `of` and
@@ -162,39 +166,41 @@ still exits non-zero — read the `error:` line, not the tail.
 A field may also be written as a bare `dtype` (no role) or a
 `(dtype, *rest)` tuple inside `.schema({...})` — see `SemanticModelSpec`
 below; `field()`/`metric_field()` are for when you need to attach `label` or an
-explicit `name` inline. `description=` is accepted there too, but it is an
-attribute description and never reaches the agent — see the next section.
+explicit `name` inline. `description=` is accepted there too, and it is the
+placement to prefer — see the next section.
 
-### `description=` — two parameters, only one reaches the agent
+### `description=` — write it once, on the field
 
-`description=` appears on both the **role builders** and the **field wrappers**,
-and they land in different places. This is the single easiest thing to get
-wrong here:
+`description=` appears on both the **role builders** and the **field wrappers**.
+Both reach the querying agent: a dimension or metric that declares no
+description of its own inherits the field's at compile time.
 
 | Written as | Lands in | Seen by the querying agent? |
 |---|---|---|
-| `dimension(description=...)`, `metric(description=...)` | the role blob → `Role::Metric.description` / dimension description | **Yes** — this is what `describe_model` shows |
-| `field(description=...)`, `metric_field(description=...)` | `AttributeSpec._description` → manifest attribute description | **No** — the roles alone are serialized into the blob; it surfaces only in the structural `data_model` block |
+| `field(description=...)`, `metric_field(description=...)` | `AttributeSpec._description` → manifest attribute description | **Yes** — a dimension/metric with no description of its own inherits it, and the catalog UI shows the same text |
+| `dimension(description=...)`, `metric(description=...)` | the role blob → `Role::Metric.description` / dimension description | **Yes**, and it wins over the field's — but it is **deprecated** and emits a `FutureWarning` |
 
-So the human sentence a consumer reads when choosing a measure or a dimension
-**must** go inside the role:
+So write the sentence a consumer reads **once, on the field**:
 
 ```python
-# RIGHT — the description reaches describe_model
+# RIGHT — one description, read by describe_model and by the catalog UI
+"total_revenue": metric_field(
+    float64(),
+    metric(Agg.SUM, of=orders.field("AMOUNT_USD"), name="total_revenue"),
+    description="Gross order amount in USD across ALL statuses.",
+)
+
+# DEPRECATED — still honoured, but warns; do not write new code this way
 "total_revenue": metric_field(
     float64(),
     metric(Agg.SUM, of=orders.field("AMOUNT_USD"),
            name="total_revenue",
            description="Gross order amount in USD across ALL statuses."),
 )
-
-# WRONG — this string only ever appears in data_model
-"total_revenue": metric_field(
-    float64(),
-    metric(Agg.SUM, of=orders.field("AMOUNT_USD"), name="total_revenue"),
-    description="Gross order amount in USD across ALL statuses.",
-)
 ```
+
+On a `metric_field`, describe the aggregate ("Gross order amount in USD"), not
+the column it reads.
 
 Model-level description **does** reach the agent — it is emitted in both
 `list_models` and `describe_model`. The chained

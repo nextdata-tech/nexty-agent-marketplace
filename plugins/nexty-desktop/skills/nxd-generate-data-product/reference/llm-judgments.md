@@ -315,91 +315,77 @@ candidate_judgments = (
     )
     .schema(
         {
-            "entity_key": field(string(), primary_key(), dimension(name="judged_entity", description="Entity this judgement is about.")),
-            "criterion": field(string(), primary_key(), dimension(name="judged_criterion", description="Rubric criterion this row scores.")),
-            "rubric_version": field(string(), primary_key(), dimension(name="rubric_version", description="Rubric version this judgement was made under.")),
-            "judged_by": field(string(), primary_key(), dimension(name="judged_by", description="Model identity, or human for an override.")),
+            "entity_key": field(string(), primary_key(), dimension(name="judged_entity"), description="Entity this judgement is about."),
+            "criterion": field(string(), primary_key(), dimension(name="judged_criterion"), description="Rubric criterion this row scores."),
+            "rubric_version": field(string(), primary_key(), dimension(name="rubric_version"), description="Rubric version this judgement was made under."),
+            "judged_by": field(string(), primary_key(), dimension(name="judged_by"), description="Model identity, or human for an override."),
             "score": field(
                 number(),
-                dimension(
-                    name="judgment_score",
-                    description=(
-                        "Agent-assigned score, within [scale_min, scale_max] "
-                        "from the scoring_rubric row for this criterion. Not a "
-                        "source value — read it with rubric_version. EMPTY "
-                        "when the evidence was absent: see limitation, and "
-                        "read an empty score as not-assessed, never as a low "
-                        "rating."
-                    ),
+                dimension(name="judgment_score"),
+                description=(
+                    "Agent-assigned score, within [scale_min, scale_max] "
+                    "from the scoring_rubric row for this criterion. Not a "
+                    "source value — read it with rubric_version. EMPTY "
+                    "when the evidence was absent: see limitation, and "
+                    "read an empty score as not-assessed, never as a low "
+                    "rating."
                 ),
             ),
             "verdict": field(
                 string(),
-                dimension(
-                    name="judgment_verdict",
-                    description=(
-                        "One of the landed verdict enum; empty when the "
-                        "criterion is not a verdict criterion."
-                    ),
+                dimension(name="judgment_verdict"),
+                description=(
+                    "One of the landed verdict enum; empty when the "
+                    "criterion is not a verdict criterion."
                 ),
             ),
             "evidence_field": field(
                 string(),
-                dimension(
-                    name="evidence_field",
-                    description=(
-                        "Which source column the judgement read — a column "
-                        "name on the facts model."
-                    ),
+                dimension(name="evidence_field"),
+                description=(
+                    "Which source column the judgement read — a column "
+                    "name on the facts model."
                 ),
             ),
             "evidence_quote": field(
                 string(),
-                dimension(
-                    name="evidence_quote",
-                    description=(
-                        "Verbatim substring of the cited field's value for "
-                        "this entity, or the literal 'not stated' when the "
-                        "evidence is absent."
-                    ),
+                dimension(name="evidence_quote"),
+                description=(
+                    "Verbatim substring of the cited field's value for "
+                    "this entity, or the literal 'not stated' when the "
+                    "evidence is absent."
                 ),
             ),
             "limitation": field(
                 string(),
-                dimension(
-                    name="judgment_limitation",
-                    description=(
-                        "Empty when the criterion was scored. Otherwise the "
-                        "why 'score' is empty — set whenever it is. "
-                        "'listed_uncaptured' (the source names the thing but "
-                        "its value was not extracted — recoverable by "
-                        "re-extracting), 'not_stated' (the source says "
-                        "nothing), or 'no_band_matched' (the evidence was "
-                        "read, but no band covered it — fix the rubric, not "
-                        "the extraction). Absence is never scored as the "
-                        "scale minimum, so a set limitation means NOT "
-                        "ASSESSED, not a low rating."
-                    ),
+                dimension(name="judgment_limitation"),
+                description=(
+                    "Empty when the criterion was scored. Otherwise the "
+                    "why 'score' is empty — set whenever it is. "
+                    "'listed_uncaptured' (the source names the thing but "
+                    "its value was not extracted — recoverable by "
+                    "re-extracting), 'not_stated' (the source says "
+                    "nothing), or 'no_band_matched' (the evidence was "
+                    "read, but no band covered it — fix the rubric, not "
+                    "the extraction). Absence is never scored as the "
+                    "scale minimum, so a set limitation means NOT "
+                    "ASSESSED, not a low rating."
                 ),
             ),
             "flags": field(
                 string(),
-                dimension(
-                    name="judgment_flags",
-                    description=(
-                        "Free-text reviewer notes (e.g. jd-mirror, no-repo). "
-                        "Kept on this model only, never on a derived sheet."
-                    ),
+                dimension(name="judgment_flags"),
+                description=(
+                    "Free-text reviewer notes (e.g. jd-mirror, no-repo). "
+                    "Kept on this model only, never on a derived sheet."
                 ),
             ),
             "status": field(
                 string(),
-                dimension(
-                    name="judgment_status",
-                    description=(
-                        "'proposed' by default (agent-produced); 'confirmed' "
-                        "once a reviewer has checked it against the citation."
-                    ),
+                dimension(name="judgment_status"),
+                description=(
+                    "'proposed' by default (agent-produced); 'confirmed' "
+                    "once a reviewer has checked it against the citation."
                 ),
             ),
         }
@@ -416,8 +402,8 @@ candidate_judgments_metrics = semantic_view(
                 Agg.COUNT,
                 of=candidate_judgments.field("entity_key"),
                 name="judgment_count",
-                description="Number of judgement rows, any status.",
             ),
+            description="Number of judgement rows, any status.",
         ),
         "avg_score": metric_field(
             number(),
@@ -425,15 +411,15 @@ candidate_judgments_metrics = semantic_view(
                 Agg.AVG,
                 of=candidate_judgments.field("score"),
                 name="avg_score",
-                description=(
-                    "Mean agent-assigned score. Averages across criteria "
-                    "unless the selection groups by criterion, and mixes "
-                    "rubric versions unless it filters on one. Skips every "
-                    "row whose score is empty — absent evidence AND evidence "
-                    "no band covered — so group by limitation to see how "
-                    "much of the rubric was assessed, and which gap is the "
-                    "rubric's rather than the source's, before quoting this."
-                ),
+            ),
+            description=(
+                "Mean agent-assigned score. Averages across criteria "
+                "unless the selection groups by criterion, and mixes "
+                "rubric versions unless it filters on one. Skips every "
+                "row whose score is empty — absent evidence AND evidence "
+                "no band covered — so group by limitation to see how "
+                "much of the rubric was assessed, and which gap is the "
+                "rubric's rather than the source's, before quoting this."
             ),
         ),
     }

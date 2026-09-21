@@ -34,42 +34,36 @@ customers = (
             "customer_id": field(
                 string(),
                 primary_key(),
-                dimension(
-                    name="customer_id",
-                    description="Account key, e.g. C0417. Group by this to name a customer.",
-                ),
+                dimension(name="customer_id"),
+                description="Account key, e.g. C0417. Group by this to name a customer.",
             ),
             "country_id": field(
                 string(),
-                dimension(
-                    name="customer_country",
-                    # The description goes INSIDE dimension(). A description=
-                    # on the enclosing field() never reaches describe_models.
-                    description="ISO-3166 alpha-2 country of the billing address.",
-                ),
+                dimension(name="customer_country"),
+                # The description goes on the field. The dimension inherits it,
+                # so describe_models and the catalog UI show the same sentence.
+                description="ISO-3166 alpha-2 country of the billing address.",
             ),
             # No question named this column, and it is annotated anyway: the
             # questions decide the ROLE, not whether to annotate. Bare-typing
             # it would drop it from describe_models entirely.
             "country": field(
                 string(),
-                dimension(
-                    name="customer_country_name",
-                    description=(
-                        "Country display name. Duplicates country_id — prefer "
-                        "customer_country for grouping."
-                    ),
+                dimension(name="customer_country_name"),
+                description=(
+                    "Country display name. Duplicates country_id — prefer "
+                    "customer_country for grouping."
                 ),
             ),
             "email": field(
                 string(),
                 dimension(
                     name="customer_email",
-                    description="Primary contact email.",
                     # Flagged from the DATA — the samples are addresses — not
                     # because a question asked for it.
                     pii=True,
                 ),
+                description="Primary contact email.",
             ),
         }
     )
@@ -88,10 +82,8 @@ orders = (
             "order_id": field(
                 number(),
                 primary_key(),
-                dimension(
-                    name="order_id",
-                    description="Order key. Group by this to name an order.",
-                ),
+                dimension(name="order_id"),
+                description="Order key. Group by this to name an order.",
             ),
             "customer_id": field(
                 # Matches the customers.customer_id type; join endpoints must agree.
@@ -116,11 +108,11 @@ order_metrics = semantic_view("order_metrics", orders).schema(
                 Agg.SUM,
                 of=orders.field("amount"),
                 name="total_order_amount",
-                description=(
-                    "Gross order amount across ALL statuses. The role grammar "
-                    "has no filtered metrics, so this is unconditional — "
-                    "consumers filter at query time."
-                ),
+            ),
+            description=(
+                "Gross order amount across ALL statuses. The role grammar "
+                "has no filtered metrics, so this is unconditional — "
+                "consumers filter at query time."
             ),
         ),
     }
@@ -149,8 +141,8 @@ ticket_signals_metrics = semantic_view("ticket_signals_metrics", ticket_signals)
                 Agg.COUNT,
                 of=ticket_signals.field("evidence_id"),
                 name="evidence_count",
-                description="Number of cited evidence spans.",
             ),
+            description="Number of cited evidence spans.",
         ),
     }
 )
@@ -168,10 +160,8 @@ is composed:
 "identifier": field(
     string(),
     join(to="open_pocket_tickets", to_column="identifier"),
-    dimension(
-        name="evidence_ticket",
-        description="Ticket this evidence was cited for. Filter on this to read one ticket's citations.",
-    ),
+    dimension(name="evidence_ticket"),
+    description="Ticket this evidence was cited for. Filter on this to read one ticket's citations.",
 ),
 ```
 

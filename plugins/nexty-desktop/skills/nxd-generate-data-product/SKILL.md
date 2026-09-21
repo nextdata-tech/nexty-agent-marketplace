@@ -271,17 +271,17 @@ per set of metrics over that table:
   `data_product_output().model(view)`. This supports `describe_models` and
   grouped aggregate queries without record-level rows or placeholder data.
 
-Role builders: `field(number(), primary_key(), dimension(name=..., description=...))` — key roles compose with a dimension, and `grain` is deprecated; `field(string(), dimension(name=..., description=..., pii=<flag>))`; `field(number(), join(to="<model>", to_column="<col>"))` — `to=`, NOT `to_model=`. **Timestamp types are parameterized:** import `DurationUnit` from `nxd.core.yaml_schemas` and use `timestamp(unit=DurationUnit.Milliseconds)` (or the source's required precision); never emit bare `timestamp()`, which raises `TypeError` during supervisor spec compilation. See [reference/nxd-spec-api.md](reference/nxd-spec-api.md) for the full type surface.
+Role builders: `field(number(), primary_key(), dimension(name=...), description=...)` — key roles compose with a dimension, and `grain` is deprecated; `field(string(), dimension(name=..., pii=<flag>), description=...)`; `field(number(), join(to="<model>", to_column="<col>"))` — `to=`, NOT `to_model=`. **Timestamp types are parameterized:** import `DurationUnit` from `nxd.core.yaml_schemas` and use `timestamp(unit=DurationUnit.Milliseconds)` (or the source's required precision); never emit bare `timestamp()`, which raises `TypeError` during supervisor spec compilation. See [reference/nxd-spec-api.md](reference/nxd-spec-api.md) for the full type surface.
 
-**Every field takes a role, except a measure a metric aggregates.** Dimensions and metrics need descriptions; `primary_key()`/`join()` do not. Every
+**Every field takes a role, except a measure a metric aggregates.** A field carrying a dimension or metric needs a `description=` on the field (the role inherits it); `primary_key()`/`join()` take none. Every
 `semantic_model` needs `.description(...)`, and a `join(...)` needs a
 `dimension(...)` on the same field. A model a Question or Output reads needs a
 view with a metric — a bare `COUNT` will do — because `run_semantic_query`
 requires a measure. Otherwise it is unqueryable (`struct.model_not_queryable`);
 the same silent failure applies to `struct.key_not_groupable`. `describe_models`
 is all a later consumer sees, so a bare column is invisible and a bare name
-unusable. Put descriptions INSIDE the role — on `field()`/`metric_field()` they
-never reach the agent. A dimension a **ruling** created must state that ruling.
+unusable. Put descriptions on `field()`/`metric_field()` — the dimension or
+metric on that field inherits them, so agent and catalog UI read the same text. A dimension a **ruling** created must state that ruling.
 Metrics stay question-driven: a numeric no question aggregates is a `number`
 dimension. No marker model: produce-verification is `.transform-complete`.
 `reference/models-example.md` shows the shape.

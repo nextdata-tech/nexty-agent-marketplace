@@ -42,14 +42,16 @@ customer_profile = (
     .schema(
         {
             # primary_key() alone is not groupable; pair it with a dimension.
-            "CUSTOMER_ID": field(int64(), primary_key(), dimension(name="customer_id", description="Customer key.")),
+            "CUSTOMER_ID": field(int64(), primary_key(), dimension(name="customer_id"), description="Customer key."),
             "COUNTRY": field(
                 string(),
-                dimension(name="country", description="ISO country of the customer's billing address."),
+                dimension(name="country"),
+                description="ISO country of the customer's billing address.",
             ),
             "EMAIL": field(
                 string(),
-                dimension(name="email", description="Primary contact email address.", pii=True),
+                dimension(name="email", pii=True),
+                description="Primary contact email address.",
             ),
         }
     )
@@ -60,7 +62,7 @@ order_event = (
     .description("One row per order or sales event.")
     .schema(
         {
-            "ORDER_ID": field(int64(), primary_key(), dimension(name="order_id", description="Order key.")),
+            "ORDER_ID": field(int64(), primary_key(), dimension(name="order_id"), description="Order key."),
             "CUSTOMER_ID": field(
                 int64(),
                 join(to="customer_profile", to_column="CUSTOMER_ID"),
@@ -79,8 +81,8 @@ order_metrics = semantic_view("order_metrics", order_event).schema(
                 Agg.COUNT,
                 of=order_event.field("ORDER_ID"),
                 name="order_count",
-                description="Number of order events recorded, all statuses.",
             ),
+            description="Number of order events recorded, all statuses.",
         ),
         "unique_customers_ordered": metric_field(
             int64(),
@@ -88,8 +90,8 @@ order_metrics = semantic_view("order_metrics", order_event).schema(
                 Agg.COUNT_DISTINCT,
                 of=order_event.field("CUSTOMER_ID"),
                 name="unique_customers_ordered",
-                description="Distinct customers with at least one order event.",
             ),
+            description="Distinct customers with at least one order event.",
         ),
         "total_revenue": metric_field(
             float64(),
@@ -97,8 +99,8 @@ order_metrics = semantic_view("order_metrics", order_event).schema(
                 Agg.SUM,
                 of=order_event.field("AMOUNT_USD"),
                 name="total_revenue",
-                description="Gross order amount in USD across ALL statuses.",
             ),
+            description="Gross order amount in USD across ALL statuses.",
         ),
     }
 )
