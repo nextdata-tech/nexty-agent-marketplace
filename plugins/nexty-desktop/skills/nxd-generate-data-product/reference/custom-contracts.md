@@ -34,6 +34,17 @@ echo-back and ask an Open Question when the attachment is ambiguous. An input
 expectation and an output promise must be attached at the phase stated in the
 approved proposal.
 
+Custom contracts are executable positive checks, not a vocabulary for absence
+or redaction rules. Every name in `fields` must be a non-empty column declared
+by the contract's `model`; an excluded or redacted column must therefore never
+be represented by a contract whose fields point at that column, and an empty
+`fields` list is not a valid workaround. Express that requirement by leaving
+the sensitive field out of the approved model and output schema, then prove
+the absence across the required physical and governed surfaces in the
+scenario evidence. If a contract refers to a field that is not declared by
+its model, admission should fail and the proposal must be regenerated without
+that field rather than patched or retried with the same payload.
+
 **A contract never replaces a Step-3b assert.** They check different things: a
 contract checks what the user guaranteed about a value, an assert checks the
 source-vs-derived relationship, which no verifier can see. Dropping an assert
@@ -99,6 +110,8 @@ schema promises: every physical output model still keeps `.promise(model)`.
 For a CSV input, define `_csv` and `_compute` once in `spec.py`:
 
 ```python
+from nxd.spec import custom
+
 _csv = "/infra-profile/desktop-local#/services/csv-source"
 _compute = "/infra-profile/desktop-local#/services/python-compute"
 ```
