@@ -14,7 +14,7 @@ allowed-tools:
   - Task
 metadata:
   author: nextdata
-  version: 0.51.2
+  version: 0.51.4
 ---
 
 # nxd-generate-data-product skill
@@ -51,7 +51,7 @@ The owning loop translates status, failures, costs, and publication state into p
 
 ## The closure layout
 
-Choose and normalize one absolute `<dp-root>` — the exact directory submitted through the supervisor's returned `capture` action — **BEFORE authoring any artifact**. Move or recreate existing closure files into it before creating/checking another. Every closure artifact must be inside `<dp-root>`: root-level artifacts are direct children, nested artifacts are descendants. This includes `spec.py`, `models.py`, `transform/`, `requirements.txt`, `infra-profile.yaml`, connector-specific artifacts such as `connectivity_check.py` for API sources, and (for credentialed sources) `.gitignore` and `SENSITIVE`. A declared custom contract additionally requires exactly one verifier under `contracts/expectations/` or `contracts/promises/` plus its matching `spec.py` wiring; an empty inventory has no contract placeholder. For an `api-source`, the sole initial-write exception is the closure-local `connectivity_check.py`: author it first from the settled plan so it can perform the payload-inspection gate described in [reference/api-source.md](reference/api-source.md#payload-inspection-gate--before-authoring).
+Choose and normalize one absolute `<dp-root>` — the exact directory submitted through the supervisor's returned `capture` action — **BEFORE authoring any artifact**. Move or recreate existing closure files into it before creating/checking another. Every closure artifact must be inside `<dp-root>`: root-level artifacts are direct children, nested artifacts are descendants. This includes `spec.py`, `models.py`, `transform/`, `requirements.txt`, `infra-profile.yaml`, connector-specific artifacts such as `connectivity_check.py` for API sources, and (for credentialed sources) `.gitignore` and `SENSITIVE`. A declared custom contract additionally requires exactly one verifier under `contracts/expectations/` or `contracts/promises/` plus its matching `spec.py` wiring; an empty inventory has no contract placeholder. For an `api-source`, write the closure-local `connectivity_check.py` first **after** `prepare_workflow` returns its consent subject and the operator's explicit approval has been relayed through `session_decision`; it is the first post-consent closure artifact, not a pre-consent exception. Then use it for the payload-inspection gate described in [reference/api-source.md](reference/api-source.md#payload-inspection-gate--before-authoring).
 Never place credentials, `SENSITIVE`, `.gitignore`, or the profile beside/above `<dp-root>`; split artifacts must be consolidated first. Use this same root for capture; supervisor capture owns reserved metadata and trusted checks.
 
 The author emits **executable closure inputs only**. Supervisor capture

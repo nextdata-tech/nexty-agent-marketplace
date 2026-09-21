@@ -271,11 +271,10 @@ standalone probe below is what distinguishes them.
 
 ## Payload inspection gate — before authoring
 
-After the plan is settled, resolve exactly one absolute closure root. For an
-`api-source`, the **first and only closure artifact initially allowed** is a
-closure-local `connectivity_check.py`. This is the deliberate exception to the
-general closure rule: the probe has to exist before it can perform the
-inspection. Its non-secret resource list, endpoint paths, expected row-array
+After the plan is settled and explicit operator consent has been relayed,
+resolve exactly one absolute closure root. For an `api-source`, write the
+closure-local `connectivity_check.py` as the first closure artifact after
+consent. Its non-secret resource list, endpoint paths, expected row-array
 selectors, and pagination bounds come from the settled plan; it must not rely
 on a later generated transform or on an untrusted caller working directory.
 Keep it dependency-light and independent of NXD, dlt, DuckDB, and the

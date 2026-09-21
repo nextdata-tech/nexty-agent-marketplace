@@ -206,6 +206,11 @@ closure, under schema `nxd-conversation-review-ledger-v1`, the workflow id, and
 append-only `review_rounds[]`: deadline and elapsed time, completeness/status,
 every original claim, adjudication, classification, user decision, proposed
 effect and applied files. Never mutate the captured closure with review output.
+Use the ledger status values `complete`, `needs_user`, or `timed_out`; do not
+copy the supervisor's separate `report.verdict` values (`clear`, `findings`,
+`rejected`, or `indeterminate`) into this field. A `findings` report can still
+belong to a `complete` ledger round when the rich claims and adjudications are
+complete; the two vocabularies answer different questions.
 Also record `deferred_finding_ids`: it is empty unless the cited user decision
 explicitly continues while leaving accepted behavior-affecting findings
 unapplied, in which case it names those finding IDs exactly.
