@@ -18,12 +18,12 @@ only with the public `nxd.spec` DSL:
 
 | Element | Where it belongs | Public form |
 |---|---|---|
-| Entity key | Physical `semantic_model` field | `field(type, primary_key(), dimension(name=..., description=...))` — pair the key role with a dimension or the key is not groupable |
+| Entity key | Physical `semantic_model` field | `field(type, primary_key(), dimension(name=...), description=...)` — pair the key role with a dimension or the key is not groupable |
 | Dimension | Physical `semantic_model` field | `field(type, dimension(...))` |
 | Join | Physical `semantic_model` field | `field(type, join(...))` |
 | Metric | Query-time `semantic_view` field | `metric_field(type, metric(...))` |
 | Model description | The model itself | `semantic_model(name).description(text)` |
-| Concept description | **Inside** the dimension/metric role | `dimension(description=...)`, `metric(description=...)` |
+| Concept description | On the **field**, once | `field(..., description=...)`, `metric_field(..., description=...)` — the role inherits it |
 
 Every physical model has one or more entity-key fields. Multiple
 `primary_key()` fields define a composite key. A semantic view belongs to one
@@ -55,7 +55,7 @@ from nxd.spec.data_types import float64, int64, string
 ### Entity key
 
 ```python
-"ORDER_ID": field(int64(), primary_key(), dimension(name="order_id", description="Order key."))
+"ORDER_ID": field(int64(), primary_key(), dimension(name="order_id"), description="Order key.")
 ```
 
 The key must identify one row of the physical model. Use more than one field when
@@ -68,9 +68,9 @@ the source has a validated composite key.
     string(),
     dimension(
         name="country",
-        description="ISO-3166 alpha-2 country of the customer's billing address.",
         pii=False,
     ),
+    description="ISO-3166 alpha-2 country of the customer's billing address.",
 )
 ```
 
@@ -84,10 +84,12 @@ basis, the population, or the ruling that produced it. "Country of the
 customer" is not enough when a model also carries a shipping country; name
 which one and where it comes from.
 
-> **Descriptions belong inside the role.** `dimension(description=...)` and
-> `metric(description=...)` reach `describe_model`. A `description=` on the
-> enclosing `field()` / `metric_field()` is an attribute description and is
-> **not** shown to the querying agent. For the full generator DSL reference,
+> **Write each description once, on the field.** `field(..., description=...)`
+> and `metric_field(..., description=...)` reach `describe_model`: a dimension
+> or metric declaring none of its own inherits the field's, and the catalog UI
+> shows the same sentence. `dimension(description=...)` /
+> `metric(description=...)` still win over it but are deprecated and emit a
+> `FutureWarning`. For the full generator DSL reference,
 > consult `nxd-generate-data-product`'s `reference/nxd-spec-api.md` when that
 > companion skill is installed; it is not a DataMesh bundle dependency.
 
@@ -120,8 +122,8 @@ order_metrics = semantic_view("order_metrics", orders).schema(
                 Agg.COUNT,
                 of=orders.field("ORDER_ID"),
                 name="order_count",
-                description="Number of order rows, including cancelled orders.",
             ),
+            description="Number of order rows, including cancelled orders.",
         ),
         "total_revenue": metric_field(
             float64(),
@@ -129,11 +131,11 @@ order_metrics = semantic_view("order_metrics", orders).schema(
                 Agg.SUM,
                 of=orders.field("AMOUNT_USD"),
                 name="total_revenue",
-                description=(
-                    "Gross order amount in USD across ALL statuses, including "
-                    "refunded and cancelled. Filter on the order_status "
-                    "dimension for a net figure."
-                ),
+            ),
+            description=(
+                "Gross order amount in USD across ALL statuses, including "
+                "refunded and cancelled. Filter on the order_status "
+                "dimension for a net figure."
             ),
         ),
         "unique_customers": metric_field(
@@ -142,8 +144,8 @@ order_metrics = semantic_view("order_metrics", orders).schema(
                 Agg.COUNT_DISTINCT,
                 of=orders.field("CUSTOMER_ID"),
                 name="unique_customers",
-                description="Distinct customers with at least one order.",
             ),
+            description="Distinct customers with at least one order.",
         ),
     }
 )
@@ -191,21 +193,19 @@ people = (
     .description("One row per registered person.")
     .schema(
         {
-            "PERSON_ID": field(int64(), primary_key(), dimension(name="person_id", description="Person key.")),
+            "PERSON_ID": field(int64(), primary_key(), dimension(name="person_id"), description="Person key."),
             "COUNTRY_CODE": field(
                 string(),
-                dimension(
-                    name="country",
-                    description="ISO-3166 alpha-2 country the person registered from.",
-                ),
+                dimension(name="country"),
+                description="ISO-3166 alpha-2 country the person registered from.",
             ),
             "EMAIL": field(
                 string(),
                 dimension(
                     name="email",
-                    description="Primary contact email address.",
                     pii=True,
                 ),
+                description="Primary contact email address.",
             ),
         }
     )
@@ -216,15 +216,13 @@ activity_events = (
     .description("One row per product activity event emitted by a person.")
     .schema(
         {
-            "EVENT_ID": field(int64(), primary_key(), dimension(name="event_id", description="Event key.")),
+            "EVENT_ID": field(int64(), primary_key(), dimension(name="event_id"), description="Event key."),
             "EVENT_TYPE": field(
                 string(),
-                dimension(
-                    name="event_type",
-                    description=(
-                        "Kind of activity recorded — one of login, view, "
-                        "export, share."
-                    ),
+                dimension(name="event_type"),
+                description=(
+                    "Kind of activity recorded — one of login, view, "
+                    "export, share."
                 ),
             ),
             "PERSON_ID": field(
@@ -243,8 +241,8 @@ event_metrics = semantic_view("event_metrics", activity_events).schema(
                 Agg.COUNT,
                 of=activity_events.field("EVENT_ID"),
                 name="event_count",
-                description="Number of activity events recorded.",
             ),
+            description="Number of activity events recorded.",
         ),
         "unique_actors": metric_field(
             int64(),
@@ -252,8 +250,8 @@ event_metrics = semantic_view("event_metrics", activity_events).schema(
                 Agg.COUNT_DISTINCT,
                 of=activity_events.field("PERSON_ID"),
                 name="unique_actors",
-                description="Distinct people who emitted at least one event.",
             ),
+            description="Distinct people who emitted at least one event.",
         ),
     }
 )

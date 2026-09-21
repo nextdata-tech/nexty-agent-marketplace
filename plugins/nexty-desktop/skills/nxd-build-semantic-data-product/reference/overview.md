@@ -75,11 +75,12 @@ meaning travels on the metric — and a description on every **dimension and
 metric** role. `primary_key()` and `join()` take no `description`, and neither
 is a concept an agent selects. See `registry-authoring.md`.
 
-> **Put the description inside the role, not on the field wrapper.**
-> `dimension(description=...)` and `metric(description=...)` are written into the
-> role blob and reach `describe_model`. The `description=` on the enclosing
-> `field()` / `metric_field()` is an attribute description — it lands in
-> `data_model` only, and the querying agent never sees it.
+> **Put the description on the field wrapper, once.** `field(...,
+> description=...)` and `metric_field(..., description=...)` reach
+> `describe_model`: a dimension or metric that declares none of its own inherits
+> the field's at compile time, and the catalog UI shows the same sentence.
+> `dimension(description=...)` / `metric(description=...)` still take precedence
+> but are deprecated and emit a `FutureWarning`.
 
 ### Why the base tables still matter
 

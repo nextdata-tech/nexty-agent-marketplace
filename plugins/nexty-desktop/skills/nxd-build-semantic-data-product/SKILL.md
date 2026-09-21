@@ -254,12 +254,13 @@ orders = (
     .description("One row per order.")
     .schema(
         {
-            "ORDER_ID": field(int64(), primary_key(), dimension(name="order_id", description="Order key.")),  # bare key = not groupable
+            "ORDER_ID": field(int64(), primary_key(), dimension(name="order_id"), description="Order key."),  # bare key = not groupable
             "REGION": field(
                 string(),
-                # The description goes INSIDE dimension() — on the enclosing
-                # field() it would never reach describe_model.
-                dimension(name="region", description="Sales region the order was booked in."),
+                dimension(name="region"),
+                # The description goes on the field; the dimension inherits it,
+                # so describe_model and the catalog UI show the same sentence.
+                description="Sales region the order was booked in.",
             ),
             "PRODUCT_ID": field(int64(), join(to="products", to_column="PRODUCT_ID")),
             # Bare is correct here: the total_revenue metric below aggregates
@@ -277,8 +278,8 @@ order_metrics = semantic_view("order_metrics", orders).schema(
                 Agg.SUM,
                 of=orders.field("REVENUE_USD"),
                 name="total_revenue",
-                description="Gross order revenue in USD across all order statuses.",
             ),
+            description="Gross order revenue in USD across all order statuses.",
         ),
     }
 )
@@ -289,18 +290,19 @@ order_metrics = semantic_view("order_metrics", orders).schema(
 
 | Role | Public DSL |
 |------|------|
-| primary key | `field(<type>(), primary_key(), dimension(name=..., description=...))` — roles compose, and a bare `primary_key()` is not groupable |
-| dimension | `field(<type>(), dimension(name=..., description=..., pii=<bool>))` |
-| metric | define on a `semantic_view(...)` with `metric_field(metric(..., description=...))`; do not add it to a physical base field |
+| primary key | `field(<type>(), primary_key(), dimension(name=...), description=...)` — roles compose, and a bare `primary_key()` is not groupable |
+| dimension | `field(<type>(), dimension(name=..., pii=<bool>), description=...)` |
+| metric | define on a `semantic_view(...)` with `metric_field(metric(...), description=...)`; do not add it to a physical base field |
 | join | `field(<type>(), join(to=..., to_column=...))` — no description parameter |
 | model | `semantic_model(...).description("One row per ...")` |
 
 Emit `primary_key()`; `grain` is deprecated.
 
-**The `description` goes INSIDE the role** — `dimension(description=...)`,
-`metric(description=...)`. A `description=` on the enclosing `field()` /
-`metric_field()` is an attribute description and never reaches
-`describe_model`, so the querying agent never sees it.
+**Write the `description` once, on the field** — `field(..., description=...)` /
+`metric_field(..., description=...)`. A dimension or metric declaring none of its
+own inherits it, so `describe_model` and the catalog UI show the same sentence.
+`dimension(description=...)` / `metric(description=...)` still win but are
+deprecated and emit a `FutureWarning`.
 
 See `reference/registry-authoring.md` for the full role vocabulary,
 auto-derivation rules, and a worked example.

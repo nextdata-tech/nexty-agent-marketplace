@@ -329,61 +329,51 @@ nxd_decisions = (
     )
     .schema(
         {
-            "decision_id": field(string(), primary_key(), dimension(name="decision_id", description="Stable id of the ruling.")),
+            "decision_id": field(string(), primary_key(), dimension(name="decision_id"), description="Stable id of the ruling."),
             "status": field(
                 string(),
-                dimension(
-                    name="decision_status",
-                    description=(
-                        "Review state — exactly one of confirmed, proposed, "
-                        "blocked. An answer built on a model a 'proposed' "
-                        "decision applies_to must be reported as provisional."
-                    ),
+                dimension(name="decision_status"),
+                description=(
+                    "Review state — exactly one of confirmed, proposed, "
+                    "blocked. An answer built on a model a 'proposed' "
+                    "decision applies_to must be reported as provisional."
                 ),
             ),
             "provenance": field(
                 string(),
-                dimension(
-                    name="decision_provenance",
-                    description=(
-                        "Who authored the ruling — exactly one of "
-                        "user_confirmed (the value came from the user), "
-                        "agent_authored (the agent invented "
-                        "it to make an underspecified rubric executable — "
-                        "including one the user later approved), "
-                        "source_derived (read off the source data), deferred "
-                        "(the step was deliberately not taken). Orthogonal to "
-                        "status: approval moves status, never provenance."
-                    ),
+                dimension(name="decision_provenance"),
+                description=(
+                    "Who authored the ruling — exactly one of "
+                    "user_confirmed (the value came from the user), "
+                    "agent_authored (the agent invented "
+                    "it to make an underspecified rubric executable — "
+                    "including one the user later approved), "
+                    "source_derived (read off the source data), deferred "
+                    "(the step was deliberately not taken). Orthogonal to "
+                    "status: approval moves status, never provenance."
                 ),
             ),
             "ruling": field(
                 string(),
-                dimension(
-                    name="decision_ruling",
-                    description="The ruling itself, in one sentence.",
-                ),
+                dimension(name="decision_ruling"),
+                description="The ruling itself, in one sentence.",
             ),
             "applies_to": field(
                 string(),
-                dimension(
-                    name="decision_applies_to",
-                    description=(
-                        "The models and columns this ruling materializes in "
-                        "(e.g. classified_spend.category). Empty for 'blocked', "
-                        "which materializes nothing."
-                    ),
+                dimension(name="decision_applies_to"),
+                description=(
+                    "The models and columns this ruling materializes in "
+                    "(e.g. classified_spend.category). Empty for 'blocked', "
+                    "which materializes nothing."
                 ),
             ),
             "detail": field(
                 string(),
-                dimension(
-                    name="decision_detail",
-                    description=(
-                        "The evidence or basis a reviewer should check. For "
-                        "'blocked': the missing datum, and which questions stay "
-                        "limited until it arrives."
-                    ),
+                dimension(name="decision_detail"),
+                description=(
+                    "The evidence or basis a reviewer should check. For "
+                    "'blocked': the missing datum, and which questions stay "
+                    "limited until it arrives."
                 ),
             ),
         }
@@ -400,8 +390,8 @@ nxd_decisions_metrics = semantic_view(
                 Agg.COUNT,
                 of=nxd_decisions.field("decision_id"),
                 name="decision_count",
-                description="Number of recorded rulings, any status.",
             ),
+            description="Number of recorded rulings, any status.",
         ),
     }
 )
