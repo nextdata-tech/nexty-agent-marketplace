@@ -442,6 +442,19 @@ bounded refresh or retry policy. It re-raises errors without a response and
 HTTP errors for other statuses; do not replace this with a broad exception
 catch or an unbounded retry loop.
 
+**Preserve exact JSON measures before dlt consumes the response.**
+`Response.json()` normally creates Python floats for JSON fractional numbers;
+converting that float later with `Decimal(str(value))` cannot recover digits
+that were already lost. When source precision is load-bearing, add a
+closure-local `response_actions` hook that parses `response.content` with
+`json.loads(..., parse_float=Decimal)` and rewrites the response body so those
+values remain exact decimal strings for the resource; convert those strings to
+`Decimal` in the transform and keep the `Decimal` through the yielded row.
+Declare `decimal(precision, scale)` from the approved source contract rather
+than `number()` or a scale-zero decimal. Verify the exact decimal value before
+the write; do not compare against a cast into the already-rounded destination
+type. The hook must preserve pagination metadata and all non-measure fields.
+
 The script is shipped as a source recipe, not as a runtime dependency of a generated closure. Copy its source into the generated self-contained transform, or copy and adapt its `_headers_from`, `RefreshingSession`, and `make_rest_api_config` definitions there. Do not import it from the installed skill tree: the closure must still work after handoff to the supervisor. Keep the generated transform resource list and auth/profile wiring around the copied implementation.
 
 The session is attached at `config["client"]["session"]`, which is the

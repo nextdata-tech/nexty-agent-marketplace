@@ -24,9 +24,36 @@ subject-bound `session_decision`, the trusted materializer projects it to
   before yielding any resource or avoid landing the relation. Do not try to
   enforce that requirement by toggling `.promise()` / `.model()` or removing a
   semantic role.
+- Treat every generated description as approved content, not free-form
+  documentation: model, field, metric, and custom-contract descriptions must
+  be copied from the relevant approved blueprint section. A useful paraphrase
+  is still an unapproved closure value and can fail the supervisor's
+  `struct.description_unreachable` check; amend and re-approve the blueprint if
+  the wording itself needs to change.
 - Compare the closure README with the actual mechanism: describe explicit
   Outputs, physical support relations, the DuckDB surface, and privacy limits
   as they are implemented. Do not preserve a claim that the code cannot enforce.
+
+## Source-derived semantic checks
+
+For every derived model that reads two or more sources, or whose approved
+Output names coverage or a ratio metric:
+
+- Confirm that the transform validates each source schema before matching. For
+  CSV/file sources, the approved field names must appear in the source contract
+  and `expected_columns` must be used when the header set is exact; for
+  API/database sources, apply the equivalent check to the complete captured
+  response rows. A source column guessed from a similar name is not a match.
+  Missing, duplicate, or exact-contract mismatches must raise before any
+  derived resource is built.
+- Confirm that every requested source-side coverage value is a separate landed
+  row with the complete source row count, matched count, basis-point rate, and
+  unmatched identity list. An aggregate match count is not evidence for both
+  source sides.
+- Confirm that aggregate ratios use separate additive numerator and denominator metrics and are computed from those query results at the approved grain. A row-level ratio (such as per-campaign CPA) must never be exposed as a metric with `Agg.AVG` or any other reduction, including `SUM`, `MIN`, or `MAX`, and a ratio column must never be summed to produce an aggregate ratio. The allowed row-grain alternative is a derived ratio column validated with `assert_row_ratios`; it must remain at that row grain and must not be reduced. Use the fail-closed recipe in `reference/derived-models.md` and inspect the actual assertions, not only the model column names.
+- Run the transform assertions against the complete supplied sources before
+  capture. A retained review may find a semantic defect, but it does not make a
+  missing source contract or a failed assertion safe to publish.
 
 ## Decision-ledger projection
 

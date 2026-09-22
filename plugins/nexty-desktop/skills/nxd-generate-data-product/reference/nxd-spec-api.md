@@ -82,7 +82,7 @@ which return an `AttributeSpec` (a full column) already carrying the role blob.
 - **`primary_key()`** — no arguments. The entity-key role.
 
   **Pair it with a `dimension(...)` on the same field.** Roles compose —
-  `field(string(), primary_key(), dimension(name=...), description=...)` is
+  `field(string(), primary_key(), dimension(name=..., description="..."))` is
   accepted — and a key that carries only `primary_key()` is **not groupable**:
   it never appears in `describe_models`, so no query can return which entity a
   row belongs to. The product still builds, publishes and answers aggregate
@@ -95,9 +95,8 @@ which return an `AttributeSpec` (a full column) already carrying the role blob.
   join makes the two models connected by construction.
 - **`dimension(name=None, pii=False, label=None, description="")`** — a
   groupable/filterable column. `label` attaches a companion display column
-  (`label_column` in the compiled blob). `description=` is **deprecated** here
-  and emits a `FutureWarning`: write it on the field instead, and the dimension
-  inherits it.
+  (`label_column` in the compiled blob). Put the semantic description here;
+  the supervisor's structural checker requires it on the role.
 
   **`name` is unique across the join-connected registry, not per model.** Two
   models that a `join()` relates may not both declare a dimension called
@@ -138,9 +137,9 @@ which return an `AttributeSpec` (a full column) already carrying the role blob.
   the other one as the key; a composite key needs every one of its columns.
 
 - **`metric(agg, of=None, name=None, description="", boolean=False, extra_dimensions=(), column=None)`**
-  — `agg` is an `Agg` value. `description=` is **deprecated** here and emits a
-  `FutureWarning`: write it on the enclosing `metric_field(...)` instead, and
-  the metric inherits it. `of` is a `FieldRef` (from `<model>.field("<col>")`)
+  — `agg` is an `Agg` value. Put the semantic metric description here so it
+  reaches the semantic catalog checker. `of` is a `FieldRef` (from
+  `<model>.field("<col>")`)
   pointing at the base column being aggregated; mutually exclusive with the
   explicit `column=` override — pass one or neither, never both. Use
   `column="*"` only for `COUNT(*)`. For `Agg.EXPRESSION`, omit both `of` and
@@ -166,41 +165,46 @@ still exits non-zero — read the `error:` line, not the tail.
 A field may also be written as a bare `dtype` (no role) or a
 `(dtype, *rest)` tuple inside `.schema({...})` — see `SemanticModelSpec`
 below; `field()`/`metric_field()` are for when you need to attach `label` or an
-explicit `name` inline. `description=` is accepted there too, and it is the
-placement to prefer — see the next section.
+explicit `name` inline. A wrapper `description=` is accepted for the physical
+attribute, but it cannot replace the semantic role description — see the next
+section.
 
-### `description=` — write it once, on the field
+### `description=` — write it on the semantic role
 
-`description=` appears on both the **role builders** and the **field wrappers**.
-Both reach the querying agent: a dimension or metric that declares no
-description of its own inherits the field's at compile time.
+`description=` appears on both the **role builders** and the **field wrappers**,
+but they are different surfaces. The supervisor's structural checker requires
+the description on `dimension(...)` or `metric(...)`, because that is what
+`describe_models` exposes. A wrapper-only description is an attribute
+description for the physical field; it does not satisfy the semantic role and
+produces `struct.description_unreachable` when the role has no description.
 
-| Written as | Lands in | Seen by the querying agent? |
+| Written as | Lands in | Satisfies the semantic description check? |
 |---|---|---|
-| `field(description=...)`, `metric_field(description=...)` | `AttributeSpec._description` → manifest attribute description | **Yes** — a dimension/metric with no description of its own inherits it, and the catalog UI shows the same text |
-| `dimension(description=...)`, `metric(description=...)` | the role blob → `Role::Metric.description` / dimension description | **Yes**, and it wins over the field's — but it is **deprecated** and emits a `FutureWarning` |
+| `field(description=...)`, `metric_field(description=...)` | `AttributeSpec._description` → physical attribute description | **No** — wrapper-only text does not make a semantic role description reachable |
+| `dimension(description=...)`, `metric(description=...)` | the semantic role blob → dimension or metric description | **Yes** — use this form |
 
-So write the sentence a consumer reads **once, on the field**:
+So write the sentence a consumer reads on the semantic role:
 
 ```python
-# RIGHT — one description, read by describe_model and by the catalog UI
+# RIGHT — the semantic description is on the role
+"total_revenue": metric_field(
+    float64(),
+    metric(Agg.SUM, of=orders.field("AMOUNT_USD"), name="total_revenue",
+           description="Gross order amount in USD across ALL statuses."),
+)
+
+# WRONG — physical wrapper text alone is not reachable by the semantic checker
 "total_revenue": metric_field(
     float64(),
     metric(Agg.SUM, of=orders.field("AMOUNT_USD"), name="total_revenue"),
     description="Gross order amount in USD across ALL statuses.",
 )
-
-# DEPRECATED — still honoured, but warns; do not write new code this way
-"total_revenue": metric_field(
-    float64(),
-    metric(Agg.SUM, of=orders.field("AMOUNT_USD"),
-           name="total_revenue",
-           description="Gross order amount in USD across ALL statuses."),
-)
 ```
 
-On a `metric_field`, describe the aggregate ("Gross order amount in USD"), not
-the column it reads.
+On a `metric`, describe the aggregate ("Gross order amount in USD"), not the
+column it reads. For a dimension, put the semantic text on
+`dimension(description=...)`; wrapper text may be added separately for a
+physical attribute, but cannot replace the role description.
 
 Model-level description **does** reach the agent — it is emitted in both
 `list_models` and `describe_model`. The chained

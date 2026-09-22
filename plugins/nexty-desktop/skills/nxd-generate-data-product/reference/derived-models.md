@@ -15,6 +15,7 @@ shows the source-independent checks and concrete failure shapes they require.
 - [Score explainability: one row per scored criterion](#score-explainability-one-row-per-scored-criterion)
 - [The resource template](#the-resource-template)
 - [Reading the sources yourself](#reading-the-sources-yourself)
+- [Fail-closed source and ratio contracts](#fail-closed-source-and-ratio-contracts)
 - [Flat dicts, and why](#flat-dicts-and-why)
   - [A column that is all-None is DROPPED, not landed as nulls](#a-column-that-is-all-none-is-dropped-not-landed-as-nulls)
   - [Closing over rows: use a factory, not a default argument](#closing-over-rows-use-a-factory-not-a-default-argument)
@@ -122,28 +123,24 @@ invoices = (
         {
             # number() because every observed invoice_id is numeric. Check the
             # source first: a "T1257"-style ID is string(), not number().
-            "invoice_id": field(number(), primary_key(), dimension(name="invoice_id"), description="Invoice key."),
+            "invoice_id": field(number(), primary_key(), dimension(name="invoice_id", description="Invoice key.")),
             "customer": field(
                 string(),
-                dimension(name="customer"),
-                description="Billed customer name as it appears on the invoice.",
+                dimension(name="customer", description="Billed customer name as it appears on the invoice."),
             ),
             "start_month": field(
                 string(),
-                dimension(name="start_month"),
-                description="First month of the invoice's service term, as YYYY-MM.",
+                dimension(name="start_month", description="First month of the invoice's service term, as YYYY-MM."),
             ),
             # No metric aggregates these, so they take dimensions rather than
             # staying bare — a roleless column never reaches describe_models.
             "term_months": field(
                 number(),
-                dimension(name="term_months"),
-                description="Length of the service term in months. A duration, not an additive measure.",
+                dimension(name="term_months", description="Length of the service term in months. A duration, not an additive measure."),
             ),
             "amount": field(
                 number(),
-                dimension(name="invoice_amount"),
-                description="Invoice face value. Recognised revenue is amortised over the term — see amortization_schedule.",
+                dimension(name="invoice_amount", description="Invoice face value. Recognised revenue is amortised over the term — see amortization_schedule."),
             ),
         }
     )
@@ -161,25 +158,22 @@ amortization_schedule = (
     )
     .schema(
         {
-            "schedule_id": field(string(), primary_key(), dimension(name="schedule_id"), description="Invoice-month key: <invoice_id>-<period>."),
+            "schedule_id": field(string(), primary_key(), dimension(name="schedule_id", description="Invoice-month key: <invoice_id>-<period>.")),
             "invoice_id": field(
                 number(),
                 join(to="invoices", to_column="invoice_id"),
             ),
             "customer": field(
                 string(),
-                dimension(name="schedule_customer"),
-                description="Billed customer, carried from the source invoice.",
+                dimension(name="schedule_customer", description="Billed customer, carried from the source invoice."),
             ),
             "period_month": field(
                 string(),
-                dimension(name="period_month"),
-                description="The month this row recognises revenue for, as YYYY-MM.",
+                dimension(name="period_month", description="The month this row recognises revenue for, as YYYY-MM."),
             ),
             "period_index": field(
                 number(),
-                dimension(name="period_index"),
-                description="1-based ordinal of this month within the invoice's term.",
+                dimension(name="period_index", description="1-based ordinal of this month within the invoice's term."),
             ),
             # Bare is correct here: recognized_revenue aggregates this column.
             "recognized_amount": number(),
@@ -197,11 +191,11 @@ amortization_metrics = semantic_view(
                 Agg.SUM,
                 of=amortization_schedule.field("recognized_amount"),
                 name="recognized_revenue",
-            ),
-            description=(
-                "Revenue recognised in the selected period(s), straight-line "
-                "amortised from invoice face value over the service term. "
-                "Not invoiced amount — group by period_month for a schedule."
+                description=(
+                    "Revenue recognised in the selected period(s), straight-line "
+                    "amortised from invoice face value over the service term. "
+                    "Not invoiced amount — group by period_month for a schedule."
+                ),
             ),
         ),
     }
@@ -306,20 +300,18 @@ classified_spend = (
     )
     .schema(
         {
-            "transaction_id": field(number(), primary_key(), dimension(name="transaction_id"), description="Transaction key."),
+            "transaction_id": field(number(), primary_key(), dimension(name="transaction_id", description="Transaction key.")),
             "merchant": field(
                 string(),
-                dimension(name="merchant"),
-                description="Merchant name as it appears on the source transaction, unnormalised.",
+                dimension(name="merchant", description="Merchant name as it appears on the source transaction, unnormalised."),
             ),
             "category": field(
                 string(),
-                dimension(name="category"),
-                description=(
+                dimension(name="category", description=(
                     "COGS/opex classification from the confirmed "
                     "merchant_categories mapping. Merchants the mapping does "
                     "not cover land in 'needs_review', not in a real category."
-                ),
+                )),
             ),
             # Bare: classified_spend_metrics below aggregates it.
             "amount": number(),
@@ -339,11 +331,11 @@ classified_spend_metrics = semantic_view(
                 Agg.SUM,
                 of=classified_spend.field("amount"),
                 name="total_spend",
-            ),
-            description=(
-                "Total classified spend. Group by category to see the "
-                "split, and check the needs_review share before quoting "
-                "the headline number."
+                description=(
+                    "Total classified spend. Group by category to see the "
+                    "split, and check the needs_review share before quoting "
+                    "the headline number."
+                ),
             ),
         ),
         "transaction_count": metric_field(
@@ -352,8 +344,8 @@ classified_spend_metrics = semantic_view(
                 Agg.COUNT,
                 of=classified_spend.field("transaction_id"),
                 name="transaction_count",
+                description="Number of classified transactions.",
             ),
-            description="Number of classified transactions.",
         ),
     }
 )
@@ -728,6 +720,89 @@ or casting an ID column: `int()` on a `"T1257"`-style key raises
 money so cent-level reconciliation asserts hold. Cast to `float` only in the final dict, since dlt
 has no `Decimal` mapping here; do the reconciliation in `Decimal` **before**
 that cast.
+
+## Fail-closed source and ratio contracts
+
+The ordinary `_read_source_rows` example above is enough only when the
+derivation has no source-field or coverage contract beyond the model's grain.
+For a CSV/file-backed multi-source join, copy/adapt the source of
+[`scripts/source_contract.py`](../scripts/source_contract.py) directly into
+`transform/main.py` and use its checks before any matching or resource
+construction. Do not import it from the installed skill directory: the
+supervisor receives the closure's staged transform, not the skill checkout.
+
+For an API or database source, there is no CSV export to reopen. Capture the
+complete fetched rows in memory at the approved source grain, validate their
+field set with the same fail-closed rule, and apply `coverage_summary` and the
+ratio assertions to those rows. Do not invent a `data/` tree just to use the
+CSV reader.
+
+The source contract must preserve the ratio's grain. For aggregate queries,
+expose additive numerator and denominator metrics separately and compute the
+ratio from those query results. Never expose a row-level ratio (such as
+per-campaign CPA) as a semantic metric with `Agg.AVG` or any other reduction.
+The allowed row-grain alternative is a derived ratio column validated with
+`assert_row_ratios`; it may be exposed at that row grain, but never through a
+reducing metric over the ratio column.
+
+```python
+# Copy/adapt the source_contract.py definitions above this code in the
+# self-contained transform. Do not make the staged transform depend on a file
+# that exists only in the installed skill tree.
+
+spend = read_csv_rows(
+    sorted((source_root / "spend").glob("*.csv")),
+    required_columns=("spend_id", "campaign_name", "spend_cents"),
+    expected_columns=("spend_id", "campaign_name", "spend_cents"),
+    source_name="spend",
+)
+conversions = read_csv_rows(
+    sorted((source_root / "conversions").glob("*.csv")),
+    required_columns=("conversion_id", "campaign_name", "conversions"),
+    expected_columns=("conversion_id", "campaign_name", "conversions"),
+    source_name="conversions",
+)
+
+# `matched_spend_ids` and `matched_conversion_ids` come from the same
+# accepted-pair set. A coverage row is emitted for EACH source side.
+spend_coverage = coverage_summary(
+    spend, matched_spend_ids, id_column="spend_id", source_name="spend"
+)
+conversion_coverage = coverage_summary(
+    conversions,
+    matched_conversion_ids,
+    id_column="conversion_id", source_name="conversions"
+)
+
+# For an aggregate CPA row, compute from the additive totals. The helper
+# rejects `sum(pair["cpa_cents"] for pair in pairs)` even when that number looks
+# plausible on a small fixture. The default quantum is one cent because these
+# inputs and the output are cent-scaled.
+assert_aggregate_ratio(
+    matched_pairs,
+    match_metrics_row,
+    numerator_column="spend_cents",
+    denominator_column="conversions",
+    ratio_column="cpa_cents",
+    metric_name="matched_cpa",
+)
+```
+
+`required_columns` is the minimum approved header set; `expected_columns` makes
+the header set exact and rejects an extra field as well. The reader rejects
+missing or blank required values before matching. After accepted matching,
+`coverage_summary` rejects duplicate source identities and matched IDs that are
+not in the source, and returns the complete unmatched identity list so the
+closure cannot hide a source-side miss. Coverage rates are integer basis points
+(`6000` means 60%). Ratios use finite values, a positive denominator, and
+explicit half-up rounding. The default quantum of `1` is appropriate only when
+the inputs and output are already in an integer unit such as cents; pass the
+approved output quantum (for example `quantum="0.001"`) for fractional rates.
+If the approved grain is not the source row, write a separate assertion that
+names that grain and reconcile the additive totals before yielding the derived
+rows. An empty source or zero denominator must remain an explicit approved
+policy (such as a null/undefined output); do not invent a zero to make the
+assertion pass.
 
 ## Flat dicts, and why
 
