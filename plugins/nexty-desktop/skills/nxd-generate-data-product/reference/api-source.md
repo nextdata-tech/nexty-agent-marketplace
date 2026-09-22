@@ -301,6 +301,14 @@ or an inferred schema is not payload inspection. A failed or uninspectable
 resource must produce a bounded diagnostic and stop authoring; do not guess a
 schema. Repeat the gate whenever the endpoint set or source binding changes.
 
+This ordering is strict: after consent, the only file written before the probe
+passes is `connectivity_check.py`. Do not create `infra-profile.yaml`,
+`.gitignore`, `SENSITIVE`, `spec.py`, `models.py`, `transform/`,
+`requirements.txt`, or `README.md` first. The probe receives the runtime
+credential from the authoring session; it does not need the profile file to
+exist yet. If the probe cannot inspect every configured resource, stop with a
+bounded diagnostic rather than authoring from a guessed schema.
+
 If credentials are unavailable in-session, author the probe and then continue
 authoring the remaining closure from the settled plan. Mark **both** payload
 inspection and the connectivity self-check as **not run** and **unverified**;
@@ -354,6 +362,11 @@ already been resolved.
   | `http_basic` | `auth_username`, `auth_password` |
   | `api_key` | `auth_api_key`, `auth_key_name`, `auth_key_location` (optional, defaults to `header`) |
   | `oauth2_client_credentials` | `auth_client_id`, `auth_client_secret`, `auth_token_url` |
+
+  Implement only the modes named by the approved source contract. A bearer-only
+  contract still dispatches on `auth_type`, but its unsupported-mode branch
+  must reject API-key, basic, or OAuth values instead of adding unused auth
+  mechanisms or credentials.
 
   Omitting `auth_type` (and its fields) entirely means
   `secrets` has no `"auth_type"` key, not an empty one. See
