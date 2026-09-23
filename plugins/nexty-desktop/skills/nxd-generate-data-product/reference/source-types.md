@@ -9,6 +9,8 @@ their service shape, companion artifacts, and detailed source recipe.
 | Other local file | `file-source` | `file-source-path` + `data/` | [File source](file-source.md) |
 | Database | `db-source` | `db-source-tables` | [Database source](database-source.md) |
 | REST API | `api-source` | `connectivity_check.py`; endpoint attributes | [API source](api-source.md) |
+| Salesforce REST API | `api-source` with `source_kind: salesforce` | `connectivity_check.py`; endpoint/query attributes | [Salesforce source](salesforce-source.md) |
+| Jira REST API | `api-source` with `source_kind: jira` | `connectivity_check.py`; endpoint/JQL attributes | [Jira source](jira-source.md) |
 | Google Drive files | `api-source` with `source_kind: google_drive_files` | `connectivity_check.py` | [Google Drive file source](google-drive-source.md) |
 | Google Sheets | `api-source` with `source_kind: google_sheets` | `connectivity_check.py` | [Google Sheets source](google-sheets-source.md) |
 
@@ -21,6 +23,9 @@ their service shape, companion artifacts, and detailed source recipe.
 - Use `api-source` for an HTTP API whose response is already a row-oriented
   resource. Start with [the API source recipe](api-source.md) for auth,
   pagination, envelopes, and redaction.
+- Use the Salesforce recipe for SOQL query results and `nextRecordsUrl`
+  pagination. Use the Jira recipe for issue search results, `startAt`/
+  `maxResults` pagination, and flat issue fields.
 - Use the Google Drive recipe for tabular files stored in Drive. Use the Google
   Sheets recipe for spreadsheet ranges; a Sheet is not a binary CSV file.
 

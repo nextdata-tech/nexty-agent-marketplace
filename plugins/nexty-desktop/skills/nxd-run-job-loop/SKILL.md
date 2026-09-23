@@ -13,7 +13,7 @@ allowed-tools:
   - Task
 metadata:
   author: nextdata
-  version: 0.52.0
+  version: 0.52.2
 ---
 
 # nxd-run-job-loop skill
@@ -330,6 +330,7 @@ natural-language translation is yours to do. For each question:
    ambiguous, ask; with no user, materialize. Never re-aggregate agent-side, and
    never silently drop the constraint.
 4. **Run the governed query.** Call `mcp__nxd-desktop__run_semantic_query` with the endpoint/token plus the selected measures/dimensions — don't bypass it with raw SQL or a local aggregation. For ranked questions, pass endpoint-native `order_by: [{"name": "<selected measure or dimension>", "dir": "desc"}]` and integer `limit`; never sort or truncate rows agent-side.
+   For row-level outputs, select numeric values as dimensions; never substitute a `total_<field>` aggregate for a promised record field.
 5. **Quantify the review bucket before presenting a classified total.** If the
    selection's model carries a classification dimension with a review bucket
    (`needs_review`, `unmapped`, `other`), a single headline number hides how much
@@ -364,15 +365,14 @@ exit: `healed`, `healed_with_concessions`, `caps_exhausted`, `blocked`,
   **Edit `dp-blueprint.md` first**, re-validate, and re-approve it when the change
   touches a ruling (a criteria change is a new `rubric_version`); then go back to
   Step 2/3 and use `reset_workflow` while the v2 construction is still pending.
-  The currently enrolled operation scope is new-build only; after publication,
-  a behavior-changing revision is unsupported and must be reported instead of
-  routed through a direct rebuild. After a later supported fresh publication,
-  discard cached artifact resources and current file, render the new release,
-  then re-describe before mapping again. If the loop doesn't
-  converge within the caps, keep the attempt history in the build record and
-  report the user-visible impact, current state, and next action using
-  [user-facing-language.md](reference/user-facing-language.md) — never loop
-  indefinitely or give up silently.
+  The enrolled scope is new-build only. After publication, behavior-changing revisions are unsupported: preserve
+  the release and never reset, recapture, validate, retry, remove, or replace its workflow ID.
+  `validation/existing_workflow_unsupported` is terminal (see
+  [reference/failure-handling.md](reference/failure-handling.md)). Report the limitation and ask explicit
+  authorization for a separate versioned product/new ID; only then start fresh workflow-v2 admission.
+  Consumers must switch; the old release is unchanged. After fresh publication, discard cached artifacts/current
+  file, render, then re-describe. If caps expire, keep attempt history and report impact, state, and next action
+  using [user-facing-language.md](reference/user-facing-language.md); never loop or quit silently.
 - **Blocked** — the fix is a ruling only the user can make (a missing rate, an
   ambiguous scope, a measurement no source carries). That is an open question
   found late, not a heal: write it back into `dp-blueprint.md`'s `## Open Questions`
@@ -464,13 +464,13 @@ current owners.
   question with SQLite, raw SQL, pandas, or a shell pipeline as fallback, and
   never author raw SQL to bypass the semantic layer — a failed MCP build is a
   reported failure, not permission to route around it.
-- **Reattach, don't rebuild, when the artifact is live, and keep one workflow id
-  per data product.** In a fresh session with no endpoint, `list_data_products` →
-  `resume_data_product` → static artifact recovers a published workflow in
-  seconds with a fresh bearer; `list_data_products` remains discovery only. An
-unavailable artifact does not authorize reconstruction outside workflow-v2;
-current v2
-  enrollment supports only a fresh workflow build
+- **Reattach, don't rebuild, when live; keep one workflow ID per data product.** In a fresh session,
+  `list_data_products` → `resume_data_product` → static artifact restores the published workflow with a fresh bearer;
+  discovery isn't a fallback. Unavailable artifacts don't authorize reconstruction outside workflow-v2;
+  enrollment admits fresh builds only. This does not reopen a published workflow
+  for revision; follow the terminal `validation/existing_workflow_unsupported`
+  rule above. A separately authorized, versioned product requires a new workflow
+  ID, and consumers must switch; the prior release remains unchanged
   ([reference/context-and-resume.md](reference/context-and-resume.md)).
 - **Keep workflow-v2 authoring on the main thread.** Pass the returned `capture`
   action an absolute generated-definition path explicitly exposed by the
@@ -495,6 +495,5 @@ current v2
   own resolved runtime path, not a defect. If a served closure is wrong, fix
   **your** source dir and re-`serve` — the supervisor re-pins.
 - **Bearer only as a tool parameter** — keep it out of narration, never persist or print it. **Never present a preview or truncated result as verified data**, and never stall silently.
-
 ## Reference docs (this skill)
 Use [dp-blueprint](reference/dp-blueprint.md), [build record](reference/build-record.md), [failure handling](reference/failure-handling.md), [user-facing language](reference/user-facing-language.md), [direct CLI lifecycle](reference/direct-cli-lifecycle.md), [source materialization](reference/source-materialization.md), [scripts bootstrap](reference/scripts-bootstrap.md), [scheduling](reference/scheduling.md), [context and resume](reference/context-and-resume.md), [inference](reference/inference.md), [handoff export](reference/handoff-export.md), [catalog resources](reference/catalog-resources.md), [query grammar](reference/query-grammar.md), and [dlt](reference/dlt.md) for named details.

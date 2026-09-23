@@ -19,6 +19,13 @@
 | `order_by[]` | names that are **among the selected** measures/dimensions, else the compiler raises |
 | `limit` | an integer — the DuckDB handler caps the result at **200 rows** regardless |
 
+For a row-level question such as "list each current record", select every
+projected value, including numeric values such as `amount`, as a dimension.
+Do not replace a projected numeric dimension with a `total_<field>` or
+`SUM(<field>)` measure. If the catalog exposes only an aggregate for a field
+the approved output promises at row grain, repair the product or report the
+blocker; never present aggregate rows as record rows.
+
 Filter **values are strings on the wire**, whatever the column's physical type.
 
 For a ranked question, make the endpoint do the ordering and limiting in the
