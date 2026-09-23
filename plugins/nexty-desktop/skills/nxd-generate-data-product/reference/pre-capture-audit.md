@@ -26,10 +26,13 @@ subject-bound `session_decision`, the trusted materializer projects it to
   semantic role.
 - Treat every generated description as approved content, not free-form
   documentation: model, field, metric, and custom-contract descriptions must
-  be copied from the relevant approved blueprint section. A useful paraphrase
-  is still an unapproved closure value and can fail the supervisor's
-  `struct.description_unreachable` check; amend and re-approve the blueprint if
-  the wording itself needs to change.
+  be copied from the relevant approved blueprint section. A paraphrase can
+  violate the approved-content contract even if a particular runtime accepts
+  it. Amend and re-approve the blueprint when its wording needs to change; do
+  not predict a specific supervisor diagnostic for that policy violation.
+  Place descriptions on the enclosing `field()` / `metric_field()` wrapper so
+  each semantic role inherits the approved text; see
+  [nxd-spec-api.md](nxd-spec-api.md#description--write-it-once-on-the-field).
 - Compare the closure README with the actual mechanism: describe explicit
   Outputs, physical support relations, the DuckDB surface, and privacy limits
   as they are implemented. Do not preserve a claim that the code cannot enforce.

@@ -226,7 +226,9 @@ A completed round that returned no findings is recorded too. "Reviewed, nothing
 found" is information; a missing or timed-out section is not a clean review.
 The marker is a declaration of the sanitization contract, not proof that the
 delegated request was faithful or credential-free. Number each dispatch from
-zero in array order. The live attestation for that review carries the same
+zero in array order within the current workflow/closure. Reset the index to
+`0` when a repair moves to a new workflow id; the index is local to that
+workflow's `review-record.json`, not a run-wide counter. The live attestation for that review carries the same
 `review_round_index` and uses the exact evidence reference
 `<normalized-job>/review-record.json#review_rounds/<review_round_index>`;
 it does not need a `turn` field. If an older recording carries `turn`, it is

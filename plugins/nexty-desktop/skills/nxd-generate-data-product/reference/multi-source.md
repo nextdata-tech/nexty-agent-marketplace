@@ -108,11 +108,10 @@ and in `.secrets([...])` — but only the attribute keys reach the transform.
 
 ## Naming table
 
-The "(unchanged)" rows restate SKILL.md's canonical connector-types table
-deliberately — each sits next to its labeled counterpart so the rename
-pattern (`<name>` → `<name>-<label>`) reads in one glance. SKILL.md's table
-stays the source of truth for the unlabeled names themselves; a rename there
-must be mirrored here.
+The "(unchanged)" rows repeat the canonical service names from the
+[source types index](source-types.md) next to their labeled counterparts so
+the rename pattern (`<name>` → `<name>-<label>`) reads in one glance. Keep the
+unlabeled names here synchronized with the index.
 
 | Case | Service | `secrets[...]` key | Companion artifact | `spec.py` var |
 |---|---|---|---|---|

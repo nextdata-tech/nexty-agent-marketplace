@@ -182,6 +182,14 @@ producing the identical error:
 - An import error for a missing dependency — the runtime is under-provisioned
   until someone provisions it.
 - A grant or spec-hash mismatch — the binding is wrong, not flaky.
+- `validation/existing_workflow_unsupported` — this workflow ID already owns a
+  published product, and the current operation scope cannot revise it. Treat this
+  as terminal and non-retryable: preserve the published product and release; do
+  not reset, recapture, validate, retry, remove, or replace that workflow. Report
+  the limitation and ask whether the user explicitly authorizes a separate,
+  versioned data product under a new workflow ID. Only after authorization, begin
+  fresh workflow-v2 admission. Consumers must switch to the new product; this
+  never updates the prior release.
 - Anything that died in `s0_spec`, `s1_structure`, `s2_transform` or `s3_closure`:
   those stages are offline and deterministic, so **there is nothing to retry**.
 

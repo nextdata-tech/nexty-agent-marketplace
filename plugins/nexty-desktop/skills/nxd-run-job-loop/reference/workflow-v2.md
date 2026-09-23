@@ -318,7 +318,9 @@ Use only these objects: self-check is exactly
 `{"action_kind":"self_check","outcome":"pass","evidence_ref":"nxd-jobs/<workflow>/closure/build-record.json#self_check"}`;
 each retained-input review adds exactly
 `{"action_kind":"adversarial_review","outcome":"complete","evidence_ref":"nxd-jobs/<workflow>/review-record.json#review_rounds/<index>","review_round_index":<index>}`.
-Replace only `<workflow>` and `<index>`. The review ledger is the captured
+Replace only `<workflow>` and `<index>`. `<index>` is zero-based within the
+current workflow's `review-record.json`; reset it to `0` when a repair moves to
+a new workflow id. The review ledger is the captured
 closure's sibling, and every `evidence_ref` is relative to the agent workspace
 root; do not shorten it to a bare filename.
 The root array may also carry a positive-integer `turn` on an object, but no

@@ -40,8 +40,9 @@ Derived models add nothing here. They are computed inside the transform that
 `python-compute` already runs and land through the `duckdb` port that already
 exists — no extra service, no extra secret, no profile change.
 
-**Other connector types.** Only the third service's *name* changes (the
-connector-types table in the skill's Overview). `csv-source` and `file-source`
+**Other connector types.** Only the third service's *name* changes; see the
+[source types index](source-types.md) for canonical service names and recipes.
+`csv-source` and `file-source`
 carry no credential and keep `attributes: []`; `db-source` and `api-source`
 populate `attributes` with the real credential — see
 [`database-source.md`](database-source.md) and [`api-source.md`](api-source.md).

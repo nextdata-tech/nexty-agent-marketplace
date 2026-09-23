@@ -123,24 +123,28 @@ invoices = (
         {
             # number() because every observed invoice_id is numeric. Check the
             # source first: a "T1257"-style ID is string(), not number().
-            "invoice_id": field(number(), primary_key(), dimension(name="invoice_id", description="Invoice key.")),
+            "invoice_id": field(number(), primary_key(), dimension(name="invoice_id"), description="Invoice key."),
             "customer": field(
                 string(),
-                dimension(name="customer", description="Billed customer name as it appears on the invoice."),
+                dimension(name="customer"),
+                description="Billed customer name as it appears on the invoice.",
             ),
             "start_month": field(
                 string(),
-                dimension(name="start_month", description="First month of the invoice's service term, as YYYY-MM."),
+                dimension(name="start_month"),
+                description="First month of the invoice's service term, as YYYY-MM.",
             ),
             # No metric aggregates these, so they take dimensions rather than
             # staying bare — a roleless column never reaches describe_models.
             "term_months": field(
                 number(),
-                dimension(name="term_months", description="Length of the service term in months. A duration, not an additive measure."),
+                dimension(name="term_months"),
+                description="Length of the service term in months. A duration, not an additive measure.",
             ),
             "amount": field(
                 number(),
-                dimension(name="invoice_amount", description="Invoice face value. Recognised revenue is amortised over the term — see amortization_schedule."),
+                dimension(name="invoice_amount"),
+                description="Invoice face value. Recognised revenue is amortised over the term — see amortization_schedule.",
             ),
         }
     )
@@ -158,22 +162,25 @@ amortization_schedule = (
     )
     .schema(
         {
-            "schedule_id": field(string(), primary_key(), dimension(name="schedule_id", description="Invoice-month key: <invoice_id>-<period>.")),
+            "schedule_id": field(string(), primary_key(), dimension(name="schedule_id"), description="Invoice-month key: <invoice_id>-<period>."),
             "invoice_id": field(
                 number(),
                 join(to="invoices", to_column="invoice_id"),
             ),
             "customer": field(
                 string(),
-                dimension(name="schedule_customer", description="Billed customer, carried from the source invoice."),
+                dimension(name="schedule_customer"),
+                description="Billed customer, carried from the source invoice.",
             ),
             "period_month": field(
                 string(),
-                dimension(name="period_month", description="The month this row recognises revenue for, as YYYY-MM."),
+                dimension(name="period_month"),
+                description="The month this row recognises revenue for, as YYYY-MM.",
             ),
             "period_index": field(
                 number(),
-                dimension(name="period_index", description="1-based ordinal of this month within the invoice's term."),
+                dimension(name="period_index"),
+                description="1-based ordinal of this month within the invoice's term.",
             ),
             # Bare is correct here: recognized_revenue aggregates this column.
             "recognized_amount": number(),
@@ -191,11 +198,11 @@ amortization_metrics = semantic_view(
                 Agg.SUM,
                 of=amortization_schedule.field("recognized_amount"),
                 name="recognized_revenue",
-                description=(
-                    "Revenue recognised in the selected period(s), straight-line "
-                    "amortised from invoice face value over the service term. "
-                    "Not invoiced amount — group by period_month for a schedule."
-                ),
+            ),
+            description=(
+                "Revenue recognised in the selected period(s), straight-line "
+                "amortised from invoice face value over the service term. "
+                "Not invoiced amount — group by period_month for a schedule."
             ),
         ),
     }
@@ -300,18 +307,20 @@ classified_spend = (
     )
     .schema(
         {
-            "transaction_id": field(number(), primary_key(), dimension(name="transaction_id", description="Transaction key.")),
+            "transaction_id": field(number(), primary_key(), dimension(name="transaction_id"), description="Transaction key."),
             "merchant": field(
                 string(),
-                dimension(name="merchant", description="Merchant name as it appears on the source transaction, unnormalised."),
+                dimension(name="merchant"),
+                description="Merchant name as it appears on the source transaction, unnormalised.",
             ),
             "category": field(
                 string(),
-                dimension(name="category", description=(
+                dimension(name="category"),
+                description=(
                     "COGS/opex classification from the confirmed "
                     "merchant_categories mapping. Merchants the mapping does "
                     "not cover land in 'needs_review', not in a real category."
-                )),
+                ),
             ),
             # Bare: classified_spend_metrics below aggregates it.
             "amount": number(),
@@ -331,11 +340,11 @@ classified_spend_metrics = semantic_view(
                 Agg.SUM,
                 of=classified_spend.field("amount"),
                 name="total_spend",
-                description=(
-                    "Total classified spend. Group by category to see the "
-                    "split, and check the needs_review share before quoting "
-                    "the headline number."
-                ),
+            ),
+            description=(
+                "Total classified spend. Group by category to see the "
+                "split, and check the needs_review share before quoting "
+                "the headline number."
             ),
         ),
         "transaction_count": metric_field(
@@ -344,8 +353,8 @@ classified_spend_metrics = semantic_view(
                 Agg.COUNT,
                 of=classified_spend.field("transaction_id"),
                 name="transaction_count",
-                description="Number of classified transactions.",
             ),
+            description="Number of classified transactions.",
         ),
     }
 )
