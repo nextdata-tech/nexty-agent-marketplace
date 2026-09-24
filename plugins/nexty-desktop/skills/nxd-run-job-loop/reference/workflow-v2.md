@@ -505,7 +505,11 @@ adjudications, and any required user decision are complete.
 
 A round whose only claims are `LOW` is clear once you resolve them. Record each
 one in the ledger as `classification: "structural_note"`, `state:
-"not_applied"`, with an `accepted` adjudication, in a `complete` round. Then
+"not_applied"`, `applied_files: []`, and a non-empty `proposed_effect` that
+says no closure change follows (for example `"No closure change; advisory
+coverage note."`), with an `accepted` adjudication, in a `complete` round. The
+ledger validator rejects an empty `proposed_effect` on every finding, advisory
+or not, and a rejected round cannot pair with its review. Then
 report `verdict: "clear"` with an empty `findings` list. The advisory claims
 stay in `review-record.json` for the user, and they need no user decision. Never
 hold publication for an advisory claim, and never downgrade a `HIGH` or `MEDIUM`
