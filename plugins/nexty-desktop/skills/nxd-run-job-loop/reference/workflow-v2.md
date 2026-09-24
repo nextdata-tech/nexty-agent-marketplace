@@ -503,6 +503,14 @@ adjudications, and any required user decision are complete.
 }
 ```
 
+A round whose only claims are `LOW` is clear once you resolve them. Record each
+one in the ledger as `classification: "structural_note"`, `state:
+"not_applied"`, with an `accepted` adjudication, in a `complete` round. Then
+report `verdict: "clear"` with an empty `findings` list. The advisory claims
+stay in `review-record.json` for the user, and they need no user decision. Never
+hold publication for an advisory claim, and never downgrade a `HIGH` or `MEDIUM`
+claim to reach this path.
+
 Map unresolved `HIGH` and `MEDIUM` claims to `severity: "blocking"`; map
 unresolved `LOW` claims to `severity: "advisory"`. Project each unresolved
 reviewer claim to exactly `{ "id", "severity", "description" }`, with
