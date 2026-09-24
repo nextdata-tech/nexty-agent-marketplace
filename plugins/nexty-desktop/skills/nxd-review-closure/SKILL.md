@@ -7,7 +7,7 @@ allowed-tools:
   - Grep
 metadata:
   author: nextdata
-  version: 0.52.5
+  version: 0.52.6
 ---
 
 # Review a generated closure — adversarially
@@ -147,6 +147,17 @@ how wrong the data is. If the expected value is computed by the same expression
 that produced the actual value, the assert is decoration. The reconciliation
 must come from an INDEPENDENT read of the source.
 
+Grade a verification gap by what it hides today, not by what a future bug might
+do:
+
+- `HIGH` if the gap hides an output that is wrong now.
+- `MEDIUM` if the approved blueprint explicitly promises that independent check.
+- `LOW` otherwise, after you have independently confirmed that the current
+  output is correct.
+
+A LOW gap is advisory. Record it so the owner can strengthen the verifier, but
+it does not block publication.
+
 ### 7. Null and coverage handling
 
 - blanks coerced to zero, fabricating a real measurement
@@ -218,7 +229,9 @@ Return, per finding:
 - `severity` — `HIGH` (a consumer gets a wrong answer, or a question is
   unanswerable), `MEDIUM` (correct but misleading or undisclosed), `LOW`
   (a real consumer-facing or public-contract quality defect with limited
-  impact; never a style, formatting, or internal-reference nit)
+  impact, including a verification gap over output you confirmed correct;
+  never a style, formatting, or internal-reference nit). Robustness against a
+  hypothetical future bug is never HIGH or MEDIUM on its own
 - `claim` — one sentence stating the defect
 - `evidence` — `file:line` in the closure, or the quoted request text. A
   finding with no evidence is an opinion; do not return it.

@@ -36,8 +36,10 @@ same edit, or the check will reject valid code.
 ## Data types (`nxd.spec.data_types`)
 
 All zero-argument unless noted; import what you need, e.g.
-`from nxd.core.yaml_schemas import DurationUnit` and
-`from nxd.spec.data_types import string, number, boolean, date32, timestamp`.
+`from nxd.spec.data_types import DurationUnit, string, number, boolean, date32, timestamp`.
+`models.py` may import only from `nxd.spec` and `nxd.spec.*`; supervisor
+validation rejects `nxd.core.*` imports there, so never import `DurationUnit`
+from `nxd.core.yaml_schemas`.
 
 | Constructor | Notes |
 |---|---|
@@ -48,8 +50,8 @@ All zero-argument unless noted; import what you need, e.g.
 | `uint()`, `uint8()`, `uint16()`, `uint32()`, `uint64()` | `uint()` is an alias for `uint16()` |
 | `number()` | A generic numeric type distinct from the sized int/float variants — what the inferred-type mapping below uses for every numeric |
 | `vector()` | |
-| `binary(length=None)`, `vector_embeddings(dimensions)`, `timestamp(unit, timezone=None)`, `decimal(precision, scale)`, `duration(unit)`, `time32(unit)`, `time64(unit)` | Parameterized; `unit` is a `DurationUnit` from `nxd.core.yaml_schemas` |
-| `list(value_type)`, `list_view(value_type)`, `large_list(value_type)`, `large_list_view(value_type)`, `map(key_type, value_type)`, `dictionary(key_type, value_type)`, `struct(fields)` | Complex/nested types — `value_type`/`fields` are `Field` instances from `nxd.core.yaml_schemas` |
+| `binary(length=None)`, `vector_embeddings(dimensions)`, `timestamp(unit, timezone=None)`, `decimal(precision, scale)`, `duration(unit)`, `time32(unit)`, `time64(unit)` | Parameterized; `unit` is a `DurationUnit` from `nxd.spec.data_types` |
+| `list(value_type)`, `list_view(value_type)`, `large_list(value_type)`, `large_list_view(value_type)`, `map(key_type, value_type)`, `dictionary(key_type, value_type)`, `struct(fields)` | Complex/nested types — `value_type`/`fields` are `Field` instances from `nxd.spec.data_types` |
 | `variant()` | Free-form semi-structured data (arbitrary JSON keys); wire-equivalent to `struct([])` |
 
 `timestamp` is **not** a zero-argument constructor. Always pass an explicit

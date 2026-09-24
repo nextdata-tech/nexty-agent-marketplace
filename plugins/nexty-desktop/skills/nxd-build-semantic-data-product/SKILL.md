@@ -12,7 +12,7 @@ allowed-tools:
   - AskUserQuestion
 metadata:
   author: nextdata
-  version: 0.52.5
+  version: 0.52.6
 ---
 
 # nxd-build-semantic-data-product skill
@@ -155,7 +155,7 @@ them answers nothing. Aggregate such a column only when a question justifies it
 dimension whose description says what it is and why it is not summed. Never
 leave it unannotated — that hides the column instead of explaining it.
 
-**DuckDB declared type → `AttributeSpec` data type** (for the `models.py` attributes). Timestamp columns import `DurationUnit` from `nxd.core.yaml_schemas` and require an explicit unit; the example below uses millisecond precision.
+**DuckDB declared type → `AttributeSpec` data type** (for the `models.py` attributes). Timestamp columns import `DurationUnit` from `nxd.spec.data_types` and require an explicit unit; the example below uses millisecond precision.
 
 | DuckDB `declared_type` | `nxd.spec.data_types` |
 |---|---|
