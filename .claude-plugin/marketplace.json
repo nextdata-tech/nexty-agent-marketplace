@@ -12,7 +12,7 @@
       "strict": false,
       "displayName": "Nexty Desktop",
       "description": "Build, serve, query, refine, and export local data products through the Nexty Desktop supervisor.",
-      "version": "0.52.2",
+      "version": "0.52.3",
       "author": {
         "name": "Nextdata"
       }

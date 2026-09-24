@@ -1170,7 +1170,10 @@ def _validate_default_term_echo(
             continue
         path = f"v3:terms[{term_id}].priority"
         origin = provenance.get(path)
-        if origin not in {"explicit", "inferred", "platform_fixed"}:
+        # Provenance is caller-authored JSON: a non-string value (for example
+        # an object) must become an issue, not a TypeError that leaves the
+        # supervisor with no report to relay.
+        if not isinstance(origin, str) or origin not in PROVENANCE_VALUES:
             _issue(
                 issues,
                 "v3.term.priority_provenance",
