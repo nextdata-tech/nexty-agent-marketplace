@@ -14,7 +14,7 @@ allowed-tools:
   - Task
 metadata:
   author: nextdata
-  version: 0.52.3
+  version: 0.52.5
 ---
 
 # nxd-generate-data-product skill
@@ -37,7 +37,9 @@ this skill treats as unrecoverable.
 
 **Connector types** — see the [source types index](reference/source-types.md) for the canonical source matrix and source-specific recipes. Names are for exactly one instance of a type; for 2+, label each per `reference/multi-source.md`.
 
-For `api-source`, additionally require the closure-local `connectivity_check.py` probe; only its endpoint-map companion is absent. For `api-source`, the endpoint-map companion is absent because its map is carried by `endpoint_<model>` profile attributes; the connectivity probe is still required, and the `connectivity_check.py` for `api-source` must pass before authoring.
+For `api-source`, the only absent companion is the endpoint map, which comes
+from `endpoint_<model>` profile attributes; additionally require the
+closure-local `connectivity_check.py` probe and make it pass before authoring.
 Specialized API profiles keep the `api-source` service name, add a non-secret `source_kind`, and require an atomic eval covering pagination, credential, authorization, and row shape. The output is a directory the **desktop supervisor** compiles, pins, boots, and publishes; it compiles `spec.py` into the kernel definition YAML at create time.
 It runs the transform, verifies staging, and stands up the semantic MCP endpoint.
 Return facts and a structured handoff to `nxd-run-job-loop`; internal terms may appear in implementation guidance and structured handoffs. The owning loop translates status, failures, costs, and publication state into plain chat and never copies raw internal output; see [user-facing language](../nxd-run-job-loop/reference/user-facing-language.md).
@@ -414,6 +416,9 @@ The desktop closure ships its own infra profile declaring the three local
 services the spec references (`duckdb`, `python-compute`, `csv-source`). Emit it
 **verbatim** from [reference/infra-profile.md](reference/infra-profile.md);
 `metadata.name` is `desktop-local` and MUST match `infra_profile=` in `spec.py`.
+Copy the fixed driver IDs exactly: `duckdb` = `nxd:local/duckdb/storage:0.1.0`,
+`python-compute` = `nxd:local/python/compute:0.1.0`, and `csv-source` =
+`nxd:local/file/storage:0.1.0`; never shorten them to a bare local driver.
 The `csv-source` service (driver `nxd:local/file/storage:0.1.0`) delivers the
 **relative** `csv-source-path` into `secrets[...]` (an absolute path escapes the
 pinned snapshot and fails).

@@ -244,6 +244,22 @@ failed promise. Cast the reference model's numeric columns in the transform (see
 landed type matches what `models.py` declares, and the verifier's SQL can be
 written plainly.
 
+**Verify against an independent witness, one verifier per promised output.**
+Every output the approved blueprint promises gets its own verifier. When two
+outputs make parallel promises (for example unmatched rows on each side of a
+join), write one verifier for each and never assume one covers the other. A
+verifier that only checks a landed row against its own columns (`cpa_cents`
+against the same row's `spend_cents / conversions`, or a diagnostics row's
+rate against its own counts) restates the transform's arithmetic and cannot
+catch a wrong total. Recompute the promised figure from a second landed table
+that sits closer to the source: re-aggregate the base or pair models with
+`GROUP BY` and compare, or `COUNT(*)` the physical input tables and compare
+them with the reported counts. Resolve each such table with
+`output.full_table_name(...)`. Internal consistency checks can stay as extra
+rows, but the independent comparison is what makes the verifier evidence.
+The adversarial reviewer treats a self-consistency-only verifier as assert
+theatre, so each one missed here costs a reset, recapture and review round.
+
 **Prove the predicate is non-vacuous before shipping it.** Run it against the
 landed rows, then against a deliberately broken copy, and confirm it returns
 zero rows and then non-zero. A contract that cannot fail is worse than no
