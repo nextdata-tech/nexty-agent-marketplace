@@ -13,7 +13,7 @@ allowed-tools:
   - Task
 metadata:
   author: nextdata
-  version: 0.52.5
+  version: 0.52.6
 ---
 
 # nxd-run-job-loop skill
@@ -222,7 +222,7 @@ ordinary `.promise(model)` never satisfies a custom contract.
 Copy exact parser coordinates for every source span (a `###` subsection `.text` range excludes its heading but may include separator blank lines). A `v3.provenance.span_mismatch` with a bounded `prepare_recovery_id` must call `inspect_prepare_recovery` and use its versioned same-blueprint semantic hash plus complete `source_spans` to regenerate the entire proposal. The inspection response contains only canonical parser paths and four integer coordinates, never source text or typed values. The legacy `validation_issue.expected_source_span` is a v1-compatible location hint, not a license to patch one path; even when present, regenerate and strictly validate the complete proposal. A `source_block_uncovered` after recovery means the complete-regeneration invariant was violated: follow **Recovering a rejected proposal** in `reference/workflow-v2.md`, replacing the whole proposal with coverage for every populated `.text` path, never patching another named path. If no recovery id is available, stop on stable `source_map_code` (`v3.provenance.source_map_unavailable` or `v3.provenance.source_map_oversized`) and obtain a fresh parser result. If the MCP host exposes only error text, read only the bounded `prepare_recovery_id` or `source_map_code` suffix; never reconstruct a map from prose. Never guess, split, trim, widen, or alter typed values.
 
 Before `prepare_workflow` succeeds, any blueprint edit invalidates all parsed coordinates: reparse the final blueprint, regenerate every proposal field and span, replace the complete proposal file with the available file operation, strictly validate it, and send a new globally unique `request_id`. Do not claim generic filesystem atomicity for a file-tool replacement. Reuse a request id only for a byte-for-byte identical request.
-Under the shellless v2 contract, the agent must not run lock write, hand-author reserved v3 metadata, or copy a checker into the closure before capture. The supervisor owns capture-time materialization and verification of those reserved surfaces. If helper tools exist, agent-side self-check and lock checks are optional evidence only and are never execution authority. Generation starts only after the supervisor records the approval. Steps 2–3
+Under the shellless v2 contract, the agent must not run lock write, hand-author reserved v3 metadata, or copy a checker into the closure before capture. The supervisor owns capture-time materialization and verification of those reserved surfaces. Before every capture, including after a repair, call the `check_data_product` MCP tool on the authoring closure and fix every failing finding first; it needs no shell and returns the full finding that supervisor validation reports only as a bounded code. It is diagnosis, never execution authority or a substitute for supervisor validation or admission. Shell helper self-check and lock checks stay optional evidence. Generation starts only after the supervisor records the approval. Steps 2–3
 stay on the main thread for an activated workflow-v2 session. Do not delegate
 semantic inference, closure generation, or any workflow MCP action to a child;
 the only conversation child is the single retained-capture review in Step 3b.
@@ -289,8 +289,9 @@ action for supervisor validation, then the returned `start_run` action for
 admission and publication. Use the exact envelopes in
 [reference/workflow-v2.md](reference/workflow-v2.md); never reuse stale action
 parameters. A successful `start_run` response is the supervisor's proof of
-admission, publication, and the serving endpoint. A failed or unavailable
-  action is a blocker; do not retry through direct build/validation commands, local
+admission, publication, and the serving endpoint. A validation failure whose
+`recovery` is `repair_then_retry` is repairable: follow **When validation
+fails** in workflow-v2.md. Any other failed or unavailable action is a blocker; do not retry through direct build/validation commands, local
 files, SQLite, raw SQL, pandas, or another database.
 
 ### Step 4a — Render the pinned static artifact

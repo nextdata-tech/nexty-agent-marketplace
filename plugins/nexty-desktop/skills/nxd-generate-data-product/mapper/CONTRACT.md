@@ -284,7 +284,7 @@ projection of the durable reviews for the current published population.
 Column type names are the `nxd.spec` types (`string()`, `int64()`, `float64()`,
 `bool()`, `timestamp(unit=DurationUnit.Microseconds)`), since these land as
 base models through the normal dlt reader loop. In a generated `models.py`,
-import `DurationUnit` from `nxd.core.yaml_schemas` and pass the unit explicitly;
+import `DurationUnit` from `nxd.spec.data_types` and pass the unit explicitly;
 `timestamp()` is not a valid zero-argument constructor.
 
 ### 2.1 `mapper_proposals`
