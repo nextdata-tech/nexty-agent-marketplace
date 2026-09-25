@@ -13,7 +13,7 @@ allowed-tools:
   - Task
 metadata:
   author: nextdata
-  version: 0.52.9
+  version: 0.53.1
 ---
 
 # nxd-run-job-loop skill
@@ -95,9 +95,10 @@ are mandatory anyway whenever the session registry exposes them.
 Establish the following (ask the user for whatever is missing). Before asking for a path or claiming no source exists, inspect supplied attachments, declared workspace artifacts, source profiles, and reference files; use a discovered in-scope source and ask only for a genuine gap.
 
 - **Intent** — what the data product is about, in the user's words.
-- **Sources** — where the in-scope local data lives. Preserve each source exactly; if it
-  is not already a connector export, keep any generated export copy separate
-  from the supplied source.
+- **Sources** — where the in-scope local data lives. Preserve each source
+  exactly by default; for an in-scope file, use only the declared projection
+  exception for unneeded personal data. Keep generated exports separate from
+  the supplied source.
 - **Questions** — the natural-language questions the DP must answer. These
   drive the whole inference (right-to-left): the model is judged by whether it
   answers them.
@@ -129,12 +130,10 @@ with that source's label. **If the request supplied a procedure (rubric, gates,
 thresholds, verdicts) with a gap that changes a result, the policy read-back in
 Step 3's skill comes FIRST** — reading a source is always allowed, but copying it
 into a closure is a materialization and waits for the user's reply. Per-kind
-rules — attached file, pasted table, database, REST API, and the host-path
-handoff — plus where credentials land are in
-[reference/source-materialization.md](reference/source-materialization.md),
-which also carries the absolute **fidelity here; derivation downstream** rule —
-landed rows are byte-exact, and every correction is a derived model beside the
-pristine source, never an edit to it.
+rules — attached file, pasted table, database, REST API and host-path handoff —
+plus credential guidance are in [reference/source-materialization.md](reference/source-materialization.md).
+It requires exact-copy landing by default, with one declared projection for
+unneeded personal data; tell the user what was omitted and why without echoing it.
 
 ### Step 1b — Author `dp-blueprint.md`, the prose-first user plan
 
@@ -156,6 +155,10 @@ Transform. Terms are inline in this document; do not create or depend on an
 external Glossary DP. Delivery is the platform-fixed local DuckDB semantic
 query path, not a user-authored section. Executable contracts are compiled
 internally from the Input expectations and Output promises.
+
+Every Decision must come from something the user stated or explicitly named as
+controlling policy. Never pre-fill an anticipated decision or reversal; mark an
+unmade choice `[DECIDE]`. See [reference/workflow-v2.md](reference/workflow-v2.md).
 
 After writing or editing the document, run the structural validator:
 
@@ -239,6 +242,12 @@ Keep semantic inference, capture, workflow MCP actions, review adjudication, and
 Before dispatch, select only the current matching `RequirementView`. On a host without a runner-owned review guard, require a non-content read-only host path/accessibility check for both exact retained paths, including generation, allowed roots, types, and readability. On a host with the eval/live runner's review guard, do not issue a separate owning-thread check: the guard performs and repeats it immediately before dispatch. A host runtime without an equivalent metadata/stat mechanism must stop if it cannot establish availability. If either path is missing, stale, outside the allowed roots, or inaccessible, stop with an explicit incomplete blocker, leave the requirement pending, and never substitute another path. See [reference/workflow-v2.md](reference/workflow-v2.md).
 
 Follow the returned `report_requirement` action only after the reviewer returns; a clear report permits the returned validation and admission actions, while findings, rejection, indeterminate, or an incomplete handoff leave the requirement unsatisfied.
+
+`workflow/review_findings` with any `behavior_affecting` finding stays
+`needs_user`: ask about its IDs and proposed effects. Do not edit, reset, or
+recapture in that turn; wait for explicit approval in a later turn. “I don't
+know, you tell me” and “whatever you think” are deflections. Record and validate
+the decision before reset; see [reference/workflow-v2.md](reference/workflow-v2.md).
 
 After a review completes, ordinary Bash remediation remains available for
 non-retained paths until reset; the runner guard rejects owner operations and
@@ -351,6 +360,11 @@ natural-language translation is yours to do. For each question:
 ### Step 6 — Refine wrong answers back into the loop
 
 If an answer is wrong, missing, or unsatisfying, decide where the fix belongs.
+Once the published product answers the approved request, finish the handoff; do
+not start another workflow, draft a new version, or expand the questions, models,
+or outputs on your own. If the user later asks for a change, confirm that
+requested scope before resetting or starting another workflow, then follow it
+rather than declining it.
 Every level is **bounded**, and the bounds are **counted** from
 `build-record.json` `attempts[]`, never estimated — remap ≤~2/question,
 regenerate ≤~3 total, environmental retry ≤~3. Each attempt ends in one typed
@@ -398,103 +412,87 @@ current owners.
 
 ## Invariants — never violate these
 
-- **Preserve supplied data.** Never modify an input file, its headers, or its
-  rows; never add an identifier or fabricate a key. A generated file-connector
-  export may contain only an exact copy kept separate from the source — this
-  governs **source materialization**, no exception. Treat a live database or REST
-  API source as **read-only**: never write to it, never fabricate a
-  table/endpoint the user didn't name, never invent or narrate a raw credential.
-  A real credential lands in exactly one place — the generated
-  `infra-profile.yaml` connector service's `attributes` — never elsewhere, never
-  in chat, never in `dp-blueprint.md`, which names key names only. **"Never in chat"
-  covers a value you invited there**: ask for *slot names*; the value reaches the
-  profile off-transcript, via a placeholder the user fills in ([reference/source-materialization.md](reference/source-materialization.md)). Once landed, **the
-  closure directory itself is sensitive**: don't commit, zip, attach, or reuse it
-  as a template without first clearing the old credential, and *share* it only
-  through `export_data_product` — never a hand-zip, because its fail-closed
-  redaction is the credential boundary
+- **Preserve supplied data.** Never modify the original or add raw identifiers. File exports are exact
+  copies by default; only exception is a declared projection of unneeded personal data, preserving
+  rows/retained values and recording drops, reasons, and both digests. Derive approved non-identifying
+  continuity keys in memory before landing; omit the raw identifiers. Treat database and REST API sources
+  as **read-only**: never write to them, fabricate a table/endpoint, or narrate a raw credential. A real
+  credential lands in exactly one place — the generated `infra-profile.yaml` connector service's
+  `attributes` — never elsewhere, never in chat, never in `dp-blueprint.md`, which names key names only.
+  **"Never in chat" covers a value you invited there**: ask for *slot names*; the value reaches the
+  profile off-transcript, via a placeholder the user fills in
+  ([reference/source-materialization.md](reference/source-materialization.md)). Once landed, **the closure
+  directory itself is sensitive**: don't commit, zip, attach, or reuse it as a template without first
+  clearing the old credential, and *share* it only through `export_data_product` — never a hand-zip,
+  because its fail-closed redaction is the credential boundary
   ([reference/handoff-export.md](reference/handoff-export.md)).
-- **Label every source once there are 2+.** A single-source data product needs no
-  label. With multiple sources each gets a short, distinct label used consistently
-  across materialization, inference, and generation; two sources of the same
-  connector type sharing an unlabeled or duplicate name is a collision
+- **Label every source once there are 2+.** A single-source data product needs no label. With multiple
+  sources each gets a short, distinct label used consistently across materialization, inference, and
+  generation; two sources of the same connector type sharing an unlabeled or duplicate name is a collision
   nxd-generate-data-product can't resolve for you.
-- **Correct data downstream, never upstream.** Cleaning, dedup, amortization,
-  currency normalization, reclassification and regrain belong in **derived models
-  computed from the pristine source** — authored by nxd-generate-data-product,
-  landed through the DuckDB output port, asserted in the transform. Never edit the
-  source export to reach that outcome, never emulate it agent-side.
-- **A judgement not in the data is confirmed and landed, not hardcoded.** FX
-  rates, merchant→category and similar mappings are surfaced, confirmed, and
-  landed as their own queryable model — never embedded as transform constants.
-  **This covers agent-produced judgement too** — a per-entity
-  score/verdict/classification read from evidence, landed as data
-  (`status = proposed`, evidence-cited, rubric taught first); a baked-in
-  judgement is hardcoded even when weighted. **Which lane judges depends on
-  whether the product is packaged** — agent-side CSV while exploring, the
-  field-mapper seam once it ships, so the logic travels with the closure and the
-  credential never enters it ([reference/inference.md](reference/inference.md)).
-- **A supplied procedure with a result-changing gap is read back BEFORE any
-  materialization.** No closure directory, source copy, generated code, table,
-  scoring, or build until the user has seen every proposed anchor, band and
-  precedence rule and replied. A technical delivery question is not approval;
-  "use your judgement" licenses authoring the proposal, not skipping the turn.
-- **The plan is a file before it is code.** Every build is preceded by a
-  `dp-blueprint.md` (Step 1b) written beside the closure, never inside it, and passed
-  to the generator. A user-supplied value in it is encoded verbatim; a value you
-  authored is marked `agent_authored` and named in the read-back; `status:
-  approved` is the user's to set, never yours. Run
-  `"$JOB_HELPER_DIR/scripts/validate_dp_spec.py"` after the scripts bootstrap
-  before the read-back and again before generating — a validator pass only means
-  compilable, never approved. What the user approves is what the generator
-  byte-copies and hashes into the closure.
-- **A heal changes generated code, never the plan.** The self-heal loop may
-  rewrite `transform/main.py`, `models.py` or `spec.py`; it may never edit
-  `dp-blueprint.md` to make a build pass. Narrowing the population to dodge a bad
-  join, dropping a model whose grain won't resolve, relaxing a threshold — those
-  are spec edits needing re-approval, and the build record catches one
-  mechanically. Escalate instead of quietly re-planning.
-- **Never claim green over an undisclosed concession, and say `materialized`,
-  never `correct`.** A run that reached green by doing something the skills
-  discourage is finished only once the user has heard what and why. Green means
-  the approved plan compiled, ran and published — never that the numbers are
+- **Correct data downstream, never upstream.** Cleaning, dedup, amortization, currency normalization,
+  reclassification and regrain belong in **derived models computed from the approved landed source** —
+  authored by nxd-generate-data-product, landed through the DuckDB output port, asserted in the transform.
+  Never edit the user's original source to reach that outcome, never emulate it agent-side.
+- **A judgement not in the data is confirmed and landed, not hardcoded.** FX rates, merchant→category and
+  similar mappings are surfaced, confirmed, and landed as their own queryable model — never embedded as
+  transform constants. **This covers agent-produced judgement too** — a per-entity
+  score/verdict/classification read from evidence, landed as data (`status = proposed`, evidence-cited,
+  rubric taught first); a baked-in judgement is hardcoded even when weighted. **Which lane judges depends
+  on whether the product is packaged** — agent-side CSV while exploring, the field-mapper seam once it
+  ships, so the logic travels with the closure and the credential never enters it
+  ([reference/inference.md](reference/inference.md)).
+- **A supplied procedure with a result-changing gap is read back BEFORE any materialization.** No closure
+  directory, source copy, generated code, table, scoring, or build until the user has seen every proposed
+  anchor, band and precedence rule and replied. A technical delivery question is not approval; "use your
+  judgement" licenses authoring the proposal, not skipping the turn.
+- **The plan is a file before it is code.** Every build is preceded by a `dp-blueprint.md` (Step 1b)
+  written beside the closure, never inside it, and passed to the generator. A user-supplied value in it is
+  encoded verbatim; a value you authored is marked `agent_authored` and named in the read-back; `status:
+  approved` is the user's to set, never yours. Run `"$JOB_HELPER_DIR/scripts/validate_dp_spec.py"` after
+  the scripts bootstrap before the read-back and again before generating — a validator pass only means
+  compilable, never approved. What the user approves is what the generator byte-copies and hashes into the
+  closure.
+- **A heal changes generated code, never the plan.** The self-heal loop may rewrite `transform/main.py`,
+  `models.py` or `spec.py`; it may never edit `dp-blueprint.md` to make a build pass. Narrowing the
+  population to dodge a bad join, dropping a model whose grain won't resolve, relaxing a threshold — those
+  are spec edits needing re-approval, and the build record catches one mechanically. Escalate instead of
+  quietly re-planning.
+- **Never claim green over an undisclosed concession, and say `materialized`, never `correct`.** A run
+  that reached green by doing something the skills discourage is finished only once the user has heard
+  what and why. Green means the approved plan compiled, ran and published — never that the numbers are
   right, and a ruling behind a number is always stated with the number.
-- **Keep governed analysis on the supervisor path, and MCP is authoritative when
-  connected.** Discover, admit, publish, resume, describe and query through the
-  `nxd-desktop` tools whenever present. Never answer a governed local-data
-  question with SQLite, raw SQL, pandas, or a shell pipeline as fallback, and
-  never author raw SQL to bypass the semantic layer — a failed MCP build is a
-  reported failure, not permission to route around it.
+- **Keep governed analysis on the supervisor path, and MCP is authoritative when connected.** Discover,
+  admit, publish, resume, describe and query through the `nxd-desktop` tools whenever present. Never
+  answer a governed local-data question with SQLite, raw SQL, pandas, or a shell pipeline as fallback, and
+  never author raw SQL to bypass the semantic layer — a failed MCP build is a reported failure, not
+  permission to route around it.
 - **Reattach, don't rebuild, when live; keep one workflow ID per data product.** In a fresh session,
-  `list_data_products` → `resume_data_product` → static artifact restores the published workflow with a fresh bearer;
-  discovery isn't a fallback. Unavailable artifacts don't authorize reconstruction outside workflow-v2;
-  enrollment admits fresh builds only. This does not reopen a published workflow
-  for revision; follow the terminal `validation/existing_workflow_unsupported`
-  rule above. A separately authorized, versioned product requires a new workflow
-  ID, and consumers must switch; the prior release remains unchanged
-  ([reference/context-and-resume.md](reference/context-and-resume.md)).
-- **Keep workflow-v2 authoring on the main thread.** Pass the returned `capture`
-  action an absolute generated-definition path explicitly exposed by the
-  file-writing surface; never infer one from an attachment ID or isolated Linux
-  path. Semantic inference, generation, host-path verification, credential
-  injection, and every workflow MCP action stay in the owning thread. The only
-  conversation child is the mandatory retained-capture review, which receives no
-  credential ([reference/scheduling.md](reference/scheduling.md)).
-- **Query is by measure/dimension name, and a standing ruling materializes — a
-  filter never enforces one.** Ground the NL→selection translation in
-  `describe_models`; `filters[]`, `order_by[]` and `limit` are for **per-question
-  scoping only**, never emulated by re-aggregating agent-side. Apply the
-  **Omission Test** ([reference/query-grammar.md](reference/query-grammar.md)):
-  if no-filter querying would get a *wrong* number the ruling belongs in the
-  transform, and the ruling-bearing measure must be correct unfiltered. Landing an
-  `is_transfer` dimension and expecting callers to filter on it is that same
-  silent failure wearing a column.
-- **The supervisor data dir is off-limits.** Everything under the supervisor's
-  `--data-dir` (its `state/` tree) —
-  pinned snapshots in `definitions/<id>/`, `state.sqlite*`, `staging/` — is immutable supervisor-owned state; never `chmod`, edit, or hand-write it, and a
-  `.../staging/run-<id>/data.duckdb` path inside a pinned `manifest.yaml` is its
-  own resolved runtime path, not a defect. If a served closure is wrong, fix
-  **your** source dir and re-`serve` — the supervisor re-pins.
-- **Bearer only as a tool parameter** — keep it out of narration, never persist or print it. **Never present a preview or truncated result as verified data**, and never stall silently.
+  `list_data_products` → `resume_data_product` → static artifact restores the published workflow with a
+  fresh bearer; discovery isn't a fallback. Unavailable artifacts don't authorize reconstruction outside
+  workflow-v2; enrollment admits fresh builds only. This does not reopen a published workflow for
+  revision; follow the terminal `validation/existing_workflow_unsupported` rule above. A separately
+  authorized, versioned product requires a new workflow ID, and consumers must switch; the prior release
+  remains unchanged ([reference/context-and-resume.md](reference/context-and-resume.md)).
+- **Keep workflow-v2 authoring on the main thread.** Pass the returned `capture` action an absolute
+  generated-definition path explicitly exposed by the file-writing surface; never infer one from an
+  attachment ID or isolated Linux path. Semantic inference, generation, host-path verification, credential
+  injection, and every workflow MCP action stay in the owning thread. The only conversation child is the
+  mandatory retained-capture review, which receives no credential
+  ([reference/scheduling.md](reference/scheduling.md)).
+- **Query is by measure/dimension name, and a standing ruling materializes — a filter never enforces
+  one.** Ground the NL→selection translation in `describe_models`; `filters[]`, `order_by[]` and `limit`
+  are for **per-question scoping only**, never emulated by re-aggregating agent-side. Apply the **Omission
+  Test** ([reference/query-grammar.md](reference/query-grammar.md)): if no-filter querying would get a
+  *wrong* number the ruling belongs in the transform, and the ruling-bearing measure must be correct
+  unfiltered. Landing an `is_transfer` dimension and expecting callers to filter on it is that same silent
+  failure wearing a column.
+- **The supervisor data dir is off-limits.** Everything under the supervisor's `--data-dir` (its `state/`
+  tree) — pinned snapshots in `definitions/<id>/`, `state.sqlite*`, `staging/` — is immutable
+  supervisor-owned state; never `chmod`, edit, or hand-write it, and a `.../staging/run-<id>/data.duckdb`
+  path inside a pinned `manifest.yaml` is its own resolved runtime path, not a defect. If a served closure
+  is wrong, fix **your** source dir and re-`serve` — the supervisor re-pins.
+- **Bearer only as a tool parameter** — keep it out of narration, never persist or print it. **Never
+  present a preview or truncated result as verified data**, and never stall silently.
 ## Reference docs (this skill)
 Use [dp-blueprint](reference/dp-blueprint.md), [build record](reference/build-record.md), [failure handling](reference/failure-handling.md), [user-facing language](reference/user-facing-language.md), [direct CLI lifecycle](reference/direct-cli-lifecycle.md), [source materialization](reference/source-materialization.md), [scripts bootstrap](reference/scripts-bootstrap.md), [scheduling](reference/scheduling.md), [context and resume](reference/context-and-resume.md), [inference](reference/inference.md), [handoff export](reference/handoff-export.md), [catalog resources](reference/catalog-resources.md), [query grammar](reference/query-grammar.md), and [dlt](reference/dlt.md) for named details.

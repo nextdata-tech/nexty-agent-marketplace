@@ -32,6 +32,16 @@ the blueprint before consent, then call `prepare_workflow` with the inline
 `typed_proposal` object, before the approval turn and before generating the
 closure:
 
+Treat the approved blueprint as canonical: preserve every Model and Output
+name exactly in the typed proposal and generated closure. Break each Questions
+entry into all of its requested clauses and map every clause to the Models,
+Transform, and Outputs that answer it. Never rename or drop a clause to fit the
+implementation; if a clause cannot be covered, leave it open and return to the
+user for a decision before approval. Populate Decisions only from a user
+statement or a policy the user explicitly designated as controlling. Evidence
+and contracts may establish facts, but do not imply a decision or an
+anticipated reversal; leave unmade choices open and mark them `[DECIDE]`.
+
 The following request-envelope sketch is intentionally abbreviated and is not
 a complete request. Do not copy it as the `typed_proposal`; copy the complete
 typed proposal object from `dp-blueprint.proposal.json` instead.
@@ -494,6 +504,20 @@ different `report.verdict` vocabulary (`clear`, `findings`, `rejected`, or
 round with findings is still recorded as `complete` only when its rich claims,
 adjudications, and any required user decision are complete.
 
+Ledger timestamps (`started_at_unix_ms`, `ended_at_unix_ms`, and, when set,
+`user_decision.approved_at_unix_ms`) are actual epoch milliseconds read from
+the current clock at the corresponding event; never estimate or invent them.
+For every finding, `state: "applied"` requires a non-empty `applied_files`, and
+every other state requires `applied_files: []`; list only files actually
+changed. A `not_applied` finding lists no files. `deferred_finding_ids` may
+contain only accepted `behavior_affecting` findings the user explicitly
+deferred; never defer a rejected, `out_of_scope`, or `structural_note` finding.
+When shell access is available, load the shipped
+`$JOB_HELPER_DIR/scripts/dp_diagnostics.py` and call
+`validate_review_round(round)` before writing the round; fix every reported
+problem first. Without shell access, apply these rules inline and do not claim
+the round was helper-validated.
+
 ```json
 {
   "schema": "nxd-conversation-review-v1",
@@ -530,6 +554,17 @@ report is permitted only after the rich ledger is complete and every accepted
 behavior-affecting claim has been resolved and, when it changed the closure,
 re-reviewed. Rejected, indeterminate, and findings reports remain unsatisfied;
 never turn them into `clear` or treat a missing report as approval.
+
+When the supervisor returns `workflow/review_findings` containing any
+`behavior_affecting` finding, the review is not authorization: set the round to
+`needs_user`, relay the finding IDs, evidence, adjudication, and proposed
+effects, and ask the user to decide the specific IDs. Do not edit the mutable
+authoring closure, reset, or recapture in that turn. Continue only after an
+explicit user approval in a later turn. “I don't know, you tell me” and
+“whatever you think” are deflections, not approval; explain the choice and
+wait. A new review finding requires a new user decision for its IDs. Only
+accepted findings the user approved may be applied; rejected, out-of-scope,
+and structural findings stay unapplied and are not deferred.
 
 There is exactly one retained-input review per capture generation, not one per
 workflow lifetime. When an accepted finding changes behavior, record the user
@@ -641,15 +676,21 @@ validation, admission, or publication.
 
 ## Reset after behavior changes
 
-Close the pending review round before resetting. When the operator authorizes
-corrections for a round whose ledger `status` is `needs_user`, or which has
-accepted `behavior_affecting` findings, update that same round in
-`review-record.json` before calling `reset_workflow` or appending another
-round. Fill its `user_decision`: `approved_at_unix_ms`, a `citation` that
-copies the authorizing operator message byte for byte, and `approved_finding_ids`
-listing the accepted findings being corrected. Also set each corrected finding's
-`state`. A round left with `user_decision: null` and unresolved accepted findings
-fails the construction review check even when every later round is clear.
+Close the pending review round before resetting. Wait for an explicit approval
+of the specific accepted finding IDs in a later user turn. Change only those
+approved findings in the mutable authoring closure; never edit the retained
+capture. Then update that same round in `review-record.json` before calling
+`reset_workflow` or appending another round: record the real `approved_at_unix_ms`, the exact authorizing
+user message in `citation` (who authorized what), and only the approved finding
+IDs in `approved_finding_ids` (which IDs). Set `state: "applied"` and list
+`applied_files` only after those files were actually changed. If the user
+explicitly defers another accepted finding, leave it `not_applied` with no
+files and include only its ID in `deferred_finding_ids`. Validate the completed
+round with `validate_review_round` when the helper is available, then write it
+and reset. Never reset first, leave `user_decision: null`, or carry approval
+from an earlier turn or a different finding ID. A round with unresolved
+accepted findings fails the construction review check even when every later
+round is clear.
 
 If the blueprint or typed proposal changes after `prepare_workflow` succeeds,
 do not retry the old operation or patch its binding. Call `reset_workflow` with

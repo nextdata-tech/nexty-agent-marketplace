@@ -183,8 +183,13 @@ Relay **every** finding to the user before mutation: ID, severity, claim,
 evidence, adjudication/citation, proposed effect, classification and applied
 state. All review findings default to behavior-affecting because this role hunts
 logical and semantic defects; they remain `needs_user` until the user explicitly
-approves their IDs. Rejected and out-of-scope claims are still relayed but change
-nothing. The only automatic exception is a syntax, mechanical, or procedural
+approves the accepted finding IDs in a later turn. The review report and an
+accepted adjudication are not authorization. Ask for the specific IDs and do
+not edit the authoring closure, reset, or recapture in the finding turn. “I
+don't know, you tell me” and “whatever you think” are deflections, not approval;
+explain the choice and wait. A later review finding needs its own explicit user
+decision. Rejected and out-of-scope claims are still relayed but change nothing.
+The only automatic exception is a syntax, mechanical, or procedural
 `structural_note` backed by evidence that the spec hash, model/field set, grain,
 row inclusion, values, aggregations, thresholds, verdicts and assertions remain
 unchanged.
@@ -212,10 +217,20 @@ copy the supervisor's separate `report.verdict` values (`clear`, `findings`,
 belong to a `complete` ledger round when the rich claims and adjudications are
 complete; the two vocabularies answer different questions.
 Also record `deferred_finding_ids`: it is empty unless the cited user decision
-explicitly continues while leaving accepted behavior-affecting findings
+explicitly continues while leaving accepted `behavior_affecting` findings
 unapplied, in which case it names those finding IDs exactly.
 Only an explicitly authorized mutation is also recorded as its normal heal
 attempt. This keeps pending, rejected, denied and timed-out findings auditable.
+
+Use actual epoch milliseconds from the current clock for review start/end and user
+approval timestamps; never estimate or invent them. `state: "applied"` requires a non-empty `applied_files`,
+and all other states, including `not_applied`, require `applied_files: []`; list only files actually changed. Defer only accepted
+`behavior_affecting` findings the user explicitly deferred. Never defer
+rejected, `out_of_scope`, or `structural_note` findings. When shell is available,
+load `$JOB_HELPER_DIR/scripts/dp_diagnostics.py` and call
+`validate_review_round(round)` before writing; fix every reported problem.
+Without shell access, apply these rules inline and do not claim helper
+validation.
 
 This follows the pack's existing stance that rulings are landed as reviewable
 data rather than buried in prose. It also makes the round auditable — a later

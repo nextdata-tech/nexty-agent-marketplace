@@ -9,6 +9,13 @@ echo-back. A typed `proposed` Decision is a valid consent candidate; after the
 subject-bound `session_decision`, the trusted materializer projects it to
 `locked` in the approved snapshot. Do not change the proposal after consent.
 
+## Contents
+
+- [Model, output, and physical-surface checks](#model-output-and-physical-surface-checks)
+- [Source projection checks](#source-projection-checks)
+- [Source-derived semantic checks](#source-derived-semantic-checks)
+- [Decision-ledger projection](#decision-ledger-projection)
+
 ## Model, output, and physical-surface checks
 
 - Classify every blueprint `Model` separately from every explicit blueprint
@@ -38,6 +45,29 @@ subject-bound `session_decision`, the trusted materializer projects it to
   as they are implemented. Do not preserve a claim that the code cannot enforce.
 
 ## Source-derived semantic checks
+
+For an in-scope file source that uses the personal-data projection exception:
+
+- Confirm the approved blueprint `Inputs` section declares the exact
+  `allow_columns` list and names each omitted personal-data column with its
+  reason. The allow-list must include every blueprint-needed column and retain
+  every non-personal column.
+- Confirm `source-projection-evidence.json` records `source_sha256`,
+  `landed_sha256`, the allow-list, dropped-column reasons, and row count. While
+  the original file is available, run `verify_csv_landing` from
+  `../scripts/source_contract.py`; it must verify that the landed CSV is exactly
+  the source projected over that allow-list, with unchanged row order and
+  retained field values. The original file itself is not copied into the
+  closure.
+- If an approved derived key is present, confirm `derived_columns` records its
+  HMAC method, declared personal-data inputs, domain, and non-secret key
+  reference. Keep the key itself out of the blueprint and evidence, and pass it
+  through the approved secret slot to `verify_csv_landing`; the verifier must
+  recompute each landed key from the original before accepting the projection.
+- Confirm no dropped value appears in a profile, transcript, log, query,
+  transform output, or landed model. Tell the user which columns were dropped
+  and why. A blueprint that needs a personal-data column requires an explicit
+  user decision before retaining it.
 
 For every derived model that reads two or more sources, or whose approved
 Output names coverage or a ratio metric:

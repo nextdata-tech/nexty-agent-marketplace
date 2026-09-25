@@ -14,8 +14,13 @@
 
 This is a sibling of the proven CSV connector documented inline in
 `SKILL.md` — same closure shape (`duckdb` port, `PHYSICAL_MODELS`,
-read-back assert, `.transform-complete`), no `data/` directory, no local
-file export.
+read-back assert, `.transform-complete`), with the database read at transform
+time instead of a CSV export. A pure `db-source` closure may omit both
+`csv-source-path` and `data/`; neither is a database input. S1 also validated a
+database capture with an empty/README-only `data/` scaffold and the CSV marker,
+so do not claim that the directory itself causes a validation failure. In S1,
+`validation/scratch_transform_failed` carried SQLAlchemy/transform errors, and
+the same layout passed after a fresh capture.
 
 ## Scope
 
@@ -140,8 +145,9 @@ missing while a populated `attributes` list is present.
    ```
 
    Never `*`. The rest of the closure — `spec.py`, `models.py`,
-   `transform/main.py`, `data/` — is exactly what a colleague needs to rebuild,
-   and a blanket ignore silently destroys that. A clone missing
+   `transform/main.py`, and connector-owned exports when present — is exactly
+   what a colleague needs to rebuild; a blanket ignore silently destroys that.
+   `data/` is not universal for database sources. A clone missing
    `infra-profile.yaml` is the intended outcome: the recipient supplies their
    own credential and rebuilds.
 
@@ -222,9 +228,17 @@ defining them raises `NameError` at runtime.
 
 ## `requirements.txt` additions
 
-Base pins unchanged. Add `dlt[sql_database]==1.28.2` plus **exactly one**
-vendor driver matched to what the user actually has — `psycopg2-binary` for
-Postgres, `pymysql` for MySQL. Never install both speculatively.
+The Desktop runtime does not install the closure's `requirements.txt`.
+Database drivers and dlt extras must be provided by the installed Desktop
+runtime; adding a package here does not make it available to a Desktop
+transform. An NXD change adding `dlt[sql_database]` and a PostgreSQL driver to
+the Desktop runtime is in flight. Use only database drivers actually present
+in the connected runtime; do not claim pending runtime support as installed.
+
+For other runtimes that do install the closure's `requirements.txt`, keep the
+base pins unchanged and add `dlt[sql_database]==1.28.2` plus **exactly one**
+vendor driver matched to the user's database — `psycopg2-binary` for Postgres,
+`pymysql` for MySQL. Never install both speculatively.
 
 ## `spec.py` / `infra-profile.yaml` diffs
 
@@ -260,8 +274,13 @@ Postgres, `pymysql` for MySQL. Never install both speculatively.
           public: false
   ```
 
-  **No `data/` directory, no path file** — `db-source-tables` is the only
-  companion artifact, and it stays non-secret topology only. For 2+ database
+  **No CSV export is required.** `db-source-tables` is the database table map
+  and stays non-secret topology only. The transform reads database rows through
+  `db-source`; it does not read `csv-source-path` or use `data/` as a database
+  source. A pure database closure may omit both, and an empty or README-only
+  `data/` scaffold is not itself a failure. Use any landed reference files only
+  when the approved blueprint names them and the transform explicitly loads
+  them through their own resource. For 2+ database
   sources, add one labeled service per instance instead (`db-source-<label>`
   / label-prefixed attribute keys such as `secrets["orders_host"]`) — see
   `reference/multi-source.md`.
