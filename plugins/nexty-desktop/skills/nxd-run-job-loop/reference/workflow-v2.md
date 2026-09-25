@@ -625,6 +625,13 @@ subprocess output from that diagnostic.
   obtain a fresh review, and start validation again. Never resubmit an
   unchanged closure after this outcome, and never audit by hand in place of
   `check_data_product`.
+- When the failure diagnostic, or `inspect_run` for its `diagnostic_run_id`,
+  carries `failed_contracts` or `exception_class`, repair those first.
+  `check_data_product` does not execute against a live source, so it can pass
+  while a source-dependent failure remains. Each `failed_contracts` entry
+  names the promise that failed, its model, and how many rows failed; an
+  `exception_class` such as `decimal.ConversionSyntax` names what the transform
+  raised on real source data.
 - `recovery: retry_unchanged` means a bounded runtime limit was hit. Retry
   once with a fresh request id.
 - `recovery: stop` is a blocker. Report it with its code.
