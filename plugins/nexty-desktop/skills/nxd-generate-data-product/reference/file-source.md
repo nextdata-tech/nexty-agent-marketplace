@@ -31,10 +31,15 @@ A supplied export arrives in one of two shapes, and both are NORMAL:
   `data/<model>/`, the model named by the directory.
 - **Flat files at the export root** — one base model per file, named from the
   **snake_cased filename** (`Card Txns 2024.csv` → `card_txns_2024`), landed at
-  `data/<model>/<file>.<ext>` as an **EXACT BYTE COPY**.
+  `data/<model>/<file>.<ext>` as an **EXACT BYTE COPY by default**. A declared,
+  verified projection may omit only personal-data columns the approved
+  blueprint does not need; follow
+  [the source-materialization rule](../../nxd-run-job-loop/reference/source-materialization.md#privacy-projection-for-unused-personal-data-columns).
 
-Read the headers either way, and never merge files, rename a header, add a
-column, or reshape a row while landing.
+Read the headers either way, and never merge files, rename a retained header,
+add a column, or reshape a row while landing. The projection exception keeps
+all rows and retained field values in order and records its explicit allow-list,
+dropped-column reasons, and source/landed digests.
 
 **Stop and surface it** — do not guess — only for a genuinely ambiguous shape:
 

@@ -239,9 +239,11 @@ human review is written.
   are immutable and append-only, like the ledger.
 
 The tradeoff is stated rather than hidden: durable human state sits inside
-`data/` beside agent-managed exports, protected by the "preserve a file
-connector's supplied export exactly" convention. A wiped `data/mapper_reviews/`
-is *loss* — the reviews are gone and the cells re-infer — never *corruption*,
+`data/` beside agent-managed exports, protected by the rule that supplied source
+exports are preserved exactly by default. The personal-data projection
+exception applies to supplied source columns only; it never authorizes edits to
+`data/mapper_reviews/`. A wiped `data/mapper_reviews/` is *loss* — the reviews
+are gone and the cells re-infer — never *corruption*,
 because `bound_value_hash`, `bound_input_snapshot_id` and `bound_mapper_spec_id`
 make it impossible for a review to silently attach to the wrong value.
 

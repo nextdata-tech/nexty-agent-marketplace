@@ -1,14 +1,15 @@
 # Materializing a source faithfully
 
-How each kind of in-scope source is landed at Step 1, before inference. These
-rules govern **source materialization only** and they are absolute — everything
-downstream depends on the landed rows being a byte-exact record of what the user
-supplied.
+How each kind of in-scope source is landed at Step 1, before inference. The
+default is a byte-exact copy of the supplied file. The sole exception is the
+declared projection below for personal-data columns the approved blueprint does
+not need.
 
 ## Contents
 
 - [Fidelity here; derivation downstream](#fidelity-here-derivation-downstream)
 - [Attached or workspace file](#attached-or-workspace-file)
+- [Privacy projection for unused personal-data columns](#privacy-projection-for-unused-personal-data-columns)
 - [Pasted table](#pasted-table)
 - [Database connection](#database-connection)
 - [REST API](#rest-api)
@@ -16,12 +17,11 @@ supplied.
 
 ## Fidelity here; derivation downstream
 
-The CSVs you land are a byte-exact record of what the user supplied, so any
-later number traces back to it. Cleaning, dedup, amortization, currency
-normalization, reclassification and regrain are legitimate — often necessary —
-but exist **only as derived models computed downstream of the pristine source**,
-never as an edit to the source export. Preserve the row on the way in, then
-derive the corrected model beside it; `nxd-generate-data-product` owns how.
+An in-scope file is an exact byte-for-byte copy by default. Cleaning, dedup,
+amortization, currency normalization, reclassification and regrain belong only
+in derived models downstream of the landed source; never edit the user's
+original. The privacy projection below is the only exception to exact-copy
+landing, and it preserves row order and every retained field value unchanged.
 
 Materialization is also **gated**: if the request supplied a procedure with a
 result-changing gap, copying a source into a closure waits for the user's reply
@@ -36,8 +36,62 @@ Before asking the user for a path or claiming that no source exists, inspect all
 supplied attachments, declared workspace artifacts, source profiles, and
 reference files. Resolve the in-scope source from those declared inputs when it
 is present; ask only about a real missing or ambiguous source. Make an exact
-byte-for-byte copy into the generated connector export. Do not rewrite
-delimiter, encoding, headers, or rows.
+byte-for-byte copy into the generated connector export unless the narrow
+personal-data projection below applies. Do not modify the user's original.
+
+## Privacy projection for unused personal-data columns
+
+Byte-exact landing remains mandatory by default. For an in-scope file only, use
+a column projection when the source contains personal-data columns and the
+approved blueprint does not need them. Personal data includes direct
+identifiers (names, email addresses, phone numbers, street addresses, national
+IDs, dates of birth) and compensation fields such as salary. Keep every other
+source column and every row, in its original order. Retained CSV cell values
+must remain identical UTF-8 strings: do not trim, coerce, normalize, or derive
+from them during projection.
+
+Before projecting, list the needed columns from the approved blueprint. Declare
+that exact output `allow_columns` list in the blueprint's `Inputs` section, and
+list each omitted source column with its reason. Only personal-data columns
+absent from the approved needed-column list may be dropped; retain all
+non-personal source columns. For CSV, use `project_csv_columns` from
+`nxd-generate-data-product/scripts/source_contract.py`, then run
+`verify_csv_landing` while the original is still available. The verifier
+checks the declared allow-list, the exact source-header partition, row count
+and order, retained cell values, and both recorded SHA-256 digests. Save its
+returned evidence as sorted-key UTF-8 JSON in
+`source-projection-evidence.json` beside the closure; do not copy the original
+source into the closure just to make later verification possible. A format
+without an equivalent deterministic projector and verifier must not silently
+fall back to copying unneeded personal data.
+
+Never inspect, profile, print, log, quote, or query values in a column marked
+for dropping, except to compute an explicitly approved derived key in memory.
+The projection step may parse rows internally, but must emit only the declared
+columns, and its diagnostics must not contain cell values. Tell the user which
+columns were omitted and why, without quoting their contents. If the approved
+blueprint needs a personal-data column, pause and raise that need for an
+explicit user decision; do not retain it by default. If a needed result depends
+on person continuity, declare a derived output, its input columns, method, and
+non-secret key reference and domain in the blueprint. For CSV, declare the
+`hmac-sha256:v1` derivation and pass the referenced key through
+`derivation_keys` to `project_csv_columns`; the helper reads only the declared
+input columns to compute the key. Use `hmac_identifier` for the canonical
+domain-separated HMAC, keep its stable key in the approved secret slot, and
+pass the same `derivation_keys` to `verify_csv_landing` so it recomputes the key
+from the original in memory. The evidence records the derivation method,
+inputs, key reference, domain, and both digests, never the raw identifier or
+key. The raw identifier must be listed as dropped. Never land, echo, or query
+the raw identifier.
+
+CSV evidence has `mode: column_projection`, `format: csv`, `allow_columns`,
+`required_columns`, `personal_data_columns`, `drop_reasons`, `derived_columns`,
+`personal_data_decision`, `reason`, `row_count`, `source_sha256`, and
+`landed_sha256`. `derived_columns` is empty when there is no derivation;
+`personal_data_decision` is null unless a personal-data source column is
+explicitly retained after a user decision. The exact-copy default does not
+authorize removing columns: an undeclared difference from the source is a
+failure.
 
 ## Pasted table
 

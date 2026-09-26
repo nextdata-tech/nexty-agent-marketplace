@@ -955,8 +955,9 @@ stand — each states why it does not gate use of the shipped harness.
    batch file, never editing an existing one**, hand-authored or tool-written, so
    review history is append-only like the ledger. **Stated tradeoff:** durable
    human state then sits inside `data/` beside agent-managed exports, protected
-   by convention only — the "preserve a file connector's supplied export exactly"
-   rule is that convention. The compensating control is the review-binding
+   by convention only — supplied source exports are preserved exactly by
+   default, and the personal-data projection exception applies only to source
+   columns, never to `mapper_reviews`. The compensating control is the review-binding
    machinery itself: a wiped `data/mapper_reviews/` is *loss* (reviews gone,
    cells re-infer), never *corruption* — `bound_value_hash`,
    `bound_input_snapshot_id` and `bound_mapper_spec_id` make it impossible for a
