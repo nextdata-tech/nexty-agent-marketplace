@@ -762,6 +762,10 @@ _register_table(
          "a contracts/ verifier imports the field-mapper harness — a verifier "
          "that re-decides pass/fail via a model is not a check, and no grant "
          "authorizes mapping there"),
+        ("grant.ambiguous_path", "error", "agent", "none", False,
+         "both contracts/mapper_grant.json and contracts/mapper_spec_grant.json "
+         "exist — the Desktop supervisor accepts exactly one and refuses the "
+         "closure before any approval prompt"),
     ),
 )
 
@@ -775,6 +779,20 @@ _register(
     owner="agent",
     summary="a consent grant in contracts/ binds no spec in this closure — "
             "stale consent left behind",
+)
+
+# A warning, not an error: the standalone harness binds a grant wherever it
+# sits. Only the Desktop supervisor reads the fixed paths, and it fails closed
+# (mapper_scope_invalid, no prompt) rather than running unconsented.
+_register(
+    "grant.not_at_supervisor_path",
+    stage="s1_structure",
+    severity="warning",
+    owner="agent",
+    summary="consent is complete, but the spec is not at "
+            "contracts/mapper_spec.json or its grant is not at "
+            "contracts/mapper_grant.json / contracts/mapper_spec_grant.json, "
+            "the only paths the Desktop supervisor reads",
 )
 
 # --- domain `runtime.` — stages s2_transform, s6_run -------------------------

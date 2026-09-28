@@ -891,8 +891,11 @@ struct.base_models_vs_data_dirs: BASE_MODELS ['linear_comments_landed',
 'verdict_thresholds']
 ```
 
-Use three tuples, with `PHYSICAL_MODELS` written as a literal (the structural
-check cannot evaluate a computed one and reports it `unverified`):
+Use three tuples. `PHYSICAL_MODELS` may be a literal or a `+` of these
+module-level tuples; each helper tuple must be a literal bound once at module
+level. A computed value — a call such as `tuple(sorted(...))`, a comprehension,
+an imported or rebound name — is reported `unverified`, and the supervisor's
+trusted read-back cannot resolve it either, so validation then fails:
 
 ```python
 # Fetched over HTTP; no data/ directory of their own.
@@ -902,8 +905,8 @@ API_MODELS = ("linear_issues_landed", "linear_comments_landed")
 BASE_MODELS = ("nxd_decisions", "scoring_rubric", "verdict_thresholds")
 # Computed in Python from the rows above.
 DERIVED_MODELS = ("open_tickets",)
-# A literal: the structural check cannot evaluate a computed tuple and reports
-# it `unverified`. The assert keeps the literal honest as the others change.
+# A literal (API_MODELS + BASE_MODELS + DERIVED_MODELS resolves equally well);
+# never a computed tuple. The assert keeps the literal honest as the others change.
 PHYSICAL_MODELS = (
     "linear_issues_landed",
     "linear_comments_landed",

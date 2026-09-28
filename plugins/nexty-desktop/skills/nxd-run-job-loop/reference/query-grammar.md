@@ -3,6 +3,7 @@
 ## Contents
 
 - [What `run_semantic_query` accepts](#what-run_semantic_query-accepts)
+- [Grouping by a time period](#grouping-by-a-time-period)
 - [What it does not accept](#what-it-does-not-accept)
 - [The Omission Test](#the-omission-test)
 - [Enforcement corollary: the default read must be right](#enforcement-corollary-the-default-read-must-be-right)
@@ -14,7 +15,7 @@
 | Field | Accepts |
 |---|---|
 | `measures[]` | declared measure names |
-| `dimensions[]` | declared dimension names |
+| `dimensions[]` | declared dimension names; a time dimension may instead be `{"dimension": <name>, "grain": <grain>}` (see [Grouping by a time period](#grouping-by-a-time-period)) |
 | `filters[]` | `=`, `!=`, `<>`, `>`, `>=`, `<`, `<=`, `LIKE`, `ILIKE` — **ANDed only** |
 | `order_by[]` | names that are **among the selected** measures/dimensions, else the compiler raises |
 | `limit` | an integer — the DuckDB handler caps the result at **200 rows** regardless |
@@ -44,6 +45,35 @@ dimension) and `dir` (`asc` or `desc`):
 Do not fetch the unrestricted grouped result and sort or truncate it in the
 agent. That loses the endpoint's ordering/limit contract and can turn a
 bounded top-N question into an incomplete or misleading answer.
+
+## Grouping by a time period
+
+For "per month", "by quarter" or "weekly", group the date dimension at a grain
+instead of grouping by day and adding the days up in the agent:
+
+```json
+{
+  "measures": ["net_spend"],
+  "dimensions": [{"dimension": "txn_date", "grain": "month"}],
+  "filters": [{"dimension": "txn_date", "op": ">=", "value": "2025-01-01"}]
+}
+```
+
+- Send the object form only for a dimension whose `describe_model` entry lists
+  `grains`, and only a grain from that list. Without a `grains` list the
+  dimension is not a time dimension, or the runtime predates time grains; group
+  by the plain name instead.
+- Dates allow `day`, `week`, `month`, `quarter` and `year`; timestamps also allow
+  `hour`. Weeks are ISO weeks starting Monday. Timezone-aware timestamps are
+  grouped in UTC.
+- The output column keeps the dimension's name, so `order_by` uses the plain
+  name: `{"name": "txn_date", "dir": "asc"}`.
+- Filters apply to the raw date, not the period. For "March 2025", filter
+  `>= "2025-03-01"` and `< "2025-04-01"`.
+- The response's `time_grains` confirms the grain applied. If it is missing or
+  empty, the query grouped by the raw value.
+- Adding up days in the agent is correct for a total, but wrong for a distinct
+  count or an average. Always use the grain.
 
 ## What it does not accept
 

@@ -7,7 +7,7 @@ allowed-tools:
   - Grep
 metadata:
   author: nextdata
-  version: 0.53.1
+  version: 0.54.3
 ---
 
 # Review a generated closure — adversarially
@@ -164,6 +164,35 @@ it does not block publication.
 - rows dropped by a join or filter without the loss being stated
 - an exclusion applied but not itemized as a named term
 - a dense grid fabricated where the source is sparse
+
+### 8. Mapper grant scope
+
+Only when a transform module imports `nxd.experimental.field_mapper`. The
+grant at `contracts/mapper_grant.json` or `contracts/mapper_spec_grant.json` is
+the scope the user will be asked to approve in the supervisor's OS dialog.
+Your review comes before that dialog, so check that the proposal is honest.
+
+- **Plausible for the request.** The provider is `anthropic`. The model and
+  any `corroboration_model` match what the transform and spec call. The
+  `max_calls`, `max_tokens` and `max_usd` ceilings fit the row count and
+  inputs the request implies, neither far too small to finish nor far larger
+  than the work needs. `expires_at` and `recurring` fit how the user asked for
+  the product to be used. An unexplained wide ceiling or `recurring: true` is a
+  `MEDIUM` claim.
+- **Declared fields are not enforced.** The grant's `input_fields`,
+  `document_classes` and `pii_category` are declared by the author and reviewed
+  by the user. The supervisor does **not** restrict what the transform sends,
+  and the harness's own check runs inside the closure, so it is no boundary. Compare them
+  with what the transform actually passes into `MapperInput`. A field, document
+  or PII column sent but not declared is a `HIGH` claim: the user would approve
+  a disclosure narrower than the real one. A declared field never sent is
+  `LOW`.
+- **No approval claims.** A grant carrying `approved`, `approved_by`,
+  `approval_id`, `decision`, `receipt`, `signature` or similar is a `HIGH`
+  claim. Approval comes only from the supervisor's dialog.
+
+Do not judge whether the user would approve, and do not propose a scope. Name
+the mismatch with `file:line` evidence on both sides.
 
 ### Sweep a defect class once you find it
 

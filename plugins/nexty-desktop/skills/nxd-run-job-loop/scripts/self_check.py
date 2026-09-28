@@ -104,8 +104,9 @@ _codes("error", "user",
        "grant.missing", "grant.spec_mismatch", "grant.expired")
 _codes("error", "agent",
        "grant.invalid", "grant.spec_unreadable", "grant.ungated_map",
-       "grant.verifier_maps", "grant.vendored_harness")
-_codes("warning", "agent", "grant.unbound")
+       "grant.verifier_maps", "grant.vendored_harness",
+       "grant.ambiguous_path")
+_codes("warning", "agent", "grant.unbound", "grant.not_at_supervisor_path")
 
 JSON_MODE = "--json" in sys.argv
 RECORD_PATH = None
@@ -732,14 +733,42 @@ def parse_spec(src, path, var_name, var_kind):
 def model_constants(src):
     """Read transform model declarations without importing the transform."""
     tree, out = ast.parse(src, "transform/main.py"), {}
+    canonical = ("BASE_MODELS", "DERIVED_MODELS", "PHYSICAL_MODELS",
+                 "OPTIONAL_EMPTY_MODELS")
+
+    def single_target(node):
+        # `X = ...` and `X: T = ...` with one plain-name target; anything else
+        # (tuple unpacking, chained targets, attribute stores) is not a
+        # declaration this reader can attribute to one name.
+        if isinstance(node, ast.Assign) and len(node.targets) == 1 and \
+                isinstance(node.targets[0], ast.Name):
+            return node.targets[0].id, node.value
+        if isinstance(node, ast.AnnAssign) and node.value is not None and \
+                isinstance(node.target, ast.Name):
+            return node.target.id, node.value
+        return None, None
+
     assignments = {}
     for node in ast.walk(tree):
-        if isinstance(node, ast.Assign) and len(node.targets) == 1 and \
-                isinstance(node.targets[0], ast.Name) and \
-                node.targets[0].id in ("BASE_MODELS", "DERIVED_MODELS",
-                                       "PHYSICAL_MODELS",
-                                       "OPTIONAL_EMPTY_MODELS"):
-            assignments[node.targets[0].id] = node.value
+        name, value = single_target(node)
+        if name in canonical:
+            assignments[name] = value
+    # Module-level helper aliases (`API_MODELS = ("a", "b")` then
+    # `PHYSICAL_MODELS = API_MODELS + DERIVED_MODELS`). Only a name bound
+    # exactly once at module level is usable: a rebinding, an augmented
+    # assignment or a store inside a loop/branch/function makes its value
+    # depend on execution, and such a name stays unresolvable (unverified).
+    bindings = {}
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Store):
+            bindings[node.id] = bindings.get(node.id, 0) + 1
+        elif isinstance(node, ast.alias):
+            bound = node.asname or node.name.split(".")[0]
+            bindings[bound] = bindings.get(bound, 0) + 1
+    for node in tree.body:
+        name, value = single_target(node)
+        if name and name not in canonical and bindings.get(name) == 1:
+            assignments[name] = value
 
     def resolve_model_value(value, seen=()):
         try:
@@ -1328,6 +1357,15 @@ say(f"phase E ok — no denied model-SDK import in transform/main.py"
 # grant.
 import subprocess                          # noqa: E402 — only Phase G shells out
 MAPPER_ROOT = "nxd.experimental.field_mapper"
+# The Desktop supervisor does not discover mapper files by shape the way this
+# gate does. It reads the spec at one fixed path and the grant at exactly one
+# of two, and it refuses a closure carrying both grant paths, because it would
+# otherwise have to pick which proposal the user is shown. Mirrors
+# MAPPER_SPEC / MAPPER_GRANT_CANDIDATES in the supervisor's mapper_approval.rs.
+SUPERVISOR_SPEC_PATH = "contracts/mapper_spec.json"
+SUPERVISOR_GRANT_PATHS = ("contracts/mapper_grant.json",
+                          "contracts/mapper_spec_grant.json")
+# gwarnings holds (code, path, message).
 gerrors, gwarnings = [], []
 # Bound here rather than inside the discovery branch: the success line reports
 # `len(matched)`, and a NameError in the reporting path of a gate that just
@@ -1493,6 +1531,24 @@ if mapper_import:
                  ev={"missing_keys": missing},
                  fix=f"add {missing} to {jpath}; the grant itself does not need "
                      f"re-consenting, only completing")
+
+    # Both supervisor grant paths at once. Checked on existence alone, not on
+    # shape: the supervisor refuses the pair whatever either file contains, so
+    # a malformed second copy is still a refusal. An error rather than a
+    # warning because the Desktop outcome is certain (mapper_scope_invalid
+    # before any prompt) and the repair is the agent's: delete the copy that
+    # is not the user's grant.
+    _grant_paths_present = [p for p in SUPERVISOR_GRANT_PATHS if Path(p).exists()]
+    if len(_grant_paths_present) > 1:
+        gerr("grant.ambiguous_path",
+             f"both {SUPERVISOR_GRANT_PATHS[0]} and {SUPERVISOR_GRANT_PATHS[1]} "
+             f"exist. The Desktop supervisor accepts the grant at exactly one of "
+             f"these paths and refuses the closure when both are present, so it "
+             f"would never show this grant to the user for approval.",
+             SUPERVISOR_GRANT_PATHS[1],
+             ev={"paths": list(SUPERVISOR_GRANT_PATHS)},
+             fix=f"keep the grant the user authored at one of the two paths and "
+                 f"delete the other; do not merge them or edit the scope")
 
     # A transform that imports the package but never references `map_inputs` is
     # the bypass grant.py names in its own docstring: `transport.Client` is
@@ -1701,14 +1757,35 @@ if mapper_import:
         for gpath, doc in (grant_files if _all_bound else []):
             if str(gpath) not in {g for g, _ in matched.values()}:
                 gwarnings.append(
-                    (str(gpath),
+                    ("grant.unbound", str(gpath),
                      f"{gpath} is a consent grant that binds no spec in this "
                      f"closure (it authorizes "
                      f"{doc.get('mapper_spec_id')!r}). Stale consent left on "
                      f"disk reads as coverage it does not provide."))
 
-for _gp, _gm in gwarnings:
-    diag("s1_structure", "grant.unbound", _gm, path=cpath(_gp))
+        # Desktop placement. Only once consent is otherwise complete, for the
+        # grant.unbound reason: a misplaced file beside a spec_mismatch is one
+        # problem reported twice. A WARNING, because the standalone harness
+        # binds a grant wherever it sits; only the Desktop supervisor reads the
+        # fixed paths, and there a misplaced grant fails closed as
+        # mapper_scope_invalid before any prompt, never as a silent run.
+        if _all_bound:
+            _sup_grant = matched.get(SUPERVISOR_SPEC_PATH, (None, None))[0]
+            if _sup_grant not in SUPERVISOR_GRANT_PATHS:
+                _where = (f"its grant is at {_sup_grant}" if _sup_grant
+                          else f"no spec is at {SUPERVISOR_SPEC_PATH}")
+                gwarnings.append(
+                    ("grant.not_at_supervisor_path",
+                     _sup_grant or SUPERVISOR_SPEC_PATH,
+                     f"the Desktop supervisor reads the mapper spec only at "
+                     f"{SUPERVISOR_SPEC_PATH} and its grant only at "
+                     f"{SUPERVISOR_GRANT_PATHS[0]} or "
+                     f"{SUPERVISOR_GRANT_PATHS[1]}; {_where}. The standalone "
+                     f"harness binds it, but a Desktop build refuses it as "
+                     f"mapper_scope_invalid before asking the user."))
+
+for _gc, _gp, _gm in gwarnings:
+    diag("s1_structure", _gc, _gm, path=cpath(_gp))
 
 if gerrors:
     say("\nPHASE G FAILED — consent gate (a mapper maps only under a "
@@ -1737,10 +1814,14 @@ if not mapper_import:
         "Whether the closure reaches a model by some other route is Phase "
         "E's question, not this one's.")
 else:
+    _n_unbound = sum(1 for c, _, _ in gwarnings if c == "grant.unbound")
     say(f"phase G ok — {mapper_import_file} imports {mapper_import!r}; "
         f"{len(matched)} mapper spec(s) under contracts/ each bound by a "
         f"grant, checked by the harness's own Grant.check"
-        + (f"; {len(gwarnings)} unbound grant(s) also present" if gwarnings
+        + (f"; {_n_unbound} unbound grant(s) also present" if _n_unbound
+           else "")
+        + ("; not at the Desktop supervisor's fixed paths"
+           if any(c == "grant.not_at_supervisor_path" for c, _, _ in gwarnings)
            else "")
         + ". Statically decidable consent over the specs ON DISK only — "
           "nothing here inspects which spec path the transform passes to "
