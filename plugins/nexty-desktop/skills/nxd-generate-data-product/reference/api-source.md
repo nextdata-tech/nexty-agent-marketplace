@@ -814,7 +814,12 @@ reports a table that never landed.
 below, under `spec.py` / `infra-profile.yaml` diffs, means this connector brings
 no *export* of its own — it does not mean the closure may not carry one. The supervisor materializes `transform/` and `data/` into the
 pinned snapshot for every closure, by path and not by connector type, so a
-`data/` tree an api closure authors itself travels with it. Do **not** inline
+`data/` tree an api closure authors itself travels with it. The same rule pins
+`csv-source-path`: keep it `data` in an api closure. Scratch validation resolves
+it for every closure, and any other directory (a `source-staging/`, say) is not
+copied into the pinned snapshot, so validation stops with a generic
+`validation/scratch_transform_failed` before the transform runs or the API is
+ever called. Do **not** inline
 the rows as a literal in the transform instead: `SKILL.md`'s "Reference data is
 landed, never hardcoded" invariant forbids exactly that, and it does not relax
 by connector.
