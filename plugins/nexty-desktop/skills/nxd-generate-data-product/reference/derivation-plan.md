@@ -16,7 +16,10 @@
 
 The semantic layer used by this desktop generation path is deliberately narrow.
 A dimension is a pointer at a physical column — there is no dimension expression
-surface, so no `CASE WHEN`, no `DATE_TRUNC`, no concatenation. A normal metric
+surface, so no `CASE WHEN`, no concatenation. The one exception is time: a
+`date` or `timestamp` dimension can be grouped by day, ISO week, month,
+quarter or year (timestamps also by hour) at query time, by selecting it as
+`{"dimension": "<name>", "grain": "month"}`. A normal metric
 is one aggregate over one column; the broader warehouse-backed builder DSL also
 has `Agg.EXPRESSION`, but that is outside this desktop closure pattern and this
 skill does not use it as a derivation substitute. That expression slot is a
@@ -34,9 +37,17 @@ Every one of these is therefore **not** a query-time concern:
 | "amortize prepayments over the term" | needs one input row to become N output rows |
 | "dedupe refund pairs" | needs rows removed — a self-anti-join |
 | "normalize everything to USD" | needs an expression over an FX rate |
-| "report monthly" | needs a month column, not a `DATE_TRUNC` at query time |
 
-Each has to land as a physical column or row that the transform writes. The
+Each has to land as a physical column or row that the transform writes.
+
+"Report monthly" is **not** on this list. Land the date as a `date()` (or
+timestamp) column with a `dimension()` role, and the query groups it by month.
+Do not derive `month`, `quarter` or `year` columns for reporting: they multiply
+dimensions, and a string month such as `"2025-03"` cannot be grouped by quarter
+later. The date must be typed as a date or timestamp, not a string, or no grain
+is available. A period still belongs in the transform when the MODEL's rows are
+per period — for example a monthly snapshot or a balance carried month to month
+— because that is a change of grain, not a way of grouping. The
 step that decides *which* models must exist is this one, and nothing else in
 the pipeline does it: inference reads the source you hand it, and code
 generation places the models you name. If you skip planning, you generate a
@@ -64,7 +75,9 @@ materialized. For each question:
      a standing ruling and a derived model must produce the column; if they would
      get a merely *broader* number, it is a per-question filter — derive nothing.
 3. **Name the dimension's column.** Same test. "By month" over a date column is
-   a derived column, not a query-time truncation.
+   NOT a derived column: keep the date typed as a date and group it with a time
+   grain at query time. Derive nothing for a period unless the model's own rows
+   are per period.
 4. **Ask what the column needs.** A classification needs a ruling. A ruling
    needs a rule source. A rule source may not exist — see
    [reference data](#reference-data-rulings-that-exist-in-no-source-csv), and
@@ -85,9 +98,9 @@ usually converge on the same one or two derived models.
 - burn multiple = net burn ÷ net new ARR — **a ratio, which no metric can
   express.** So it is not one metric; it is two metrics the agent divides when
   presenting, or a derived column at the reporting grain.
-- **net burn** = cash out − cash in, per month → needs a signed `amount` column
-  and a `month` column at monthly grain. The source has a transaction date, not
-  a month → **derived column**.
+- **net burn** = cash out − cash in, per month → needs a signed `amount` column.
+  "Per month" needs no column: land the transaction date typed as a `date()`
+  dimension, and the query groups it with `"grain": "month"`.
 - cash out excludes internal transfers → "transfers are never expenses" is a
   standing ruling, not a scoping clause: a consumer querying spend with no
   filters would count transfers as spend — a confidently wrong number. So the
@@ -110,8 +123,8 @@ usually converge on the same one or two derived models.
 |---|---|---|---|
 | `transactions` | base | one source transaction | the pristine export |
 | `merchant_categories` | base (reference) | one merchant | the user-confirmed ruling, landed as data |
-| `classified_spend` | derived | transaction × category | adds `category` (incl. `needs_review`), `month`, signed `amount` |
-| `spend_metrics` | view | — | `SUM(amount)` over the `category` / `month` dimensions |
+| `classified_spend` | derived | transaction × category | adds `category` (incl. `needs_review`) and signed `amount`; keeps `txn_date` as a `date()` dimension |
+| `spend_metrics` | view | — | `SUM(amount)` over the `category` and `txn_date` dimensions; monthly totals group `txn_date` at `"grain": "month"` |
 
 Note what the plan makes possible: "which merchants are unclassified?" is now a
 query, not a support ticket, because `needs_review` is a value in a dimension.
@@ -121,7 +134,7 @@ query, not a support ticket, because `needs_review` is a value in a dimension.
 | The model's rows are… | Kind |
 |---|---|
 | exactly the supplied export's rows, 1:1 | **base** — `data/<name>/`, key from a source column |
-| the same entities, with new columns (classification, FX normalization, month column) | **derived**, keeps the source key |
+| the same entities, with new columns (classification, FX normalization) | **derived**, keeps the source key |
 | the same entities minus some (dedupe, filter) | **derived**, keeps the source key |
 | one input row expanded into N (amortize, unpivot) | **derived**, new composite key from the grain |
 | many input rows collapsed into one (monthly regrain) | **derived**, new composite key from the grain |

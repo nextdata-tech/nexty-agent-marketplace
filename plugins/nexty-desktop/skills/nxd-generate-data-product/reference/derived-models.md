@@ -1022,7 +1022,7 @@ landed reference model. Every source row survives; nothing is aggregated.
 def _classify_spend(
     txns: list[dict[str, str]], rulings: list[dict[str, str]]
 ) -> list[dict[str, Any]]:
-    """One output row per source transaction, plus category / month."""
+    """One output row per source transaction, plus its category."""
     by_merchant = {r["merchant"]: r["category"] for r in rulings}
     return [
         {
@@ -1032,7 +1032,9 @@ def _classify_spend(
             "merchant": t["merchant"],
             # Uncovered merchants get an explicit bucket, never a silent drop.
             "category": by_merchant.get(t["merchant"], "needs_review"),
-            "month": t["txn_date"][:7],           # derived column, not DATE_TRUNC
+            # Keep the date whole and type it date() in models.py; queries group
+            # it by month with a time grain. No derived month column.
+            "txn_date": t["txn_date"],
             "currency": t["currency"],
             "amount": float(Decimal(t["amount"])),  # signed; refunds stay negative
         }

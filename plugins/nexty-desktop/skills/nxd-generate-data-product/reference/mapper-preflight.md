@@ -31,7 +31,7 @@ one.
 |---|---|---|---|
 | 1 | mapper import available | `python -c "import nxd.experimental.field_mapper"` | the `nxd` package is missing or too old |
 | 2 | anthropic SDK importable | `python -c "import anthropic"` | runtime under-provisioned — `nxd-desktop-setup.sh --force` |
-| 3 | API key present in the child environment | test the variable is set and non-empty — **never print it** | execution reachability only, not Desktop authorization or credential isolation; see [field-mapper.md](field-mapper.md#desktop-supervisor-approval-boundary) |
+| 3 | API key present in the child environment | test the variable is set and non-empty — **never print it** | execution reachability for the standalone harness only, not Desktop authorization. Under Desktop supervision the key is never in the child environment: the supervisor keeps it in the Keychain and brokers every call. See [field-mapper.md](field-mapper.md#desktop-supervisor-approval-boundary) |
 | 4 | mapper spec parses | `MapperSpec.load(path)` | malformed spec — fix before anything else |
 | 5 | canonical spec id computed | `python -m nxd.experimental.field_mapper spec-id <spec>` | the id the grant must carry |
 | 6 | grant exists | the grant file is present in `contracts/` | the user must author one; you cannot |
