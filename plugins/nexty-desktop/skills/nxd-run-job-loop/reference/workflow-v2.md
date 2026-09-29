@@ -122,7 +122,10 @@ When a term priority is omitted, materialize the platform default as `P3` with
 `platform_fixed` provenance and disclose that default; an explicitly written
 priority uses `explicit` provenance. The natural-language echo must also name
 the affected term and say that it uses the platform-default `P3` priority;
-putting `P3` only in the typed term is not disclosure.
+putting `P3` only in the typed term is not disclosure. The default is also
+covered as its own path: list `v3:terms[<id>].priority` in `echo.coverage` for
+each such term, next to that term's `.text` entry. The prose sentence alone
+fails with `v3.echo.default_uncovered`.
 
 Input expectation and output promise source entries each have exactly `id`,
 `model`, `guarantee`, `rule`, and `fields`. Compiled contracts each have exactly
@@ -152,7 +155,11 @@ variants. If a proposal rebuilt from a fresh recovery map
 (`inspect_prepare_recovery`) is still rejected, stop calling
 `prepare_workflow`: report the exact rejection codes and the blueprint section
 they point to, and ask the user how to proceed. Repeated guessed calls do not
-converge and consume the turn.
+converge and consume the turn. That stop applies to span and coordinate
+rejections, the kind a recovery map can fix. A content rejection whose shape
+this reference documents (a `v3.echo.*` coverage or disclosure code, a
+provenance code) is not a question for the user: fix it to the documented shape
+and call again. Stop and ask only if the same code survives that fix.
 
 Treat source paths as opaque strings. Copy the exact parser key returned by the
 source map, including the `v3:` prefix; do not independently slugify, snake-case,
@@ -580,6 +587,14 @@ explicit user approval in a later turn. “I don't know, you tell me” and
 wait. A new review finding requires a new user decision for its IDs. Only
 accepted findings the user approved may be applied; rejected, out-of-scope,
 and structural findings stay unapplied and are not deferred.
+
+A user reply that decides only some of the round's IDs is a partial decision.
+Once a round carries a `user_decision`, every accepted behavior-affecting
+finding in it must be applied or listed in `deferred_finding_ids`; the ledger
+validator rejects the round otherwise. So record a partial approval either by
+deferring the still-open IDs in that round, or by leaving `user_decision: null`
+on the `needs_user` round and recording the decision in the next round. An
+applied structural note needs no user decision.
 
 There is exactly one retained-input review per capture generation, not one per
 workflow lifetime. When an accepted finding changes behavior, record the user
