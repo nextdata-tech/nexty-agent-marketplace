@@ -7,7 +7,7 @@ allowed-tools:
   - Grep
 metadata:
   author: nextdata
-  version: 0.54.3
+  version: 0.54.5
 ---
 
 # Review a generated closure — adversarially
@@ -152,8 +152,10 @@ do:
 
 - `HIGH` if the gap hides an output that is wrong now.
 - `MEDIUM` if the approved blueprint explicitly promises that independent check.
-- `LOW` otherwise, after you have independently confirmed that the current
-  output is correct.
+- `LOW` otherwise: either you have independently confirmed that the current
+  output is correct, or no output exists yet to confirm and the capture shows
+  no evidence that it will be wrong. Review runs before validation, so "not yet
+  verified" alone never makes a gap blocking.
 
 A LOW gap is advisory. Record it so the owner can strengthen the verifier, but
 it does not block publication.
