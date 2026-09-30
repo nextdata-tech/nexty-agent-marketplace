@@ -11,6 +11,7 @@ VALIDATION_SCHEMA_V1 = "nxd-workflow-proposal-validation-v1"
 VALIDATION_SCHEMA_V2 = "nxd-workflow-proposal-validation-v2"
 SOURCE_MAP_UNAVAILABLE_CODE = "v3.provenance.source_map_unavailable"
 SOURCE_MAP_OVERSIZED_CODE = "v3.provenance.source_map_oversized"
+BLOCKING_OPEN_QUESTION_CODE = "v3.open_question.blocking_unresolved"
 
 # These are deliberately limits on the structural recovery hint, not on the
 # blueprint parser.  The map contains only parser paths and coordinates; it
@@ -28,6 +29,10 @@ _SOURCE_PATH_RE = re.compile(
     r")"
 )
 _SPAN_FIELDS = ("line_start", "line_end", "offset_start", "offset_end")
+_BLOCKING_OPEN_QUESTION_MESSAGE = (
+    "Open Question {ordinal} blocks preparation. Ask the user, record their answer in the blueprint "
+    "as a Decision, regenerate the complete proposal, and prepare again. Never change blocking yourself."
+)
 
 
 def _source_path_for_target(parsed, proposal, target_path):
@@ -190,12 +195,28 @@ def validation_result(parsed, proposal, *, protocol=2):
     issues = authoring.validate_proposal(parsed, proposal, require_locked_decisions=False)
     payload = proposal.get("proposal") if isinstance(proposal, dict) else None
     questions = payload.get("open_questions", []) if isinstance(payload, dict) else []
-    blocking = any(isinstance(item, dict) and item.get("blocking") is True for item in questions)
-    primary = min(issues, key=lambda item: (item.path, item.code, item.message), default=None)
+    if not isinstance(questions, list):
+        questions = []
+    first_blocking_index = next(
+        (
+            index
+            for index, item in enumerate(questions)
+            if isinstance(item, dict) and item.get("blocking") is True
+        ),
+        None,
+    )
+    structural_primary = min(issues, key=lambda item: (item.path, item.code, item.message), default=None)
+    primary = structural_primary
+    if primary is None and first_blocking_index is not None:
+        primary = authoring.ValidationIssue(
+            code=BLOCKING_OPEN_QUESTION_CODE,
+            path=f"v3:open_questions[{first_blocking_index}].blocking",
+            message=_BLOCKING_OPEN_QUESTION_MESSAGE.format(ordinal=first_blocking_index + 1),
+        )
 
     return {
         "schema": VALIDATION_SCHEMA_V1 if protocol == 1 else VALIDATION_SCHEMA_V2,
-        "ok": not issues and not blocking and parsed.frontmatter.status == "proposed",
+        "ok": not issues and first_blocking_index is None and parsed.frontmatter.status == "proposed",
         "source_semantic_sha256": authoring.semantic_hash(parsed),
         "proposal_sha256": authoring.proposal_hash(proposal) if isinstance(proposal, dict) else None,
         "issue": _issue_payload(parsed, proposal, primary, protocol=protocol),

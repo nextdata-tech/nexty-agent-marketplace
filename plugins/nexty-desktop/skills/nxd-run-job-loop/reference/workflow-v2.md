@@ -8,6 +8,8 @@ do not fall back to a direct CLI or local substitute.
 
 - [Gate on the connected capability](#gate-on-the-connected-capability)
 - [Prepare the prose blueprint](#prepare-the-prose-blueprint)
+  - [Classify admission failures before recovery](#classify-admission-failures-before-recovery)
+  - [Recovering a rejected proposal](#recovering-a-rejected-proposal)
 - [Relay consent and capture](#relay-consent-and-capture)
 - [Run and report the review](#run-and-report-the-review)
 - [Follow returned actions through admission](#follow-returned-actions-through-admission)
@@ -195,6 +197,16 @@ state. Do not call `inspect_workflow` after a rejection unless admission
 actually created a workflow; its absence is expected for a proposal that failed
 trusted validation. Classify the returned details first:
 
+- `v3.open_question.blocking_unresolved`: return to the user and ask the
+  indicated Open Question. Record their answer in the blueprint as a Decision,
+  reparse the final blueprint, regenerate every proposal field and span,
+  strictly validate the complete proposal, and prepare with a fresh `request_id`.
+  Never set `blocking: false` yourself; any question-state change must faithfully
+  reflect the user's answer.
+- `workflow/proposal_validator_unavailable`: stop and report the runtime
+  failure. Do not regenerate the proposal. Only if `retryable: true`, a retry
+  of the identical request is permitted later; do not automatically retry or
+  enter a regeneration loop.
 - A bounded `prepare_recovery_id` is the only source for a retained complete
   parser map. Inspect it immediately, verify that it belongs to the unchanged
   final blueprint, and regenerate the whole proposal from that map.
@@ -212,9 +224,11 @@ trusted validation. Classify the returned details first:
   in the model when the user actually requires it. Custom contracts cannot
   express redaction by naming absent fields or by using an empty field list.
 
-In every branch, an edit invalidates all parsed spans. Re-read the final
-blueprint, regenerate every proposal section, strictly validate the complete
-replacement, and send a fresh request id before retrying.
+The blocking-question branch waits for the user's answer; the runtime-failure
+branch stops without regeneration. For proposal recovery after a blueprint edit,
+all parsed spans are invalid: re-read the final blueprint, regenerate every
+proposal section, strictly validate the complete replacement, and send a fresh
+request id before retrying.
 
 ### Recovering a rejected proposal
 
