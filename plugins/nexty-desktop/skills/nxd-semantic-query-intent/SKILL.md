@@ -6,7 +6,7 @@ allowed-tools:
   - AskUserQuestion
 metadata:
   author: nextdata
-  version: 0.54.9
+  version: 0.54.10
 ---
 
 # Semantic query intent validation
@@ -22,7 +22,19 @@ The gate validates intent-to-selection mapping before governed execution:
 1. Check that catalog coverage is complete for the agreed scope before relying
    on relevance or grain decisions.
 2. Have the catalog-aware critic compare the question, selection, and model
-   descriptions, including compatibility and reachability metadata.
+   descriptions, including compatibility and reachability metadata. Every SCOPE
+   constraint (a named value, entity, segment, or time window that narrows the
+   population) must be honored. Use a filter when a catalog dimension's
+   description expresses it; when a metric definition already encodes it (for
+   example, a partner-sourced metric), selecting that metric satisfies the
+   constraint without a filter. Similar-looking dimension values alone do not
+   establish the meaning. A requested BREAKDOWN (such as "by product" or
+   "per month") maps to a grouped dimension. A comparison of named values (such
+   as "Psychiatry vs Neurology") needs a filter restricting to those values and
+   grouping by that dimension; grouping never substitutes for filtering on a
+   named value. Add a missing filter only when a dimension's description
+   expresses the constraint, then re-run the critic. Return `likely-wrong` and
+   abstain or clarify only when no metric or dimension can express it.
 3. Show a plain-language round-trip echo assembled from the selected concepts'
    descriptions, including applicable PII or governance notes.
 4. Clarify or abstain when the mapping is ambiguous, likely wrong, unavailable,
