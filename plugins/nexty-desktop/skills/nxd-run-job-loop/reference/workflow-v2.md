@@ -41,7 +41,9 @@ entry into all of its requested clauses and map every clause to the Models,
 Transform, and Outputs that answer it. Never rename or drop a clause to fit the
 implementation; if a clause cannot be covered, leave it open and return to the
 user for a decision before approval. Populate Decisions only from a user
-statement or a policy the user explicitly designated as controlling. Evidence
+statement or a policy the user explicitly designated as controlling. A bare
+"yes" or "sure" to a message with several questions or alternatives is not such
+a statement; see "Relay consent and capture". Evidence
 and contracts may establish facts, but do not imply a decision or an
 anticipated reversal; leave unmade choices open and mark them `[DECIDE]`.
 
@@ -304,7 +306,18 @@ itself; do not change the proposal after consent.
 ## Relay consent and capture
 
 Find the consent action in `next_actions`. After the user approves the exact
-blueprint read-back, call `advance_workflow` with `session_decision`. Relay the
+blueprint read-back, call `advance_workflow` with `session_decision`.
+
+A bare reply such as "yes", "sure", "fine" or "ok" that names nothing settles
+nothing. It is not approval of the read-back, and it does not choose among
+alternatives or answer open questions in the same message, including your own
+recommendations. Do not record a Decision, relay consent, or generate the
+closure from it. Re-ask once, naming the single item you need. For approval,
+that is the specific blueprint read-back, e.g. "Do you approve this plan as
+shown? Reply 'approved' to build it." For a choice, name the options and your
+recommendation, and ask for the choice itself. An affirmative reply to that
+single-item re-ask settles that item; a reply naming the item settles it on
+the first ask. Relay the
 approval quote exactly as it appeared in the current session; do not summarize,
 reword, or manufacture a second approval. Echo the supervisor-provided
 `subject_sha256` and use the returned revision for the compare-and-swap.
