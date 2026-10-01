@@ -132,9 +132,12 @@ Supported operators (exact symbols — not words):
 
 ```
 =   !=   <>   >   >=   <   <=   LIKE   ILIKE   IN   NOT IN
+IS NULL   IS NOT NULL
 ```
 
-For `IN` / `NOT IN`, `value` must be a list. For all others, a scalar.
+`IN` / `NOT IN` take a non-empty list. `IS NULL` / `IS NOT NULL` omit `value`;
+other operators take a scalar. Values are checked against the dimension's
+declared type, so they are not always strings.
 
 Example filters:
 

@@ -13,7 +13,7 @@ allowed-tools:
   - Task
 metadata:
   author: nextdata
-  version: 0.54.9
+  version: 0.54.10
 ---
 
 # nxd-run-job-loop skill
@@ -330,8 +330,9 @@ natural-language translation is yours to do. For each question:
    join-reachable models within this closure remain eligible.
 3. **Check the question fits the MCP grammar.**
    `mcp__nxd-desktop__run_semantic_query` accepts `measures[]`, `dimensions[]`,
-   ANDed `filters[]`, `order_by[]` and `limit` — no `OR`, no measure-level
-   filtering, no raw rows, no SQL. The operator list, the sanctioned workarounds
+   ANDed `filters[]`, `order_by[]` and `limit` — no disjunction across different
+   dimensions; alternatives on one dimension use `IN`. There is no measure-level
+   filtering, raw rows, or SQL. The operator list, the sanctioned workarounds
    and the **Omission Test** are in
    [reference/query-grammar.md](reference/query-grammar.md). Apply that test to
    every constraint first: would a consumer querying with no filters get a
