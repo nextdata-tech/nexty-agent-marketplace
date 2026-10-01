@@ -6,8 +6,11 @@
 - [Frontmatter](#frontmatter)
 - [Sections](#sections)
 - [Where an Input expectation can actually run](#where-an-input-expectation-can-actually-run)
+- [Procedures are landed, not described](#procedures-are-landed-not-described)
 - [Terms](#terms)
+- [A Term relative to the clock must name its anchor](#a-term-relative-to-the-clock-must-name-its-anchor)
 - [Interpretation and approval](#interpretation-and-approval)
+- [Sharing the document](#sharing-the-document)
 - [Porting a blueprint to a new workflow](#porting-a-blueprint-to-a-new-workflow)
 - [Claude Desktop form contract](#claude-desktop-form-contract)
 - [Worked example](#worked-example)
@@ -184,6 +187,18 @@ Markdown structure and spans
 Every approval-relevant typed value records `explicit`, `inferred`, or
 `platform_fixed` provenance. Inferred values must be covered by the echo-back.
 Blocking Open Questions prevent approval.
+
+Disclosure or suppression choices that change which rows or values are exposed,
+and choices between a baseline and the reporting period, are **blocking Open
+Questions**. Ask and get the user's answer before building; a proposed default
+does not resolve either choice.
+
+Constraints attached to approval — for example, "approved, but keep this field
+as a declared enum" — belong in the prepared blueprint and an executable
+**Output Promise**, enforced by a typed model or a definition-bound verifier,
+before capture. Re-prepare and show the revised echo-back so the user's approval
+covers those constraints. A check that runs only in the transform does not
+satisfy the promised contract.
 
 Each approved Decision is locked by id and hash. Extraction cannot overwrite a
 locked Decision. A conflicting edit becomes an explicit proposed change and
