@@ -262,7 +262,14 @@ Return, per finding:
   (a real consumer-facing or public-contract quality defect with limited
   impact, including a verification gap over output you confirmed correct;
   never a style, formatting, or internal-reference nit). Robustness against a
-  hypothetical future bug is never HIGH or MEDIUM on its own
+  hypothetical future bug is never HIGH or MEDIUM on its own. Neither is a
+  presentation gap: output that already discloses a fact accurately, in a
+  shape consistent with every approved Decision and Output Promise, but
+  could be more convenient (added names or labels, extra columns, more
+  declared joins, denormalized diagnostics). Grade that `LOW`. `MEDIUM`
+  needs a consumer who would be misled, or a fact the request or an approved
+  Decision or Output Promise requires that the output does not disclose. A
+  review of a repaired capture applies the same bar
 - `claim` — one sentence stating the defect
 - `evidence` — `file:line` in the closure, or the quoted request text. A
   finding with no evidence is an opinion; do not return it.
