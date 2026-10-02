@@ -188,7 +188,14 @@ accepted adjudication are not authorization. Ask for the specific IDs and do
 not edit the authoring closure, reset, or recapture in the finding turn. “I
 don't know, you tell me” and “whatever you think” are deflections, not approval;
 explain the choice and wait. A later review finding needs its own explicit user
-decision. Rejected and out-of-scope claims are still relayed but change nothing.
+decision. When findings force a reset, write each of the user's rulings on
+them, including "keep as approved", into the blueprint's Decisions in words
+that settle the point, so the fresh review grades against the ruling rather
+than re-raising it. Rejected and out-of-scope claims are still relayed but change nothing.
+Never recommend deferring or accepting an accepted `HIGH` finding: recommend
+the fix. If no fix fits the approved rulings, say so, name the ruling the fix
+needs and ask for it, without recommending deferral. A `MEDIUM` trade-off may
+be offered as a genuine choice.
 The only automatic exception is a syntax, mechanical, or procedural
 `structural_note` backed by evidence that the spec hash, model/field set, grain,
 row inclusion, values, aggregations, thresholds, verdicts and assertions remain

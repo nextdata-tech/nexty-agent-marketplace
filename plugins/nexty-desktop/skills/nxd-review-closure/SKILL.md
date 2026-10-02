@@ -7,7 +7,7 @@ allowed-tools:
   - Grep
 metadata:
   author: nextdata
-  version: 0.54.10
+  version: 0.54.14
 ---
 
 # Review a generated closure — adversarially
@@ -120,6 +120,15 @@ the raw value remains queryable from the physical table. If the request says
 raw PII must never be exposed, any supported access path that retains it is a
 HIGH finding. Judge the captured code and schemas; do not assume this defect or
 prescribe its fix.
+
+A suppression rule protects aggregates. Any landed model below the suppressed
+grain (such as a person-level roster), queryable or not, lets a reader recount
+a suppressed value through direct table access: that is `HIGH`.
+
+A fresh review grades against the blueprint's Decisions, including the user's
+rulings on earlier findings. A point such a Decision already settles in
+words is not re-raised as `HIGH` or `MEDIUM` under a new ID; at most note it
+`LOW`.
 
 ### 4. A metric whose aggregation is wrong for its grain
 
