@@ -561,6 +561,10 @@ every other state requires `applied_files: []`; list only files actually
 changed. A `not_applied` finding lists no files. `deferred_finding_ids` may
 contain only accepted `behavior_affecting` findings the user explicitly
 deferred; never defer a rejected, `out_of_scope`, or `structural_note` finding.
+When findings force a reset, write each user ruling on them into the
+blueprint's Decisions before re-preparing, so the fresh review grades against it.
+Never recommend deferring an accepted `HIGH` finding; recommend its fix (see
+[Relay and authorization](../../nxd-generate-data-product/reference/adversarial-review.md#relay-and-authorization)).
 When shell access is available, load the shipped
 `$JOB_HELPER_DIR/scripts/dp_diagnostics.py` and call
 `validate_review_round(round)` before writing the round; fix every reported
@@ -586,7 +590,10 @@ or not, and a rejected round cannot pair with its review. Then
 report `verdict: "clear"` with an empty `findings` list. The advisory claims
 stay in `review-record.json` for the user, and they need no user decision. Never
 hold publication for an advisory claim, and never downgrade a `HIGH` or `MEDIUM`
-claim to reach this path.
+claim to reach this path. After publication, report advisory claims as notes.
+A stricter alternative to an approved Decision is an optional change you may
+offer, not an open question: do not say the result is not ready to circulate,
+do not ask the user to decide it, and do not end the turn waiting on it.
 
 Map unresolved `HIGH` and `MEDIUM` claims to `severity: "blocking"`; map
 unresolved `LOW` claims to `severity: "advisory"`. Project each unresolved

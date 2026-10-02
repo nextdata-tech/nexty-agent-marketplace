@@ -14,7 +14,7 @@ allowed-tools:
   - Task
 metadata:
   author: nextdata
-  version: 0.54.10
+  version: 0.54.14
 ---
 
 # nxd-generate-data-product skill
@@ -139,7 +139,7 @@ The nxd-run-job-loop handoff MUST carry `job_helper_dir`, an already-resolved ab
   description, and which questions the semantic layer must answer.
 - The inferred model gives each base model's primary key, dimensions, joins,
   PII flags, metrics, and column types. Base roles and metric views are
-  different authored objects — see Step 2. `pii=True` and a roleless field control semantic discovery; they do not mask a column in the physical DuckDB table or direct SQL. For a file source, omit personal-data columns the approved blueprint does not need through the declared projection before landing. If an approved derived key needs a personal-data value, derive the non-identifying key in memory before landing and omit the raw value. No supported physical output may retain a dropped value. Every non-empty model, field, metric, and contract description must be copied from the relevant approved blueprint section; do not invent a paraphrase that is unreachable from the approved plan. If new wording is needed, amend and re-approve the blueprint before capture.
+  different authored objects — see Step 2. `pii=True` and a roleless field control semantic discovery; they do not mask a column in the physical DuckDB table or direct SQL. For a file source, omit personal-data columns the approved blueprint does not need through the declared projection before landing. If an approved derived key needs a personal-data value, derive the non-identifying key in memory before landing and omit the raw value. No supported physical output may retain a dropped value. When an approved Decision suppresses or withholds values below a grain (for example department-months under five people), never land rows below that grain (such as a person-level roster): read the projected export inside the transform, compute in memory, and land only models that apply the rule, so nothing landed can recount a suppressed value. Place that projected export outside `data/` (for example `source/<name>/`), declare the root in the root-level `companion-files` manifest, and read it below `os.environ["NXD_TRANSFORM_ROOT"]`, failing closed; a `data/` directory without a base model fails `struct.base_models_vs_data_dirs`. Say so in the blueprint. Every non-empty model, field, metric, and contract description must be copied from the relevant approved blueprint section; do not invent a paraphrase that is unreachable from the approved plan. If new wording is needed, amend and re-approve the blueprint before capture.
 - Each connector config names a **connector type** (CSV / other local file /
   database / REST API) plus its location. For non-CSV types follow
   `reference/file-source.md` / `database-source.md` / `api-source.md`; for
@@ -153,7 +153,7 @@ The nxd-run-job-loop handoff MUST carry `job_helper_dir`, an already-resolved ab
   [reference/file-source.md](reference/file-source.md) and
   [the source-materialization guide](../nxd-run-job-loop/reference/source-materialization.md).
   Never merge files, rename or add headers, or reshape rows; read headers either way.
-- Every data directory MUST have a base model; a promised model with **no** data
+- Every data directory MUST have a base model (a below-grain source under an approved suppression rule lives outside `data/`, above); a promised model with **no** data
   directory is a **derived** model (Step 3a), not a missing export. An
   optional-empty base model listed in `OPTIONAL_EMPTY_MODELS` may have no source
   directory until its first rows are supplied.
