@@ -317,7 +317,9 @@ that is the specific blueprint read-back, e.g. "Do you approve this plan as
 shown? Reply 'approved' to build it." For a choice, name the options and your
 recommendation, and ask for the choice itself. An affirmative reply to that
 single-item re-ask settles that item; a reply naming the item settles it on
-the first ask. Relay the
+the first ask, and so does a reply that says which field or rule carries the
+meaning the request needs (record that as an `inferred` Decision, see
+[dp-blueprint.md](dp-blueprint.md)). Relay the
 approval quote exactly as it appeared in the current session; do not summarize,
 reword, or manufacture a second approval. Echo the supervisor-provided
 `subject_sha256` and use the returned revision for the compare-and-swap.
