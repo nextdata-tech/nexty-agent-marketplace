@@ -13,7 +13,7 @@ allowed-tools:
   - Task
 metadata:
   author: nextdata
-  version: 0.54.18
+  version: 0.54.19
 ---
 
 # nxd-run-job-loop skill
@@ -383,12 +383,13 @@ exit: `healed`, `healed_with_concessions`, `caps_exhausted`, `blocked`,
   Step 2/3 and use `reset_workflow` while the v2 construction is still pending.
   The enrolled scope is new-build only. After publication, behavior-changing revisions are unsupported: preserve
   the release and never reset, recapture, validate, retry, remove, or replace its workflow ID.
-  `validation/existing_workflow_unsupported` is terminal (see
-  [reference/failure-handling.md](reference/failure-handling.md)). Report the limitation and ask explicit
-  authorization for a separate versioned product/new ID; only then start fresh workflow-v2 admission.
-  Consumers must switch; the old release is unchanged. After fresh publication, discard cached artifacts/current
-  file, render, then re-describe. If caps expire, keep attempt history and report impact, state, and next action
-  using [user-facing-language.md](reference/user-facing-language.md); never loop or quit silently.
+  `validation/existing_workflow_unsupported` is terminal (see [reference/failure-handling.md](reference/failure-handling.md)).
+  Report the limitation and ask explicit authorization for a separate versioned product/new ID; only then start fresh workflow-v2 admission.
+  A request to revise a published product is not that authorization: first say the release can't be revised in place, that it would
+  be a separate versioned product under a new workflow ID, and that consumers must switch; then ask and wait for the user's yes.
+  Never call `prepare_workflow` for the new ID in the same turn as the ask, and never fold the authorization into the plan approval.
+  After fresh publication, discard cached artifacts/current file, render, re-describe. If caps expire, keep attempt history and report
+  impact, state, next action ([user-facing-language.md](reference/user-facing-language.md)); never loop or quit silently.
 - **Blocked** — the fix is a ruling only the user can make (a missing rate, an
   ambiguous scope, a measurement no source carries). That is an open question
   found late, not a heal: write it back into `dp-blueprint.md`'s `## Open Questions`
@@ -472,9 +473,8 @@ current owners.
   `list_data_products` → `resume_data_product` → static artifact restores the published workflow with a
   fresh bearer; discovery isn't a fallback. Unavailable artifacts don't authorize reconstruction outside
   workflow-v2; enrollment admits fresh builds only. This does not reopen a published workflow for
-  revision; follow the terminal `validation/existing_workflow_unsupported` rule above. A separately
-  authorized, versioned product requires a new workflow ID, and consumers must switch; the prior release
-  remains unchanged ([reference/context-and-resume.md](reference/context-and-resume.md)).
+  revision; follow the terminal `validation/existing_workflow_unsupported` rule above, including its
+  ask-first rule for a separate versioned product ([reference/context-and-resume.md](reference/context-and-resume.md)).
 - **Keep workflow-v2 authoring on the main thread.** Pass the returned `capture` action an absolute
   generated-definition path explicitly exposed by the file-writing surface; never infer one from an
   attachment ID or isolated Linux path. Semantic inference, generation, host-path verification, credential

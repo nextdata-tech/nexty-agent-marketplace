@@ -189,7 +189,9 @@ producing the identical error:
   the limitation and ask whether the user explicitly authorizes a separate,
   versioned data product under a new workflow ID. Only after authorization, begin
   fresh workflow-v2 admission. Consumers must switch to the new product; this
-  never updates the prior release.
+  never updates the prior release. A request to revise is not that authorization:
+  say so first, ask, and wait for the yes; never prepare the new ID in the same
+  turn as the ask, and never fold it into the plan approval.
 - Anything that died in `s0_spec`, `s1_structure`, `s2_transform` or `s3_closure`:
   those stages are offline and deterministic, so **there is nothing to retry**.
 
