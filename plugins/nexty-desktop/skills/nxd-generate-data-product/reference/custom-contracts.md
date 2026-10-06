@@ -57,6 +57,20 @@ inferred from profiling is a real constraint but is **not** a custom contract:
 it belongs in the model and an ordinary `.promise(model)`. Do not promote one
 into `contracts/` — that relabels your own inference as the user's guarantee.
 
+**Source drift must fail through a named contract.** A transform that raises on a
+missing field or an unexpected enum or stage value surfaces no named failure:
+validation reports `validation/scratch_transform_failed` with empty stderr and no
+`failed_contracts`, so nobody can say what changed. Required fields and accepted
+enum or stage values the user declared belong in an Input expectation (CSV inputs,
+before the transform) or an Output promise (after it; the only option for an API
+source), whose verifier names each drift in `VerifyResult.context`, for example
+`missing field amount; unexpected stage verbal_commit`. An Output promise only runs
+after the transform, so the transform must land the drift rather than raise: map a
+missing declared field to null and pass an undeclared enum or stage value through
+unchanged, so the promise fails and names it. A promise on top of a transform that
+still raises (including an implicit `KeyError` from `row["amount"]`) reproduces the
+empty `scratch_transform_failed`.
+
 If a guarantee is missing a threshold, accepted set, time zone, tolerance or
 reconciliation population, that gap belongs back in the spec as an **Open
 Questions** entry, not filled in here. Do not work around it by choosing a
