@@ -189,12 +189,37 @@ Every approval-relevant typed value records `explicit`, `inferred`, or
 Blocking Open Questions prevent approval.
 
 Disclosure or suppression choices that change which rows or values are exposed,
-and choices between a baseline and the reporting period, are **blocking Open
-Questions**. Ask and get the user's answer before building; a proposed default
-does not resolve either choice. Ask each of these questions on its own, with
-its options, so the reply must name the choice. Never offer a shortcut such as
-"reply yes to use my recommendations" for them: a bare "yes", "sure" or "ok"
-leaves every one of them open, and you re-ask, naming the first open one. Once a suppression rule is approved, the
+choices between a baseline and the reporting period, and any other choice that
+changes the reported numbers and that neither the request nor the source
+settles, are **blocking Open Questions**. Examples of the last kind: which date
+places an event in a period (when it took effect or when it was received), or
+whether a customer's movements within one period are netted or counted per
+event. Ask and get the user's answer before you prepare or ask for approval; a
+proposed default does not resolve any of these choices, and you never list one
+as a non-blocking default. Ask each blocking question on its own, with
+its options, so the reply can name the choice. Never offer a shortcut such as
+"reply yes to use my recommendations" for any blocking question: a bare "yes",
+"sure" or "ok" leaves every blocking question open, and you re-ask, naming the
+first open one. A reply that says which field or rule carries the meaning the request needs does
+settle the choice, even if it does not name one of your options: a reply that
+describes one date column as the moment a change took effect settles that a
+per-period report counts each change in the period that column falls in.
+Record that reading as an `inferred` Decision whose basis quotes the user's
+words, state the reading itself in the echo-back (for example, "From your
+answer that this column is when a change took effect, I'll count each change in
+the month it falls in"), and do not ask again; approval of that echo-back is
+consent to the inference.
+
+Only a choice between real alternatives is blocking. Your own definitions of
+the requested measures, the reporting range, and other readings that follow
+from the request and the source go into the plan as `inferred` values; plan
+approval confirms them. Do not hold them as a separate question or wait for a
+"yes" to them before you prepare. If a definition depends on one of the
+blocking choices above (for example, which date places an event in a period,
+or whether movements within a period net out), that choice is still a blocking
+question: ask it, and infer only the rest of the definition.
+
+Once a suppression rule is approved, the
 Models section lands nothing below the suppressed grain (for example a
 person-level roster): those rows are read in memory by the transform, so
 nothing landed can recount a suppressed value.
