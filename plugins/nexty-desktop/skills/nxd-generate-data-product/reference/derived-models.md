@@ -931,6 +931,14 @@ Raise `RuntimeError` carrying the actual-vs-expected numbers. The failure is
 read from the supervisor's run log, so the message is the entire diagnostic —
 `assert` with no message, or a bare boolean, wastes the one signal available.
 
+Source-structure drift is not an assert's job: a renamed column or a new enum or
+stage value must reach validation as a named input-expectation or output-promise
+failure ([custom-contracts.md](custom-contracts.md)), never as a bare `RuntimeError`
+raised by the transform. The asserts above are `RuntimeError`s too, and their message
+is visible through `inspect_run`, not in the validation diagnostic; a transform-raised
+drift leaves that diagnostic empty (`validation/scratch_transform_failed`, no
+`failed_contracts`), which is why drift needs a named contract.
+
 ## Choosing the invariant
 
 An assert earns its place by being **falsifiable if the derivation is wrong**.

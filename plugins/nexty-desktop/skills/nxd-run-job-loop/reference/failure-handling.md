@@ -192,6 +192,18 @@ producing the identical error:
   never updates the prior release. A request to revise is not that authorization:
   say so first, ask, and wait for the yes; never prepare the new ID in the same
   turn as the ask, and never fold it into the plan approval.
+- A `transform_error` with empty `stderr_tail`, `stdout_tail` and no `failed_contracts`
+  after the source changed (a renamed column, a new stage value) is source drift
+  behind a raw transform raise. Compare the source against the blueprint's Inputs,
+  name the drift, ask the business question, and do not retry or keep asking for
+  diagnostics; for a new stage value that question is how to treat it. Then, if the field or stage
+  set is already a declared Promise in the approved blueprint, the repair is making the
+  transform stop raising (map a missing field to null, pass an undeclared value
+  through unchanged) so the existing promise runs and names the drift. If it is not
+  declared, amend the blueprint so it is a declared Promise (fresh approval, not a
+  bounded repair) and regenerate so the transform lands the drifted value instead of
+  raising; never add a contract to the closure alone
+  ([custom-contracts.md](../../nxd-generate-data-product/reference/custom-contracts.md)).
 - Anything that died in `s0_spec`, `s1_structure`, `s2_transform` or `s3_closure`:
   those stages are offline and deterministic, so **there is nothing to retry**.
 
