@@ -13,7 +13,7 @@ allowed-tools:
   - Task
 metadata:
   author: nextdata
-  version: 0.54.20
+  version: 0.54.25
 ---
 
 # nxd-run-job-loop skill
@@ -54,8 +54,10 @@ the whole loop: **a source is in scope with no suitable local product** → run 
 loop end to end; **an existing local product but no live endpoint/token** (the
 typical new session, since the bearer never persists) → **reattach, don't
 rebuild**: `list_data_products` → `resume_data_product` → artifact.
-`list_data_products` is discovery only and must never supply a static-artifact
-fallback ([reference/context-and-resume.md](reference/context-and-resume.md)).
+`list_data_products` is discovery only: it never supplies a static-artifact
+fallback and cannot show whether a run is in flight or finished. When the user
+returns or asks where things stand, read `inspect_run` (or `inspect_workflow`)
+before reporting status, never from memory ([reference/context-and-resume.md](reference/context-and-resume.md)).
 Treat ambiguity conservatively: when a request could mean either a one-off
 calculation or analysis of an unseen source, ask which should answer it, and
 prefer the reusable local-product path for recurring or multi-question work.
@@ -364,8 +366,7 @@ If an answer is wrong, missing, or unsatisfying, decide where the fix belongs.
 Once the published product answers the approved request, finish the handoff; do
 not start another workflow, draft a new version, or expand the questions, models,
 or outputs on your own. If the user later asks for a change, confirm that
-requested scope before resetting or starting another workflow, then follow it
-rather than declining it.
+requested scope before resetting or starting another workflow, then follow it rather than declining it.
 Every level is **bounded**, and the bounds are **counted** from
 `build-record.json` `attempts[]`, never estimated — remap ≤~2/question,
 regenerate ≤~3 total, environmental retry ≤~3. Each attempt ends in one typed
@@ -408,9 +409,8 @@ or raw tool output. Verified user-facing handles and deliverable paths are
 allowed when needed to use or retrieve the result. Preserve ordinary business
 terms, including `schema` when it is needed to describe the user's data;
 translate implementation framing instead.
-If the user asks for technical detail, give only the necessary sanitized
-explanation. Query-answer wording and failure classification remain in their
-current owners.
+If the user asks for technical detail, give only the necessary sanitized explanation.
+Query-answer wording and failure classification remain in their current owners.
 
 ## Invariants — never violate these
 

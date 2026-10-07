@@ -204,6 +204,13 @@ producing the identical error:
   bounded repair) and regenerate so the transform lands the drifted value instead of
   raising; never add a contract to the closure alone
   ([custom-contracts.md](../../nxd-generate-data-product/reference/custom-contracts.md)).
+  A renamed field the transform maps to null passes silently when the model is
+  nullable and the user never declared it required; if a published measure or governed
+  output depends on it, the blueprint needs a named promise that fails when it is null
+  across all current rows (unless all-null is a recorded accepted state), and the
+  transform records the unmapped source key names (names only) so the failure names
+  the missing and the unseen fields and you can ask about the new field in the same
+  revision rather than building another version just to look.
 - Anything that died in `s0_spec`, `s1_structure`, `s2_transform` or `s3_closure`:
   those stages are offline and deterministic, so **there is nothing to retry**.
 

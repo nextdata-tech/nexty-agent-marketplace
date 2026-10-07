@@ -142,6 +142,14 @@ cross-session catalog and a fast re-serve; use them:
    (those are lowercase physical `dataset.table` identities, not the semantic
    catalog). Then `run_semantic_query`.
 
+**Read run state before reporting status.** When the user returns after a gap, or
+asks whether a run finished or where things stand, call
+`mcp__nxd-desktop__inspect_run` (or `inspect_workflow`) for the relevant
+workflow/run first. It reports lifecycle (`in_progress` / `terminal` /
+`unknown`) and lists runs still in flight. `list_data_products` is discovery
+only: it cannot show whether a run is in flight or finished. Never report a
+run's state from conversation memory.
+
 Resuming the **same** workflow again is idempotent — it returns the same live
 endpoint. Resuming or building a **different** workflow replaces the current
 endpoint, so any earlier one from this session stops answering.
