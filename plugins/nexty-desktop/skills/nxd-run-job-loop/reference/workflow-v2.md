@@ -8,6 +8,7 @@ do not fall back to a direct CLI or local substitute.
 
 - [Gate on the connected capability](#gate-on-the-connected-capability)
 - [Prepare the prose blueprint](#prepare-the-prose-blueprint)
+  - [Revised or successor plan](#revised-or-successor-plan)
   - [Classify admission failures before recovery](#classify-admission-failures-before-recovery)
   - [Recovering a rejected proposal](#recovering-a-rejected-proposal)
 - [Relay consent and capture](#relay-consent-and-capture)
@@ -36,6 +37,9 @@ the blueprint before consent, then call `prepare_workflow` with the inline
 closure. Write `dp-blueprint.proposal.json` before every `prepare_workflow`
 call, retries included, so the file always equals the proposal that call
 received, even when the call is rejected.
+
+Before the first draft, write the conventions the transform will apply as
+explicit defaults, per [dp-blueprint.md § Conventions every plan states](dp-blueprint.md#conventions-every-plan-states).
 
 Treat the approved blueprint as canonical: preserve every Model and Output
 name exactly in the typed proposal and generated closure. Break each Questions
@@ -193,6 +197,46 @@ the path named by the mismatch. The legacy
 `validation_issue.expected_source_span` field remains available for v1
 consumers, but it is only a location hint: even when it is present, regenerate
 the complete proposal.
+
+### Revised or successor plan
+
+A refresh, new-version, or successor request starts here, before you draft the
+plan, and not only after a failure. The source may have changed since the
+earlier build, so "rules carried over unchanged" and "the data pulled fresh" are
+not claims you can make without looking.
+
+1. **Probe the live source the way the original build did.** For an API source
+   that is the closure-local `connectivity_check.py` from the earlier build: run
+   it (it prints the response shape, keys, and distinct values of enumerated
+   fields) when the session has a shell. For a file, read or profile the file;
+   for a database, use the connector's declared tables. If the session has no
+   shell, you cannot run the probe, and the supervisor's validation scratch run
+   is the only contact with the live source, so make that run the probe. Put the
+   drift promises in the revised plan, so they go through approval, never in the
+   closure alone: one that fails when a published measure is null in every current
+   row, and one that checks each enumerated field against its accepted set. Have
+   the transform record, without raising, a bounded list of the source key names
+   it did not map and the distinct enumerated values it saw (names and category
+   values only, never row values or PII), and have the promise verifier put that
+   list in its failure `VerifyResult.context`, following the unmapped-key rule in
+   [custom-contracts.md](../../nxd-generate-data-product/reference/custom-contracts.md).
+   Read the first validation result as the probe and make the diff from it. A
+   passing first validation verifies only the fields those promises cover; until
+   it runs, mark each affected plan item "unverified against the live source".
+   Asking the user for the current field names, category values, or a sample is a
+   secondary option, not the main path: the user often does not know the current
+   shape.
+2. **Diff, then write every difference down.** Compare the observed keys and
+   values against every field the existing transform reads and every enumerated
+   value it declares. Put each difference in the revised plan as an explicit
+   item, or as a question to the user when it changes what a field, measure, or
+   category means. Carrying a rule over as unchanged is allowed only for items
+   the diff covered, or that are marked unverified.
+3. **Write the implicit conventions as defaults.** State what the earlier
+   transform applied without saying, using the list in
+   [dp-blueprint.md § Conventions every plan states](dp-blueprint.md#conventions-every-plan-states),
+   which applies to every plan. Review blocks on unwritten conventions, and each
+   block costs a reset and a fresh approval.
 
 ### Classify admission failures before recovery
 
@@ -858,7 +902,9 @@ subprocess output from that diagnostic.
   while a source-dependent failure remains. Each `failed_contracts` entry
   names the promise that failed, its model, and how many rows failed; an
   `exception_class` such as `decimal.ConversionSyntax` names what the transform
-  raised on real source data.
+  raised on real source data. When a contract failure names no field or row,
+  follow [failure-handling.md](failure-handling.md): localise it inside the
+  existing verifier and revalidate before asking the user.
 - `recovery: retry_unchanged` means a bounded runtime limit was hit. Retry
   once with a fresh request id.
 - `recovery: stop` is a blocker. Report it with its code.

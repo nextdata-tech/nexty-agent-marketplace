@@ -5,6 +5,7 @@
 - [Authoring contract](#authoring-contract)
 - [Frontmatter](#frontmatter)
 - [Sections](#sections)
+- [Conventions every plan states](#conventions-every-plan-states)
 - [Where an Input expectation can actually run](#where-an-input-expectation-can-actually-run)
 - [Procedures are landed, not described](#procedures-are-landed-not-described)
 - [Terms](#terms)
@@ -83,6 +84,28 @@ The document has exactly these top-level headings, in this order:
    locked after approval.
 10. **Open Questions** — unresolved questions, their target, and whether they
     block approval or materialization.
+
+### Conventions every plan states
+
+Every plan states these conventions as explicit defaults, the first plan
+included, not only a revised or successor one. Put them in Transform (or in
+Scope when they bound the question), and ask the user when a choice changes the
+reported numbers and the source does not settle it:
+
+- whether rows marked deleted, inactive, or cancelled are excluded or kept, and
+  whether an exclusion drops the row from every count and total or only from some;
+- whether categorical values match exactly or after normalising case and whitespace;
+- the timezone assumed for naive timestamps;
+- the tie-break when a version or recency field is missing or tied between rows;
+- how an unparseable or null measure is treated in counts and in totals (skipped,
+  counted as zero, or kept as null);
+- whether totals and other aggregates span every categorical state, including
+  closed or terminal ones, or only some of them;
+- which source fields the connector fetches (state it under Inputs), versus which
+  the output keeps (its Output projection).
+
+Review blocks on unwritten conventions, and each block costs a reset and a fresh
+approval.
 
 ### Where an Input expectation can actually run
 

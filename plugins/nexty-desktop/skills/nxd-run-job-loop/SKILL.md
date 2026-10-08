@@ -13,7 +13,7 @@ allowed-tools:
   - Task
 metadata:
   author: nextdata
-  version: 0.54.27
+  version: 0.54.30
 ---
 
 # nxd-run-job-loop skill
@@ -147,7 +147,7 @@ Open Questions. Keep the headings strict but allow ordinary prose, lists,
 tables, examples, and code blocks within them. The user must never be asked to
 write or inspect the terse typed proposal. Schema, Terms behavior, editing
 rules, and the Claude Desktop form contract are in
-[reference/dp-blueprint.md](reference/dp-blueprint.md).
+[reference/dp-blueprint.md](reference/dp-blueprint.md). Every plan, the first included, writes its implicit conventions (row exclusion, matching, timezone, tie-break, null measures, aggregate span, fetched versus kept fields) as defaults, asking first when a choice changes the reported numbers and the source does not settle it ([§ Conventions every plan states](reference/dp-blueprint.md#conventions-every-plan-states)).
 
 **If the user supplied a doc** — a build spec, a rubric page, or a prose
 description — preserve its meaning in the Markdown and show what you filled in.
@@ -302,7 +302,7 @@ admission and publication. Use the exact envelopes in
 parameters. A successful `start_run` response is the supervisor's proof of
 admission, publication, and the serving endpoint. A validation failure whose
 `recovery` is `repair_then_retry` is repairable: follow **When validation
-fails** in workflow-v2.md. Any other failed or unavailable action is a blocker; do not retry through direct build/validation commands, local
+fails** in workflow-v2.md and read [reference/failure-handling.md](reference/failure-handling.md) before asking the user anything. Any other failed or unavailable action is a blocker; do not retry through direct build/validation commands, local
 files, SQLite, raw SQL, pandas, or another database.
 
 ### Step 4a — Render the pinned static artifact
@@ -371,7 +371,7 @@ Every level is **bounded**, and the bounds are **counted** from
 `build-record.json` `attempts[]`, never estimated — remap ≤~2/question,
 regenerate ≤~3 total, environmental retry ≤~3. Each attempt ends in one typed
 exit: `healed`, `healed_with_concessions`, `caps_exhausted`, `blocked`,
-`retry_environmental` ([reference/failure-handling.md](reference/failure-handling.md)):
+`retry_environmental`. Read [reference/failure-handling.md](reference/failure-handling.md) on any repair outcome (`repair_then_retry`, `validation/scratch_transform_failed`, any contract failure) before asking the user anything, and before preparing any revised or successor workflow after a source change (also on any refresh or new-version request, probe the live source first: [workflow-v2.md § Revised or successor plan](reference/workflow-v2.md#revised-or-successor-plan)). The repair levels, cheapest first:
 
 - **Query-level** (cheapest) — the model is right but the selection was wrong or a
   dimension was missing. Re-describe, re-map, re-query through MCP.
@@ -385,7 +385,7 @@ exit: `healed`, `healed_with_concessions`, `caps_exhausted`, `blocked`,
   The enrolled scope is new-build only. After publication, behavior-changing revisions are unsupported: preserve
   the release and never reset, recapture, validate, retry, remove, or replace its workflow ID.
   `validation/existing_workflow_unsupported` is terminal (see [reference/failure-handling.md](reference/failure-handling.md)).
-  Report the limitation and ask explicit authorization for a separate versioned product/new ID; only then start fresh workflow-v2 admission.
+  Report the limitation and ask explicit authorization for a separate versioned product/new ID; only then start fresh workflow-v2 admission, whose plan starts with that source probe.
   A request to revise a published product is not that authorization: first say the release can't be revised in place, that it would
   be a separate versioned product under a new workflow ID, and that consumers must switch; then ask and wait for the user's yes.
   Never call `prepare_workflow` for the new ID in the same turn as the ask, and never fold the authorization into the plan approval.
