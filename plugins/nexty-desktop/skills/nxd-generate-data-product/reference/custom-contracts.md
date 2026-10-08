@@ -83,6 +83,13 @@ the unmapped source key names (names only, never values or PII) so the promise's
 `context` names both the missing field and the unseen ones, for example
 `amount null in all rows; unmapped source keys deal_value`.
 
+A promise that fails with only a count, naming no field, cannot be acted on: write
+one check per field within that promise's verifier (or include per-field null counts
+in the failure context) so the failure names the field. This keeps the promise's id
+and fields unchanged; splitting it into several promises changes the approved
+contract inventory. A revised transform is re-derived from the live source, not
+copied from the earlier version.
+
 If a guarantee is missing a threshold, accepted set, time zone, tolerance or
 reconciliation population, that gap belongs back in the spec as an **Open
 Questions** entry, not filled in here. Do not work around it by choosing a
