@@ -71,6 +71,18 @@ unchanged, so the promise fails and names it. A promise on top of a transform th
 still raises (including an implicit `KeyError` from `row["amount"]`) reproduces the
 empty `scratch_transform_failed`.
 
+A rename the transform maps to null instead of raising is the quieter failure: with
+`item.get("amount")` after `amount` became `deal_value`, every current row lands
+null, the model is nullable, and nothing the user declared is violated, so the drift
+is found only after all-null totals are published. A field that a published measure
+or governed output depends on must not land null for every row: propose a named
+Promise under that Output in `dp-blueprint.md` (fresh approval, like any other drift
+Promise) that fails when it is null across all current rows, unless the blueprint
+records all-null as an accepted state. Never add it to the closure alone. Have the transform also record a bounded diagnostic of
+the unmapped source key names (names only, never values or PII) so the promise's
+`context` names both the missing field and the unseen ones, for example
+`amount null in all rows; unmapped source keys deal_value`.
+
 If a guarantee is missing a threshold, accepted set, time zone, tolerance or
 reconciliation population, that gap belongs back in the spec as an **Open
 Questions** entry, not filled in here. Do not work around it by choosing a
@@ -87,7 +99,7 @@ uses `nxd:local/file/storage:0.1.0` and is also the transform secret via
 secrets on this runtime; do not bind one through `.input(...).source(...)`.
 
 The input expectation receives `LocalFileInput` and runs **before** the DLT
-transform. It reads only its declared `model_paths` from the pinned export.
+transform. It reads only the models its input declares from the pinned export.
 DLT separately loads that same export during the transform; a verifier does
 not receive a DLT loader or connection context.
 
@@ -186,9 +198,14 @@ The profile declares:
 Keep `csv-source-path` relative. It selects the pinned export root; it is not
 a secret value and no absolute host path may enter the closure.
 Each CSV source-aligned input also declares `model_paths` relative to that
-root, one exact `model: model/model.csv` mapping per attached model. The local
-file context uses this mapping; do not scan a root directory or hard-code a
-path inside a verifier.
+root, one exact `model: model/model.csv` mapping per attached model. Do not
+scan a root directory or hard-code a path inside a verifier. Keep the model
+name, the `data/<model>/` folder and the CSV file stem identical, as in
+`orders/orders.csv`, and call `path_for` with that name. Observed failure: a
+model named `events` over `events/subscription_events.csv` failed every
+validation with `Invalid model name 'events'. Available:
+['subscription_events']` and nothing published, so the name `path_for` accepted
+was the CSV file stem, not the name chosen in the mapping.
 
 ## Verification scripts
 
@@ -215,9 +232,13 @@ from nxd.core.context import (
 ```
 
 A CSV expectation takes `LocalFileInput`, reads only `source.path_for("model")`
-with `csv.DictReader`. An output promise takes `DuckDbOutput`, resolves its table
-through `output.full_table_name("model")`, and opens `output.path` read-only with
-`duckdb`. Resolve **every** table that way, including a second one the check
+with `csv.DictReader`. Input expectations run before the transform, and an
+input expectation's `path_for` takes only a model the input itself declares
+(see the `model_paths` paragraph above for how to name it). A model the
+transform produces is not available there and raises `ValueError`, so checks on
+transform outputs belong in output promises. An output promise takes
+`DuckDbOutput`, resolves its table through `output.full_table_name("model")`,
+and opens `output.path` read-only with `duckdb`. Resolve **every** table that way, including a second one the check
 joins to — never spell a table name as a literal.
 
 `VerifyResult`'s second argument is `context: Optional[dict[str, Any]]` — a
@@ -273,6 +294,32 @@ them with the reported counts. Resolve each such table with
 rows, but the independent comparison is what makes the verifier evidence.
 The adversarial reviewer treats a self-consistency-only verifier as assert
 theatre, so each one missed here costs a reset, recapture and review round.
+
+**A reconciling promise reads the movements.** An output promise that reconciles a
+bridge or waterfall (opening, movements, closing) must read the published
+movement rows and the balances and check that they tie: opening plus the sum of
+the signed movements equals closing for each period. Its `models` must list the
+movement model. Declare both by chaining `.model(...)` once per model:
+
+```python
+.promise(
+    custom("balance-ties-to-movements")
+    .description("User-stated: opening plus signed movements equals closing for each period.")
+    .model(balances)
+    .model(movements)
+    .verify(script("contracts/promises/balance-ties-to-movements.py").compute(_compute))
+)
+```
+
+The second `.model(...)` belongs only in this `spec.py` wiring. The approved
+blueprint promise keeps its single `model` (the balance model) and its
+`fields` stay within that model, so proposal validation does not reject it
+with `v3.contract.field_ref`. A verifier that reads a model the promise does
+not declare in `spec.py` does not count as covering it. This is in addition to the independent witness above, not
+instead of it: also re-derive the balances (or the movement totals) from a
+table closer to the source and compare. A verifier that only re-derives
+balances never reads the movement amounts; one that only ties published
+movements to balances computed from them restates the transform.
 
 **Prove the predicate is non-vacuous before shipping it.** Run it against the
 landed rows, then against a deliberately broken copy, and confirm it returns

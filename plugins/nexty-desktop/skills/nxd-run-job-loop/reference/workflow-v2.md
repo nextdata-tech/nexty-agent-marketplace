@@ -33,7 +33,9 @@ write the exact, real typed proposal JSON beside it as
 `dp-blueprint.proposal.json`. Parse that complete object and validate/bind it to
 the blueprint before consent, then call `prepare_workflow` with the inline
 `typed_proposal` object, before the approval turn and before generating the
-closure:
+closure. Write `dp-blueprint.proposal.json` before every `prepare_workflow`
+call, retries included, so the file always equals the proposal that call
+received, even when the call is rejected.
 
 Treat the approved blueprint as canonical: preserve every Model and Output
 name exactly in the typed proposal and generated closure. Break each Questions
@@ -252,6 +254,9 @@ named by the primary issue. Follow this order exactly:
    `echo.coverage` from the complete provenance key set.
 6. Replace the complete proposal, round-trip and strictly validate it, then
    retry only when validation has zero issues and with a fresh `request_id`.
+   Before retrying `prepare_workflow`, write the complete corrected proposal to
+   `dp-blueprint.proposal.json` and pass that same object inline, as the file
+   must equal what every `prepare_workflow` call receives.
 
 `source_block_uncovered` after an attempted recovery means this complete
 regeneration invariant was violated. Do not patch a second named path, infer a
@@ -557,7 +562,13 @@ adjudications, and any required user decision are complete.
 
 Ledger timestamps (`started_at_unix_ms`, `ended_at_unix_ms`, and, when set,
 `user_decision.approved_at_unix_ms`) are actual epoch milliseconds read from
-the current clock at the corresponding event; never estimate or invent them.
+the current clock at the corresponding event (for example a portable
+`python3 -c 'import time; print(time.time_ns() // 1_000_000)'` call; BSD
+`date` on macOS has no `%N`); never estimate or invent them. A round's
+`ended_at_unix_ms` must not precede `started_at_unix_ms`, a `complete` or
+`needs_user` round must end within `budget_ms` of its start, and a `timed_out`
+round must span at least `budget_ms`. Each finding's `evidence` is a non-empty
+list of non-empty citation strings, never a single string.
 For every finding, `state: "applied"` requires a non-empty `applied_files`, and
 every other state requires `applied_files: []`; list only files actually
 changed. A `not_applied` finding lists no files. `deferred_finding_ids` may
