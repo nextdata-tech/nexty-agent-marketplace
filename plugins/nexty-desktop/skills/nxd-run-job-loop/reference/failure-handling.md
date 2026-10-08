@@ -211,6 +211,20 @@ producing the identical error:
   transform records the unmapped source key names (names only) so the failure names
   the missing and the unseen fields and you can ask about the new field in the same
   revision rather than building another version just to look.
+- A revised or successor workflow built after a source change re-derives its
+  transform from the live source; it never carries the earlier transform forward
+  unexamined. Before preparing it, re-read or re-profile the live source and diff
+  its keys and types against every field the existing transform reads. A key the
+  transform reads that the source no longer has must be resolved, and when
+  resolving it changes what a field or measure means, that is a plan decision put
+  to the user, not a silent remap.
+- A contract failure that reports a count and names no field or row (for example
+  `failed_count=1`) is not a question for the user and not a reason to re-run
+  validation unchanged. Localise it yourself first, inside the existing verifier
+  and keeping its contract id and fields unchanged: check each declared field
+  separately, or add per-field null counts to its `VerifyResult.context`, and
+  revalidate. Splitting one contract into several changes the approved contract
+  inventory and needs fresh approval. Then report the specific field.
 - Anything that died in `s0_spec`, `s1_structure`, `s2_transform` or `s3_closure`:
   those stages are offline and deterministic, so **there is nothing to retry**.
 
