@@ -216,8 +216,9 @@ not claims you can make without looking.
    closure alone: one that fails when a published measure is null in every current
    row, and one that checks each enumerated field against its accepted set. Have
    the transform record, without raising, a bounded list of the source key names
-   it did not map and the distinct enumerated values it saw (names and category
-   values only, never row values or PII), and have the promise verifier put that
+   it did not map (each with its kind of value, as listed in custom-contracts.md, and the number of current rows it
+   appears on), the current row count, and the distinct enumerated values it saw
+   (names, kinds, counts and category values only, never row values or PII), and have the promise verifier put that
    list in its failure `VerifyResult.context`, following the unmapped-key rule in
    [custom-contracts.md](../../nxd-generate-data-product/reference/custom-contracts.md).
    Read the first validation result as the probe and make the diff from it. A
@@ -230,7 +231,9 @@ not claims you can make without looking.
    values against every field the existing transform reads and every enumerated
    value it declares. Put each difference in the revised plan as an explicit
    item, or as a question to the user when it changes what a field, measure, or
-   category means. Carrying a rule over as unchanged is allowed only for items
+   category means; a user who hands a renamed-key decision back is delegating, and
+   a like-for-like rename is then mapped as a recorded assumption, per
+   [failure-handling.md](failure-handling.md). Carrying a rule over as unchanged is allowed only for items
    the diff covered, or that are marked unverified.
 3. **Write the implicit conventions as defaults.** State what the earlier
    transform applied without saying, using the list in
@@ -900,7 +903,8 @@ subprocess output from that diagnostic.
   carries `failed_contracts` or `exception_class`, repair those first.
   `check_data_product` does not execute against a live source, so it can pass
   while a source-dependent failure remains. Each `failed_contracts` entry
-  names the promise that failed, its model, and how many rows failed; an
+  names the promise that failed, its model, and how many rows failed, and its
+  `context` carries the verifier's identifiers (field names, stage values, counts); an
   `exception_class` such as `decimal.ConversionSyntax` names what the transform
   raised on real source data. When a contract failure names no field or row,
   follow [failure-handling.md](failure-handling.md): localise it inside the

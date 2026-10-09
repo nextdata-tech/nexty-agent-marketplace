@@ -173,6 +173,19 @@ on it.
 
 ### Do not retry a deterministic failure
 
+When a custom contract fails, read `failed_contracts[].context` first: it
+carries the verifier's own identifiers (field names, unexpected values, counts).
+If `context` is present but lacks a key the verifier returns, that value's shape
+was dropped by the agent-facing filter (nested dicts and strings with spaces or
+`=` do not survive), so reshape it rather than guessing: rewrite the verifier to
+report identifier-valued keys, with prose under `detail`. A context that is
+absent altogether means nothing survived: nxd omits it when every key the
+verifier returns was dropped, so first check each returned key and value against
+the rules in [custom-contracts.md](../../nxd-generate-data-product/reference/custom-contracts.md).
+Look at the other causes (an older nxd that passes no context, a verifier that
+raised before returning) only when the verifier is already correctly shaped, and
+do not rewrite it for them.
+
 A retry is only ever justified when the failure could plausibly resolve on its
 own. **These never do**, and retrying them unchanged burns time and spend while
 producing the identical error:
@@ -208,7 +221,8 @@ producing the identical error:
   nullable and the user never declared it required; if a published measure or governed
   output depends on it, the blueprint needs a named promise that fails when it is null
   across all current rows (unless all-null is a recorded accepted state), and the
-  transform records the unmapped source key names (names only) so the failure names
+  transform records the unmapped source key names, each with its kind of value (as listed in custom-contracts.md) and the
+  number of current rows it appears on (never values), so the failure names
   the missing and the unseen fields and you can ask about the new field in the same
   revision rather than building another version just to look.
 - A revised or successor workflow built after a source change re-derives its
@@ -218,6 +232,43 @@ producing the identical error:
   transform reads that the source no longer has must be resolved, and when
   resolving it changes what a field or measure means, that is a plan decision put
   to the user, not a silent remap.
+  An explicit hand-back of a renamed-key decision ("you decide", "you tell me",
+  "your call"), including after you explained the trade-off, is a delegation, not
+  a non-answer: do not keep re-asking and do not default to stopping. A deferral
+  ("I need to check with Finance") is not a hand-back, and other drift decisions,
+  such as how to treat a new category value, keep the usual rule: explain the
+  options and ask again. Nor does this apply to approving a review finding, where
+  the same words remain a deflection; a mapping recorded under this rule is a
+  Decision the review grades against, not a finding to re-ask. The rename is
+  like-for-like when exactly one field the transform read is gone; exactly one new
+  source key is a plausible replacement for it by name, has the same kind of source
+  value as the old field (int and float are both numbers; the type the old field
+  landed as, such as `decimal(38,9)`, is not the comparison), and is present on
+  every current row (its row count in the transform's diagnostic
+  equals `current_row_count`; see
+  [custom-contracts.md](../../nxd-generate-data-product/reference/custom-contracts.md));
+  other new keys that plainly mean something else, such as a person object or
+  free-text field, are not candidates and do not block it; and nothing you can see
+  contradicts the mapping. Where you can see the new key's values (a shell probe),
+  compare them with the old field's values for records whose id and `updatedAt` did
+  not change: a true rename matches on every such row, while a weighted or converted
+  measure does not. Then adopt the mapping as a recorded assumption. Add a decision
+  row that says it is the agent's assumption made on the user's delegation, cites
+  the message, and records which of these checks it passed; say so plainly in the
+  revised plan and in the final report (labelled assumption, with what would change
+  if the mapping is wrong); keep or declare a promise that fails if the mapped column
+  is null or not of the old field's landed type across current rows; and still go through
+  the normal re-prepare and plan approval; never map silently. Before publishing,
+  read the prior release's id, `updatedAt` and old-field value for every current
+  record (a same-workflow revision stops serving them); after publication, compare
+  the new values on the records whose id and `updatedAt` match. For either value
+  comparison, with no matching records or a prior release that does not publish
+  them, record it as not run, not passed. Say in the final report whether the values matched, and on how
+  many unchanged records. If any differs, say plainly that the mapping is not a rename and the
+  published figures for that measure are wrong, and propose a revision before
+  answering queries on it. When it is not like-for-like (several candidates, a change
+  in the kind of source value, a candidate missing on some current rows, or a value mismatch), say you cannot pick safely, name the
+  specific evidence that would settle it, and stop.
 - A contract failure that reports a count and names no field or row (for example
   `failed_count=1`) is not a question for the user and not a reason to re-run
   validation unchanged. Localise it yourself first, inside the existing verifier
