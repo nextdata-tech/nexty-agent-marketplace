@@ -13,7 +13,7 @@ allowed-tools:
   - Task
 metadata:
   author: nextdata
-  version: 0.54.30
+  version: 0.54.31
 ---
 
 # nxd-run-job-loop skill
