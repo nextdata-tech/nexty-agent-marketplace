@@ -64,7 +64,8 @@ validation reports `validation/scratch_transform_failed` with empty stderr and n
 enum or stage values the user declared belong in an Input expectation (CSV inputs,
 before the transform) or an Output promise (after it; the only option for an API
 source), whose verifier names each drift in `VerifyResult.context`, for example
-`missing field amount; unexpected stage verbal_commit`. An Output promise only runs
+`unexpected_stage_values: ["verbal_commit"]` and `unexpected_stage_count: 1`
+(shape it as described in "Shape `VerifyResult.context` so it survives" below). An Output promise only runs
 after the transform, so the transform must land the drift rather than raise: map a
 missing declared field to null and pass an undeclared enum or stage value through
 unchanged, so the promise fails and names it. A promise on top of a transform that
@@ -81,7 +82,16 @@ Promise) that fails when it is null across all current rows, unless the blueprin
 records all-null as an accepted state. Never add it to the closure alone. Have the transform also record a bounded diagnostic of
 the unmapped source key names (names only, never values or PII) so the promise's
 `context` names both the missing field and the unseen ones, for example
-`amount null in all rows; unmapped source keys deal_value`.
+`null_field_count: 1` and `unmapped_source_keys: ["deal_value"]`, with any prose
+under `detail`. Record each unmapped key's observed kind of value (`bool` first, since a Python
+bool is also an int; then `number` for any int, float or `Decimal`, and for a decimal
+string your precision hook wrote, so mixed values stay one entry; `string`, `dict`,
+`list`; a `null` counts toward the row count but not the kind, so `deal_value:number:6`
+when one of six is null)
+and the number of current rows it appears on as identifiers too, with the current row count, for
+example `unmapped_key_shapes: ["deal_value:number:6", "champion:dict:2"]` and
+`current_row_count: 6`, so a rename candidate can be told apart from an unrelated
+new field without a shell.
 
 A promise that fails with only a count, naming no field, cannot be acted on: write
 one check per field within that promise's verifier (or include per-field null counts
@@ -260,10 +270,10 @@ observed-vs-expected values:
             {
                 "contract": "order-total-reconciles",
                 "model": "orders",
-                "guarantee": "output line totals reconcile to order totals",
+                "detail": "output line totals do not reconcile to order totals",
                 "observed_offending_rows": len(rows),
                 "expected_offending_rows": 0,
-                "examples": repr(rows[:3]),
+                "offending_order_ids": [str(order_id) for order_id, *_ in rows[:3]],
             },
         )
     return VerifyResult(
@@ -272,6 +282,21 @@ observed-vs-expected values:
          "observed_offending_rows": 0},
     )
 ```
+
+**Shape `VerifyResult.context` so it survives.** The agent sees a failed custom
+contract's context in `failed_contracts[].context`, but only after a fail-closed
+filter. Put prose only under the keys `detail`, `message` or `reason`. The keys
+`contract`, `model`, `column`, `sample(s)`, `example(s)`, `row(s)`, `value(s)`,
+`data` and `record(s)` are skipped, so do not rely on them to carry a finding. Any
+other key must be identifier-shaped (ASCII letters, digits and `_ . : -`, at most
+128 bytes), and its value must be a number, a boolean, an identifier string (same
+characters, no spaces, no `=`) or a flat list of those with at most 20 items.
+Nested dicts, dicts inside lists, and strings with spaces or `=` (such as
+`stage=count`, e.g. `verbal_commit=1`) are dropped silently, so the failure then
+reaches the agent without the detail you meant to give it. Report drift as
+separate identifier-valued keys:
+`unexpected_stage_values: ["verbal_commit"]`, `unexpected_stage_count: 1`,
+`unmapped_source_keys: ["deal_value"]`, and put any explanation in `detail`.
 
 The current enum values are `PASS`, `WARNING`, and `FAILED`; use `FAILED` for a
 broken user guarantee. A bare `pass`, `...`, or unconditional PASS is a

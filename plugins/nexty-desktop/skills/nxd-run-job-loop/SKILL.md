@@ -13,7 +13,7 @@ allowed-tools:
   - Task
 metadata:
   author: nextdata
-  version: 0.54.31
+  version: 0.54.33
 ---
 
 # nxd-run-job-loop skill
@@ -248,8 +248,8 @@ Follow the returned `report_requirement` action only after the reviewer returns;
 `workflow/review_findings` with any `behavior_affecting` finding stays
 `needs_user`: ask about its IDs and proposed effects. Do not edit, reset, or
 recapture in that turn; wait for explicit approval in a later turn. “I don't
-know, you tell me” and “whatever you think” are deflections. Record and validate
-the decision before reset; see [reference/workflow-v2.md](reference/workflow-v2.md).
+know, you tell me” and “whatever you think” are deflections on a review finding,
+including one about a mapped rename (a renamed-key drift decision outside review follows [failure-handling.md](reference/failure-handling.md)). Record and validate the decision before reset; see [reference/workflow-v2.md](reference/workflow-v2.md).
 
 After a review completes, ordinary Bash remediation remains available for
 non-retained paths until reset; the runner guard rejects owner operations and
