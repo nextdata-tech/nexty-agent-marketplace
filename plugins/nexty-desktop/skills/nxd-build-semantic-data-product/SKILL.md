@@ -12,7 +12,7 @@ allowed-tools:
   - AskUserQuestion
 metadata:
   author: nextdata
-  version: 0.54.33
+  version: 0.54.35
 ---
 
 # nxd-build-semantic-data-product skill
@@ -307,13 +307,10 @@ deprecated and emit a `FutureWarning`.
 See `reference/registry-authoring.md` for the full role vocabulary,
 auto-derivation rules, and a worked example.
 
-### Step 3 — Author `transform.py` to seed the base tables (no DDL view)
+### Step 3 — Author `transform.py` to seed the base tables (base-table default)
 
-The tools query **base tables** directly — `run_semantic_query` compiles governed
-SQL against them from the kernel payloads. There is **no semantic-view DDL** and
-**no `@on_provision` hook** in this pattern. The transform's job is to seed the
-base tables (and a one-row marker so the storage port's produce-verification
-passes).
+By default, `run_semantic_query` compiles against base tables from the kernel
+payloads; this path needs no semantic-view DDL or provisioning hook.
 
 ```python
 # transform.py
@@ -387,7 +384,7 @@ _storage = (
 spec = (
     data_product(name="my-semantic-dp", domain="...", version="1.0.0-dev",
                  infra_profile=INFRA_PROFILE)
-    # Seeds the base table(s) + the marker row. No semantic-view DDL.
+    # Seeds the base table(s) + the marker row for default base-table routing.
     .transform(
         code(transform).compute(f"/infra-profile/{INFRA_PROFILE}#/services/<compute>")
     )
@@ -398,21 +395,22 @@ spec = (
 )
 ```
 
-`semantic_tools(service, *, port_name="mcp-api", mcp_path="/mcp")` —
-`service` is the infra-profile service name the MCP RPC port binds to.
+`semantic_tools(service, *, port_name="mcp-api", mcp_path="/mcp", backend="snowflake",
+view_name=None, view_names=None)` — `service` names the infra-profile service.
 
 Key facts:
-- **Do NOT also call `data_product_rpc_output()`.** `.semantic_tools()` IS the RPC
-  output; adding another (or calling it twice) raises
-  `ValidationError("Data Product has RPC Output already configured")`.
+- **RPC output:** `.semantic_tools()` creates one when absent and composes its
+  four tools onto an existing RPC output; `service`, `port_name`, and `mcp_path`
+  are ignored in that compose case.
 - **Promise every annotated model**, or its attributes never reach the manifest and
   its `.nxd/semantic/<model>.json` payload is never written.
-- **A `.transform(...)` is required** — it seeds the base tables the tools query AND
+- **For this transform-backed pattern, `.transform(...)` is required** — it seeds the base tables the tools query AND
   bundles the sibling `models.py` (the `**/*.py` glob runs on the compute path).
-- **No `@on_provision`, no view DDL** — `run_semantic_query` compiles against the
-  base tables directly.
-- **Plain `storage(...)`** — never `.config(...).as_view(...)` (the facade is
-  mutually exclusive with `.transform()`).
+- **Base-table default needs no semantic-view DDL.** For native routing, provision
+  separately with `.provision(sql(...).compute(...))` and set `view_name` or
+  `view_names`; do not put `plain_view_ddl()` in the transform.
+- **Use plain `storage(...)` for this transform-backed path.** For the separate
+  no-transform `.config(...).as_view(...)` facade, follow the reference.
 
 ---
 
@@ -465,19 +463,19 @@ is finished. Before reporting done, confirm all four files exist in the workspac
 - **Never re-implement the compiler or MCP tools.** They live in
   `nxd.experimental.semantic` (shipped with the `nxd.data_product` wheel) and are
   auto-wired by `.semantic_tools()`. Import; never copy.
-- **Use `.semantic_tools(service=...)`.** It IS the RPC output — never
-  call `data_product_rpc_output()` alongside it (raises `ValidationError`).
+- **Use `.semantic_tools(service=...)`.** It creates an RPC output or composes
+  the tools onto an existing one, whose port configuration it keeps.
 - **Promise every annotated model.** Un-promised model → no manifest attributes →
   no `.nxd/semantic/<model>.json` payload → that model is invisible to the tools.
 - **Use the public field DSL only.** Author keys, dimensions, and joins with
   `field(..., role(...))`; author metrics on semantic views. Never mutate private
   model metadata.
-- **No `@on_provision`, no view DDL.** The tools compile against base tables. Seed
-  them with `CREATE OR REPLACE TABLE` + `write_pandas` in the transform.
-- **Always declare a `.transform(...)`** — it seeds the base tables AND bundles
+- **Native semantic-view DDL is optional;** the base-table route is default.
+- **In this transform-backed pattern, declare `.transform(...)`** — it seeds the base tables AND bundles
   `models.py`.
-- **Chasm-trap**: do not put metrics from two different models in one
-  `run_semantic_query` call — the compiler raises `CompileError`. Surface it.
+- **Chasm-trap**: a resolvable, collapsible path permits cross-home metrics,
+  pre-aggregated at their home grains; disconnected paths or unsafe roll-ups
+  raise `CompileError`.
 - **Agg enum is closed**: count, count_distinct, sum, avg, min, max.
 - **Read-only, 200-row cap**: the query path is aggregated and capped. No raw-SQL
   passthrough.

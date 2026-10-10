@@ -102,10 +102,15 @@ needed when cold starts exceed the normal execution-start window.
 
 ## Tool discovery
 
-`.semantic_tools(service=...)` is the only RPC declaration needed. It creates the
-RPC output and the `list_models`, `semantic_model`, `describe_model`, and
-`run_semantic_query` MCP tools. Do not add `data_product_rpc_output()` or invoke
-`.semantic_tools()` twice; either conflicts with the generated RPC output.
+With no RPC output declared, `.semantic_tools(service=...)` creates one and adds
+the `list_models`, `semantic_model`, `describe_model`, and `run_semantic_query`
+MCP tools. If the data product already has a bespoke RPC output, declare it first
+with at least one port, then call `.semantic_tools()` to add the four tools
+alongside its existing functions. On this compose path, `service`, `port_name`,
+and `mcp_path` are ignored because the existing ports keep their configuration.
+Call `.semantic_tools()` only once: a second call raises `ValidationError`
+because the four generated tool names already exist. Do not add another RPC
+output after `.semantic_tools()`.
 
 At startup, the runtime loads kernel-delivered semantic payloads. In the
 split-pod topology, where the MCP server has no kernel, it rebuilds equivalent
