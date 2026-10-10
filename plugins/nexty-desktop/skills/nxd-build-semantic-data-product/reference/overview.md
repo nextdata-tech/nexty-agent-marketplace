@@ -25,7 +25,10 @@ The DP stays flat at its root:
   `.semantic_tools()`.
 
 An agent asks for named concepts, not raw SQL. The compiler enforces compatible
-dimensions, the one-model-per-query rule, read-only execution, and the row cap.
+dimensions and read-only execution, and applies the row cap. A selection may
+combine metrics from different home models when a resolvable, collapsible join
+path lets the compiler preserve each metric's grain. Disconnected or unsafe
+paths raise a compile error.
 
 ---
 
@@ -100,9 +103,12 @@ produce-verification.
 | `describe_model` | Explain metrics, compatible dimensions, PII flags, and joins. |
 | `run_semantic_query` | Compile concept selections to governed SQL and return rows. |
 
-`describe_model` keeps metrics associated with the physical model they measure.
-Metrics from two models cannot be combined in one query, which structurally avoids
-chasm traps.
+`describe_model` keeps metrics associated with the model where each metric is
+declared. Metrics from different home models can be combined when their join path
+is resolvable and safe to collapse: the compiler pre-aggregates each metric at its
+home grain before joining the results. It raises a compile error for disconnected
+paths or combinations that cannot be rolled up safely, which prevents chasm
+traps without banning all cross-model selections.
 
 ---
 

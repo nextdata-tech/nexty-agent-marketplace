@@ -215,12 +215,22 @@ not claims you can make without looking.
    drift promises in the revised plan, so they go through approval, never in the
    closure alone: one that fails when a published measure is null in every current
    row, and one that checks each enumerated field against its accepted set. Have
-   the transform record, without raising, a bounded list of the source key names
-   it did not map (each with its kind of value, as listed in custom-contracts.md, and the number of current rows it
-   appears on), the current row count, and the distinct enumerated values it saw
-   (names, kinds, counts and category values only, never row values or PII), and have the promise verifier put that
-   list in its failure `VerifyResult.context`, following the unmapped-key rule in
-   [custom-contracts.md](../../nxd-generate-data-product/reference/custom-contracts.md).
+   the transform land, without raising, the source keys it did not map (each with
+   its kind of value and the number of current rows it appears on) and the current
+   row count in the fixed `source_diagnostics` model, copied verbatim from the
+   unmapped-key rule in
+   [custom-contracts.md](../../nxd-generate-data-product/reference/custom-contracts.md)
+   (names, kinds and counts only, never row values or PII). The stage promise reads
+   enumerated values from the landed column itself. Have each promise verifier put
+   what it finds in its failure `VerifyResult.context`. Never add any other
+   diagnostics table, column or wording.
+   These drift promises, the fixed diagnostics model, type-pinned columns, and a
+   transform that lands an unexpected value rather than raising are part of every
+   refresh plan for a live API source, not optional extras. An instruction to carry
+   forward only the approved corrections does not remove them: they are how this
+   refresh sees the source. List them in the plan for approval. Leave one out only
+   when the user declines it by name, and then say which change in the source
+   would go unnoticed.
    Read the first validation result as the probe and make the diff from it. A
    passing first validation verifies only the fields those promises cover; until
    it runs, mark each affected plan item "unverified against the live source".

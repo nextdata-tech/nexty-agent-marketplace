@@ -221,10 +221,13 @@ producing the identical error:
   nullable and the user never declared it required; if a published measure or governed
   output depends on it, the blueprint needs a named promise that fails when it is null
   across all current rows (unless all-null is a recorded accepted state), and the
-  transform records the unmapped source key names, each with its kind of value (as listed in custom-contracts.md) and the
-  number of current rows it appears on (never values), so the failure names
-  the missing and the unseen fields and you can ask about the new field in the same
-  revision rather than building another version just to look.
+  transform lands the unmapped source key names, each with its kind of value and
+  the number of current rows it appears on (never values), in the fixed
+  `source_diagnostics` model from
+  [custom-contracts.md](../../nxd-generate-data-product/reference/custom-contracts.md),
+  so the failure names the missing and the unseen fields and you can ask about the
+  new field in the same revision rather than building another version just to look.
+  Never invent another diagnostics table or bespoke wording for it.
 - A revised or successor workflow built after a source change re-derives its
   transform from the live source; it never carries the earlier transform forward
   unexamined. Before preparing it, re-read or re-profile the live source and diff

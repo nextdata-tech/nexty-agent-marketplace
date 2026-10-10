@@ -71,6 +71,14 @@ missing declared field to null and pass an undeclared enum or stage value throug
 unchanged, so the promise fails and names it. A promise on top of a transform that
 still raises (including an implicit `KeyError` from `row["amount"]`) reproduces the
 empty `scratch_transform_failed`.
+This holds even when the plan says an unexpected value "fails the build": the
+blocking promise is what fails it, so the transform never rejects the value itself.
+Landing a null only works when the column's type is pinned: give every declared
+column an explicit dlt type hint
+([derived-models.md](derived-models.md#a-column-that-is-all-none-is-dropped-not-landed-as-nulls)).
+Unpinned, a column that is null in every row is dropped, and the run fails at load
+on the missing column before any promise runs. That failure also reaches you only
+as an unexplained transform failure, so pin the types before the first validation.
 
 A rename the transform maps to null instead of raising is the quieter failure: with
 `item.get("amount")` after `amount` became `deal_value`, every current row lands
@@ -79,11 +87,11 @@ is found only after all-null totals are published. A field that a published meas
 or governed output depends on must not land null for every row: propose a named
 Promise under that Output in `dp-blueprint.md` (fresh approval, like any other drift
 Promise) that fails when it is null across all current rows, unless the blueprint
-records all-null as an accepted state. Never add it to the closure alone. Have the transform also record a bounded diagnostic of
-the unmapped source key names (names only, never values or PII) so the promise's
+records all-null as an accepted state. Never add it to the closure alone. Have the transform also land a bounded diagnostic of
+the unmapped source key names (in the fixed model below) (names only, never values or PII) so the promise's
 `context` names both the missing field and the unseen ones, for example
 `null_field_count: 1` and `unmapped_source_keys: ["deal_value"]`, with any prose
-under `detail`. Record each unmapped key's observed kind of value (`bool` first, since a Python
+under `detail`. Land each unmapped key's observed kind of value (`bool` first, since a Python
 bool is also an int; then `number` for any int, float or `Decimal`, and for a decimal
 string your precision hook wrote, so mixed values stay one entry; `string`, `dict`,
 `list`; a `null` counts toward the row count but not the kind, so `deal_value:number:6`
@@ -92,6 +100,53 @@ and the number of current rows it appears on as identifiers too, with the curren
 example `unmapped_key_shapes: ["deal_value:number:6", "champion:dict:2"]` and
 `current_row_count: 6`, so a rename candidate can be told apart from an unrelated
 new field without a shell.
+
+**Drift diagnostics go in one fixed table, copied verbatim.** An output promise
+is its own `script(...)` and reads only landed tables, and on this runtime every
+landed model is published, so for an API source (which has no custom input
+expectation here) the transform must land the diagnostics for the promise to read
+them. Land them in exactly this model and nothing else: no other diagnostics table,
+column, metric or view, and no bespoke wording. Declare it as an optional
+`.model(source_diagnostics)` in `spec.py`, list it in both `PHYSICAL_MODELS` and
+`OPTIONAL_EMPTY_MODELS` (when nothing drifted it has no rows, so no table), and copy
+this block and its descriptions verbatim into `models.py` and, as one Output line
+("`source_diagnostics`: fixed drift diagnostics, see custom-contracts.md"), into the
+blueprint. Its only role is a bare `primary_key()`, so the whole model is absent from
+`describe_models` and answers no user question. Self-check therefore reports
+`struct.key_not_groupable` and `struct.model_not_queryable` for it; both are expected
+here, so never add a dimension, metric or view to clear them:
+
+```python
+source_diagnostics = (
+    semantic_model("source_diagnostics")
+    .description(
+        "Fixed drift diagnostics for the output promises. One row per source key "
+        "the transform did not map. Not for analysis."
+    )
+    .schema(
+        {
+            "key_name": field(string(), primary_key(),
+                description="A source key the transform did not map. Names only."),
+            "value_kind": field(string(),
+                description="bool, number, string, dict or list; empty when every value is null."),
+            "row_count": field(int64(),
+                description="Current rows on which the key is present, nulls included."),
+            "current_row_count": field(int64(),
+                description="Current rows in this run; the same on every row."),
+        }
+    )
+)
+```
+
+The promise reads it through `output.full_table_name("source_diagnostics")` and
+puts what it finds in its failure `VerifyResult.context` as above. On a run without
+drift the table does not exist: check `duckdb_tables()` first and treat an absent
+table as zero unmapped keys, never as an error. The table holds
+key names, kinds and counts only, never values or PII. A passing validation reports
+nothing about it. If a review or self-check finding concerns this model's fixed
+wording, roles or queryability, answer that the model is prescribed here verbatim
+and is not a plan change. For a CSV input, an
+input expectation can diff the header instead, and no diagnostics model is needed.
 
 A promise that fails with only a count, naming no field, cannot be acted on: write
 one check per field within that promise's verifier (or include per-field null counts

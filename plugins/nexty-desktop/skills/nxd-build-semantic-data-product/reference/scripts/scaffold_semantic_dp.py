@@ -22,8 +22,12 @@ the full source before declaring it.
 Wiring constraints:
 1. Promise every physical base model on the storage port. Register each metric
    view with `.model(view)`, never `.promise(view)`.
-2. `.semantic_tools(service=...)` creates the RPC output and all four tools. Do
-   not add `data_product_rpc_output()`.
+2. `.semantic_tools(service=...)` creates an RPC output when none exists. To
+   combine semantic tools with bespoke RPC functions, declare
+   `data_product_rpc_output()` with at least one port first; then
+   `.semantic_tools()` adds the four tools alongside them. Call
+   `.semantic_tools()` only once: a second call raises `ValidationError` because
+   the generated tool names already exist.
 3. The transform seeds physical base tables and writes a marker row for storage
    produce-verification. It creates no semantic-view DDL.
 """
