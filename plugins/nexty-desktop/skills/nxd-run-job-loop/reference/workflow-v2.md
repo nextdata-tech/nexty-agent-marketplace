@@ -803,7 +803,8 @@ the install has from the requirements `prepare_workflow` returns:
 Mapper builds also run only on macOS, because mapper-mode compute needs the
 macOS sandbox. The shipped policy limits a grant to provider `anthropic`;
 priced haiku, sonnet, opus or fable model ids (exact ids, dated aliases
-included); 1000 calls, 2,000,000 tokens and 25 USD per approval; 100 USD
+included, or a bare family alias for the primary model only); 1000 calls,
+2,000,000 tokens and 25 USD per approval; 100 USD
 lifetime per mapper spec; and no recurring grants. The approval window is
 300 s, the dialog times out after 120 s, and a decline starts a 30 s cooldown.
 
@@ -821,11 +822,59 @@ does not show the grant's expiry or whether it is recurring, so state both
 yourself. Then call `start_requirement` with the returned requirement id and
 the current revision. The supervisor opens a native OS dialog. That dialog is
 the only approval surface. The response carries
-`approval: {state: "awaiting_user", expires_at}` and no URL, token, capability
-or key, and you must not look for one. You cannot approve, decline, extend,
-widen or reset an approval. Do not click the dialog, type into it, or drive it
-with any automation tool. Wait for the user, then read the new state with
-`inspect_workflow`.
+`approval` with `state:"awaiting_user"` and timing details, and no URL, token,
+capability or key, and you must not look for one. You cannot approve, decline,
+extend, widen or reset an approval. Do not click the dialog, type into it, or
+drive it with any automation tool.
+
+Explain the three times separately from returned fields, never guessed durations:
+`request_expires_at` is the request deadline; `dialog_timeout_seconds` is the
+native decision time limit, with `dialog_started_at` and `dialog_deadline_at`
+when recorded; `grant_expires_at` is spending permission expiry. Legacy
+`expires_at` remains readable: request deadline while pending, grant expiry
+after a decision. Older records may omit timing details; do not reconstruct them.
+
+Once the prompt is open, use read-only `wait_workflow_approval(workflow,
+request_id, after_revision?, timeout_seconds?)` in a bounded loop of a few calls,
+respecting the conversation. `request_id` is the approval request id from
+`approval.request_id` in the `start_requirement` response (or
+`mapper.approval.request_id`), never the `advance_workflow` idempotency key; a
+wrong id returns `workflow/approval_request_not_found` or
+`workflow/invalid_request`. The default wait is 20 seconds, capped at 25 per
+call; zero checks once. Capability `approval_wait` carries
+`default_timeout_seconds`, `max_timeout_seconds`, and `fallback:"inspect_workflow"`;
+the tool is listed in `operations`.
+If absent, use bounded `inspect_workflow` polling.
+The result is the flattened current snapshot plus `wait_status`: `pending`, `terminal`,
+`superseded` or `interrupted`. A revision or dialog-phase change may return early;
+ending a wait does not expire the request. Do not reopen a prompt while waiting.
+The supervisor polls every 300 ms and allows one wait reader per workflow.
+A concurrent second wait may briefly return `workflow/state_unavailable`;
+serialize waits and retry within the bounded loop or inspect current state.
+`workflow/approval_request_not_found` means the request was not found for this
+workflow; inspect current state rather than creating a new request.
+For `interrupted`, the response omits top-level `approval`, clears `next_actions`,
+and sets `mapper.approval.state:"interrupted"` with no live `dialog_phase`.
+Inspect current state before continuing; never reuse stale prompt actions.
+When `wait_reason:"request_deadline_passed_not_yet_recorded"` accompanies
+`terminal`, the deadline passed without a recorded decision. Do not report
+acceptance or a recorded expiry from that observation; inspect current state.
+
+Check `mapper.approval.recorded_decision` (`outcome`, `decided_at`, `request_id`)
+against the request being observed. When `outcome:"accepted"`, tell the user
+"Your spending approval is recorded" and continue the authorized returned
+actions with the latest revision, without asking for another chat message.
+The receipt proves a committed decision, not current eligibility: expiry,
+budgets, other requirements and admission still apply. A user saying "I clicked
+approve" is not acceptance; check the runtime.
+For terminal `dialog_timed_out`, legacy `timed_out`, `request_expired`,
+`declined` or `cancelled`, give one next step: ask whether to reopen the same
+capped request. Reopen only on their yes and if runtime eligibility permits
+it. `surface_unavailable` (the native dialog could not be shown) and
+`integrity_unavailable` (the decision could not be verified) are not consent:
+report the blocker and inspect state; never reopen automatically. If still
+`pending` after the bounded wait, say it is pending and leave it open. For `superseded` or `interrupted`,
+inspect current state; never reopen automatically.
 
 `inspect_workflow` reports a `mapper` block for the requirement. It carries
 the approval `state` and `code`, the declared scope, each spend ledger (its
@@ -841,8 +890,8 @@ request shape and the ceilings. Never tell the user that the declared field
 list limits what the transform sends.
 
 A grant is fixed once the user approves it. Any wider scope (a new model,
-higher ceilings, a later expiry, `recurring: true`) needs a grant the user
-edits or confirms, a recapture, a fresh review and a fresh OS approval. Never
+higher ceilings, a later expiry, `recurring: true`) needs a proposal the agent authors and the user
+confirms, a recapture, a fresh review and a fresh OS approval. Never
 widen a grant yourself to get past a refusal. Never retry `start_requirement`
 in a loop: each call can put a dialog in front of the user.
 
@@ -852,10 +901,12 @@ in a loop: each call can put a dialog in front of the user.
 | `workflow/mapper_approval_claims_rejected` | The grant carries approval claims such as `approved`, `approved_by`, `receipt` or `signature`. | Nothing was approved; the grant tried to assert approval. | Remove the claims, reset capture, recapture, review, request approval again. Never add approval fields. |
 | `workflow/mapper_grant_exceeds_policy` | The grant asks for more than the installed policy allows (ceilings, provider, model, recurring). | The request is larger than this install permits. | Ask the user to narrow the scope, then edit, recapture, review and request again. Do not look for a way to raise the policy. |
 | `workflow/mapper_model_unpriced` | The model has no price entry, so spend cannot be bounded. | That model cannot be used under supervision. | Ask the user to choose a priced model; edit the spec and grant, recapture, review, request again. |
-| `workflow/approval_pending` | An approval request for this requirement is already open. | A prompt is already waiting for their decision. | Wait. Do not call `start_requirement` again; read state with `inspect_workflow`. |
-| `workflow/approval_declined` | The user declined in the OS dialog. The requirement is pending again. | They declined; nothing ran and nothing was spent. | Stop and ask what they want to change. Request again only when they ask for it. |
+| `workflow/approval_pending` | An approval request for this requirement is already open. | A prompt is already waiting for their decision. | Observe with bounded `wait_workflow_approval` (or `inspect_workflow`); do not call `start_requirement` again. |
+| `workflow/approval_declined` | The user declined in the OS dialog. The requirement is pending again. | They declined; nothing ran and nothing was spent. | Ask whether to reopen the same capped request. Request again only on their yes. |
 | `workflow/approval_cancelled` | The dialog was cancelled. | The prompt was cancelled; nothing was approved. | Ask whether to prompt again; request again only on their yes. |
-| `workflow/approval_expired` | The dialog timed out; the approval's expiry passed before admission; or a non-recurring approval was already spent by the publication it admitted. | The approval no longer applies. | Ask whether to prompt again. If the grant's own `expires_at` is past, the user must set a new expiry: edit, recapture, review, request again. |
+| `workflow/approval_dialog_timed_out` | The native decision window timed out. | The approval window closed without recorded acceptance. | Ask whether to reopen the same capped request; only on their yes, follow returned actions. |
+| `workflow/approval_request_expired` | The request deadline passed before a decision was recorded. | The spending approval request expired. | Ask whether to reopen the same capped request; only on their yes and if eligible. |
+| `workflow/approval_expired` | Spending permission expired before admission, or a non-recurring approval was already spent by the publication it admitted; historical timeout records remain readable. | The approval no longer applies. | Ask whether to prompt again. If the grant's own `expires_at` is past, agree a new expiry, author it, recapture, review and request fresh native approval. |
 | `workflow/approval_cooldown` | A request for the same mapper subject came too soon after a decline or cancel. | A short wait applies after a decline. | Do not poll. Tell the user, and request again only when they ask after the cooldown. |
 | `workflow/approval_interrupted` | The supervisor restarted while a prompt was open. | The prompt was lost when the supervisor restarted. | Ask whether to prompt again; request again only on their yes. |
 | `workflow/approval_surface_unavailable` | The OS dialog could not be shown. | Approval cannot be collected on this machine right now. | Stop and report the code. Never substitute a chat "yes" for the dialog. |
@@ -902,7 +953,10 @@ subprocess output from that diagnostic.
 
 - `recovery: repair_then_retry` means the retained closure has a defect you can
   fix. Call `check_data_product` on the authoring closure to read the specific
-  structure, runtime, contract, and semantic findings. For example, a
+  structure, runtime, contract, and semantic findings. For a closure that uses
+  the mapper, full mode refuses with `mapper_approval_required` (it would
+  execute scoring without admission); use `mode:"structural"` instead and
+  repair from its findings. For example, a
   `structure/spec_compile_failed` finding carries the compiler's own error,
   such as a duplicate metric name. Repair the closure, then reset the
   capture requirement with `replacement_blueprint_path` set to null. Recapture,

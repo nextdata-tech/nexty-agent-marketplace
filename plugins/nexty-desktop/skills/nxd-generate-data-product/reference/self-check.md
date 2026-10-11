@@ -235,9 +235,11 @@ trustworthy rather than decorative:
   the three consent codes `grant.missing`, `grant.spec_mismatch` and
   `grant.expired`, which are `owner: user`. Only the user can approve a spec,
   and only the user can consent to sending the closure's content to a model: you
-  cannot author a grant on their behalf, decide that a drifted rubric is still
-  acceptable, or extend an expiry. The agent absorbs the rest and reports one
-  plain line of outcome.
+  cannot consent on their behalf, decide that a drifted rubric is still
+  acceptable, or extend an expiry. In Desktop you do author the capped proposal
+  ([mapper-preflight.md](mapper-preflight.md#desktop-preparation)); the user's
+  act is the native supervisor approval, never editing a file. The agent absorbs
+  the rest and reports one plain line of outcome.
 - **Phase B row counts are recorded under their own key, `phase_b_row_counts`,
   and are never merged with published counts.** One is a dry run against a
   temporary database; the other is what shipped. Collapsing them would let a
@@ -350,6 +352,12 @@ model was called. Specifically:
 Phase E raises the cost of reaching a model from *nothing* to *deliberately
 routing around a named check*. That is what it is worth; do not report it as
 more.
+
+**Scope of the command lines in this Phase G section:** the
+`python -m nxd.experimental.field_mapper` invocations below describe what the
+gate runs internally and how a developer/CI reproduces it. They are never
+instructions for a Desktop user; Desktop setup goes through
+[mapper-preflight.md](mapper-preflight.md#desktop-preparation).
 
 **What Phase G cannot see.** Phase G is the *consent* gate, and it is a
 different question from Phase E's. Phase E asks whether the transform reaches a

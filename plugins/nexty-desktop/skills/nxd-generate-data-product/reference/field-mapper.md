@@ -30,9 +30,8 @@ that product stops being an experiment and starts being something that ships,
 gets handed off, or is rebuilt later. In every one of those, the procedure has to
 be inside the closure, and this is what puts it there.
 
-It brings real cost, and the cost is worth stating plainly: a consent grant the
-user must author, a supervisor approval interaction, and live model calls (with
-real spend) during the self-check and every build.
+It brings real cost, and the cost is worth stating plainly: an agent-authored spending proposal, a human supervisor approval interaction,
+and live model calls (with real spend) during admitted execution.
 
 **Use [reference/llm-judgments.md](llm-judgments.md) — agent-side judging, landed
 as CSV — while the product is still being explored.** Judging a bounded list
@@ -49,18 +48,18 @@ was told.
 
 ## Before you build: run the preflight
 
-A mapper build has two execution prerequisites that fail *outside* your
-generated code — the `anthropic` SDK and an API key visible to the MCP child
-process — and several that fail inside it before any model is contacted. Key
-visibility is only a reachability observation: it is not a Desktop approval or
-a credential-isolation guarantee. All prerequisites are checkable offline in
-under a second.
-
-**Run the preflight in [mapper-preflight.md](mapper-preflight.md) before every
-mapper build**, and report its `MAPPER RUN STATUS` block before and after the
-attempt. It is mandatory, it never calls the model, and it exists because a real
-build spent a full cycle to discover a missing SDK, then another to discover a
-wrong `MapperInput` call — both free to catch beforehand.
+**Run the Desktop preparation in [mapper-preflight.md](mapper-preflight.md)
+before every mapper build.** Check `get_workflow_capabilities.mapper_preparation`,
+call `prepare_mapper(definition, workflow)`, save its returned `proposed_grant`
+through the normal authoring surface when the ID is missing, and recheck until
+no findings remain. Resolve unknown/unpriced model choices from the returned
+catalog before capture or consent; preserve a priced explicit choice. Then use
+`check_data_product` with `mode:"structural"` before spending approval.
+Say "The setup checks passed; scoring has not run." This is not live validation
+or admission. If the capability is absent, this setup step needs a Desktop
+update; never hand the user commands, hashes, source inspection or JSON edits.
+Keep technical status blocks internal and use the canonical
+[user-facing language](../../nxd-run-job-loop/reference/user-facing-language.md).
 
 ## Importing it in a closure
 
@@ -87,11 +86,18 @@ is a closure quietly mapping under a grant issued against a different harness.
 
 ## Authoring the spec and the grant
 
-Write the mapper spec as JSON under `contracts/` (for example
-`contracts/mapper_spec.json`) and load it with `MapperSpec.load`. A spec inlined
+Write the mapper spec as JSON at `contracts/mapper_spec.json` and load it with
+`MapperSpec.load`; `prepare_mapper` reads only that name. A spec inlined
 as a Python literal has no stable id, so nothing can be consented to.
 
-Compute the id the grant must carry:
+On Desktop, the agent owns authoring the spec and capped scope proposal;
+`prepare_mapper` supplies the canonical binding and static findings as described
+in [mapper-preflight.md](mapper-preflight.md#desktop-preparation). Preparation is
+read-only and advisory (`native_approval_required:true`, `run_admitted:false`);
+it never records consent.
+
+**Developer/CI reference only — not the Desktop conversation path.**
+For the standalone harness, compute the id the grant must carry:
 
 ```bash
 python -m nxd.experimental.field_mapper spec-id contracts/mapper_spec.json
@@ -121,7 +127,7 @@ calls the placeholder out by name as `grant.invalid` before it ever subprocesses
 because a value that binds to whatever it is handed is worth distinguishing from
 a grant for the wrong spec. **Both refuse it** — only the classification differs.
 
-**Consent is the user's act.** You cannot author a grant on the user's behalf,
+**Standalone consent is the user's act.** You cannot author an authorized standalone grant on the user's behalf,
 extend an expiry, or decide a drifted rubric is still acceptable. Editing the
 spec — the instruction, a threshold, the target fields, the model — moves the id
 and revokes the grant on purpose.
@@ -149,9 +155,10 @@ install has depends on its supervisor, so read it from the requirements that
   Validation depends on the approval. A closure without a field mapper
   completes that step at once as `not_present`, with no prompt, so it only
   costs one extra `start_requirement`. The policy allows provider `anthropic`
-  only; models by exact id, limited to the priced ids of the Claude haiku,
-  sonnet, opus and fable families (dated aliases included, anything unpriced
-  is `workflow/mapper_model_unpriced`); at most 1000 calls, 2,000,000 tokens
+  only; models by exact id (dated aliases included) limited to the priced ids
+  of the Claude haiku, sonnet, opus and fable families, or, for the primary
+  model only, a bare family alias that resolves at native approval; anything
+  unpriced is `workflow/mapper_model_unpriced`; at most 1000 calls, 2,000,000 tokens
   and 25 USD per approval, 100 USD lifetime per mapper spec; no recurring
   grants; a 300 s approval window, a 120 s dialog timeout and a 30 s cooldown
   after a decline. A grant beyond any of these is
@@ -199,7 +206,7 @@ getting a fresh review:
 | Code | Cause |
 |---|---|
 | `workflow/mapper_scope_invalid` | missing, malformed or loosely typed grant; an unknown key; both grant paths present; spec missing |
-| `workflow/mapper_approval_claims_rejected` | the grant carries `approved`, `approval`, `approved_by`, `approval_id`, `approval_hash`, `user_approved`, `decision`, `receipt` or `signature` |
+| `workflow/mapper_approval_claims_rejected` | the grant carries approval claims: `approved`, `approval`, `approved_by`, `approval_id`, `approval_hash`, `user_approved`, `decision`, `receipt` or `signature`. The evidence keys `approval_evidence`, `execution_evidence`, `mapper_evidence`, `run_evidence` and `validation_evidence` are unknown keys here and fail as `workflow/mapper_scope_invalid`; `prepare_mapper` reports all fourteen, nested ones included, as this claims finding |
 | `workflow/mapper_grant_exceeds_policy` | provider, model, ceilings or `recurring` beyond the installed policy |
 | `workflow/mapper_model_unpriced` | a model with no price entry, so spend cannot be bounded |
 
@@ -227,9 +234,41 @@ offer `start_requirement` for it:
    grant's expiry or `recurring` flag, so tell the user those yourself. Decline
    is the default button.
 4. The response to the agent carries
-   `approval: {state: "awaiting_user", expires_at}`. That expiry is the
-   earlier of the policy's approval window and the grant's `expires_at`. It
-   contains no URL, token, capability or key.
+   `approval` with `state:"awaiting_user"` and returned timing details.
+   It contains no URL, token, capability or key. `request_expires_at` is the
+   request deadline; `dialog_timeout_seconds` is the native decision time
+   limit, with `dialog_started_at` / `dialog_deadline_at` when recorded;
+   `grant_expires_at` is the spending permission expiry. Never guess durations.
+   Legacy `expires_at` means the request deadline while pending and grant
+   expiry after a decision; older records may omit separate fields.
+5. After opening the prompt, call read-only `wait_workflow_approval` with
+   `workflow`, `request_id` (the approval request id from the
+   `start_requirement` response's `approval.request_id`, or
+   `mapper.approval.request_id`; never the `advance_workflow` idempotency
+   key), optional `after_revision`, and `timeout_seconds`
+   (default 20, cap 25 seconds; zero checks once). Use a few calls at most,
+   respecting the conversation; fall back to bounded `inspect_workflow`
+   polling if unavailable. Discover limits in `get_workflow_capabilities.approval_wait`;
+   serialize waits, since a concurrent second wait for the same workflow may
+   briefly return `workflow/state_unavailable` (the supervisor polls every 300 ms).
+   Check `mapper.approval.recorded_decision` for the
+   matching request: when `outcome:"accepted"`, say "Your spending approval is
+   recorded" and continue authorized returned actions with the latest revision
+   without requiring another chat message. Acceptance does not start a run or
+   bypass expiry, budgets, validation or admission.
+   For terminal `dialog_timed_out`, legacy `timed_out`, `request_expired`,
+   `declined` or `cancelled`, ask whether to reopen the same capped request;
+   reopen only on their yes and if eligible. `surface_unavailable` (the native
+   dialog could not be shown) and `integrity_unavailable` (the decision could
+   not be verified) record no consent: report the blocker and inspect state.
+   For `pending`, stop after the bounded wait and report it is still pending;
+   for `superseded` or `interrupted`, inspect current state and never reopen
+   automatically. Interrupted responses omit top-level `approval` and clear
+   `next_actions`; never reuse stale prompt actions. A `terminal` response with
+   `wait_reason:"request_deadline_passed_not_yet_recorded"` observes a passed
+   deadline without a recorded choice; inspect current state before reporting
+   an outcome. A chat message "I clicked approve" is not acceptance;
+   check the runtime receipt.
 
 A decline, cancel, timeout, interrupted prompt or unavailable dialog returns
 the requirement to pending with a `workflow/approval_*` code. The user can be

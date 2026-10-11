@@ -7,7 +7,7 @@ allowed-tools:
   - Grep
 metadata:
   author: nextdata
-  version: 0.54.35
+  version: 0.55.0
 ---
 
 # Review a generated closure — adversarially
@@ -187,7 +187,8 @@ Your review comes before that dialog, so check that the proposal is honest.
   any `corroboration_model` match what the transform and spec call. The
   `max_calls`, `max_tokens` and `max_usd` ceilings fit the row count and
   inputs the request implies, neither far too small to finish nor far larger
-  than the work needs. `expires_at` and `recurring` fit how the user asked for
+  than the work needs. The proposal's `expires_at` (spending permission expiry,
+  not the request deadline or dialog timeout) and `recurring` fit how the user asked for
   the product to be used. An unexplained wide ceiling or `recurring: true` is a
   `MEDIUM` claim.
 - **Declared fields are not enforced.** The grant's `input_fields`,

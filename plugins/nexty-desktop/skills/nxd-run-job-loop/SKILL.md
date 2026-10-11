@@ -13,17 +13,35 @@ allowed-tools:
   - Task
 metadata:
   author: nextdata
-  version: 0.54.35
+  version: 0.55.0
 ---
 
 # nxd-run-job-loop skill
 
+## If a reference cannot be loaded
+
+If a reference cannot be read at the announced base directory, locate this
+skill's own sibling paths through the host's plugin directory only after an
+exact skill name + `metadata.version` match to this SKILL.md. Never substitute
+another version. If still unavailable, say "Some guidance could not be loaded"
+and retain these essential first-plan rules:
+
+- No local commands during first-plan discovery; never ask the user to run them or use a CLI construction fallback.
+- Never ask for credential files, placeholders, YAML edits or secrets in chat; without an inherited env var, a credentialed source is blocked; if the user volunteers one anyway, don't echo it, and tell them it now sits in chat history and should be rotated after the build.
+- Never guess spending protections, budgets, models or approval durations.
+- Use runtime capability calls before claiming anything about the environment.
+- Ask only for business meaning, source access and human consent.
+- Read back result-changing plan choices before materialization; the agent owns authoring.
+- Require native spending acceptance and all admission gates; setup checks are not scoring.
+- Keep diagnostics internal and answer only from published semantic query evidence.
+
+A missing document never implies the runtime is unavailable. Check the tools;
+never tell the user to "open Claude Desktop" to recover a missing reference.
+Use [user-facing-language.md](reference/user-facing-language.md) whenever readable.
+
 ## Overview
 
-This skill is the analyst-facing entry point for local business-data questions;
-start from the user's outcome and available data, not internal product language.
-When a durable local product is useful, drive the **local job loop**: a natural
-language intent plus a local source become a running, queryable desktop product.
+This skill is the analyst-facing entry point for local business-data questions; start from the user's outcome and available data, not internal product language. When a durable local product is useful, drive the **local job loop**: a natural language intent plus a local source become a running, queryable desktop product.
 
 ```
 intent + sources + questions
@@ -35,32 +53,12 @@ intent + sources + questions
    → describe → translate NL → query → present → refine
 ```
 
-This skill is the **orchestrator** and entry point for end-to-end builds.
-`nxd-generate-data-product` constructs the closure after the plan is settled; if
-you arrive there without Steps 1–1b, come back here first. It invokes the owning
-skills, then drives the supervisor MCP path — routing the user never sees.
-
-> **You own the conversation and sequencing**, except for the policy read-back
-> discharged by the approved `dp-blueprint.md` in Step 1b. Keep one data product in
-> flight at a time while iterating.
+This skill is the **orchestrator** and entry point for end-to-end builds. `nxd-generate-data-product` constructs the closure after the plan is settled; if you arrive there without Steps 1–1b, come back here first. It invokes the owning skills, then drives the supervisor MCP path — routing the user never sees.
+> **You own the conversation and sequencing**, except for the policy read-back discharged by the approved `dp-blueprint.md` in Step 1b. Keep one data product in flight at a time while iterating.
 
 ## Route the request before doing work
 
-Classify the request before provisioning, generation, or querying, and prefer the
-smallest path that gives an honest answer — the routing table, step order, caps,
-the one-DP-in-flight rule and the subagent fan-out are in
-[reference/scheduling.md](reference/scheduling.md). The two routes that decide
-the whole loop: **a source is in scope with no suitable local product** → run the
-loop end to end; **an existing local product but no live endpoint/token** (the
-typical new session, since the bearer never persists) → **reattach, don't
-rebuild**: `list_data_products` → `resume_data_product` → artifact.
-`list_data_products` is discovery only: it never supplies a static-artifact
-fallback and cannot show whether a run is in flight or finished. When the user
-returns or asks where things stand, read `inspect_run` (or `inspect_workflow`)
-before reporting status, never from memory ([reference/context-and-resume.md](reference/context-and-resume.md)).
-Treat ambiguity conservatively: when a request could mean either a one-off
-calculation or analysis of an unseen source, ask which should answer it, and
-prefer the reusable local-product path for recurring or multi-question work.
+Classify the request before provisioning, generation, or querying, and prefer the smallest path that gives an honest answer — the routing table, step order, caps, the one-DP-in-flight rule and the subagent fan-out are in [reference/scheduling.md](reference/scheduling.md). The two routes that decide the whole loop: **a source is in scope with no suitable local product** → run the loop end to end; **an existing local product but no live endpoint/token** (the typical new session, since the bearer never persists) → **reattach, don't rebuild**: `list_data_products` → `resume_data_product` → artifact. `list_data_products` is discovery only: it never supplies a static-artifact fallback and cannot show whether a run is in flight or finished. When the user returns or asks where things stand, read `inspect_run` (or `inspect_workflow`) before reporting status, never from memory ([reference/context-and-resume.md](reference/context-and-resume.md)). Treat ambiguity conservatively: when a request could mean either a one-off calculation or analysis of an unseen source, ask which should answer it, and prefer the reusable local-product path for recurring or multi-question work.
 
 ## Choose the execution surface
 
@@ -227,7 +225,7 @@ ordinary `.promise(model)` never satisfies a custom contract.
 Classify prepare failures before proposal recovery: `v3.open_question.blocking_unresolved` means return to the user, ask the indicated Open Question, record their answer in the blueprint as a Decision, reparse, regenerate every proposal field and span, strictly validate, and prepare with a fresh `request_id`. Never set `blocking: false` yourself; any question-state change must faithfully reflect the user's answer. `workflow/proposal_validator_unavailable` means stop and report the runtime failure; do not regenerate. Only if `retryable: true`, a retry of the identical request is permitted later; do not automatically retry or enter a regeneration loop. For provenance recovery, copy exact parser coordinates for every source span (a `###` subsection `.text` range excludes its heading but may include separator blank lines). A `v3.provenance.span_mismatch` with a bounded `prepare_recovery_id` must call `inspect_prepare_recovery` and use its versioned same-blueprint semantic hash plus complete `source_spans` to regenerate the entire proposal. The inspection response contains only canonical parser paths and four integer coordinates, never source text or typed values. The legacy `validation_issue.expected_source_span` is a v1-compatible location hint, not a license to patch one path; even when present, regenerate and strictly validate the complete proposal. A `source_block_uncovered` after recovery means the complete-regeneration invariant was violated: follow **Recovering a rejected proposal** in `reference/workflow-v2.md`, replacing the whole proposal with coverage for every populated `.text` path, never patching another named path. If no recovery id is available, stop on stable `source_map_code` (`v3.provenance.source_map_unavailable` or `v3.provenance.source_map_oversized`) and obtain a fresh parser result. If the MCP host exposes only error text, read only the bounded `prepare_recovery_id` or `source_map_code` suffix; never reconstruct a map from prose. Never guess, split, trim, widen, or alter typed values.
 
 Before `prepare_workflow` succeeds, any blueprint edit invalidates all parsed coordinates: reparse the final blueprint, regenerate every proposal field and span, replace the complete proposal file with the available file operation, strictly validate it, and send a new globally unique `request_id`. Do not claim generic filesystem atomicity for a file-tool replacement. Reuse a request id only for a byte-for-byte identical request.
-Under the shellless v2 contract, the agent must not run lock write, hand-author reserved v3 metadata, or copy a checker into the closure before capture. The supervisor owns capture-time materialization and verification of those reserved surfaces. Before every capture, including after a repair, call the `check_data_product` MCP tool on the authoring closure and fix every failing finding first; it needs no shell and returns the full finding that supervisor validation reports only as a bounded code. It is diagnosis, never execution authority or a substitute for supervisor validation or admission. Shell helper self-check and lock checks stay optional evidence. Generation starts only after the supervisor records the approval. Steps 2–3
+Under the shellless v2 contract, the agent must not run lock write, hand-author reserved v3 metadata, or copy a checker into the closure before capture. The supervisor owns capture-time materialization and verification of those reserved surfaces. Before every capture, including after a repair, call the `check_data_product` MCP tool on the authoring closure (`mode:"structural"` for a mapper closure, since full mode refuses it with `mapper_approval_required`) and fix every failing finding first; it needs no shell and returns the full finding that supervisor validation reports only as a bounded code. It is diagnosis, never execution authority or a substitute for supervisor validation or admission. Shell helper self-check and lock checks stay optional evidence. Generation starts only after the supervisor records the approval. Steps 2–3
 stay on the main thread for an activated workflow-v2 session. Do not delegate
 semantic inference, closure generation, or any workflow MCP action to a child;
 the only conversation child is the single retained-capture review in Step 3b.
@@ -422,7 +420,8 @@ Query-answer wording and failure classification remain in their current owners.
   credential lands in exactly one place — the generated `infra-profile.yaml` connector service's
   `attributes` — never elsewhere, never in chat, never in `dp-blueprint.md`, which names key names only.
   **"Never in chat" covers a value you invited there**: ask for *slot names*; the value reaches the
-  profile off-transcript, via a placeholder the user fills in
+  profile off-transcript from an environment variable your tooling already inherits, or the source is
+  blocked unless the user volunteers the credential anyway
   ([reference/source-materialization.md](reference/source-materialization.md)). Once landed, **the closure
   directory itself is sensitive**: don't commit, zip, attach, or reuse it as a template without first
   clearing the old credential, and *share* it only through `export_data_product` — never a hand-zip,

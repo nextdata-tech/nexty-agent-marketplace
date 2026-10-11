@@ -97,9 +97,11 @@ _codes("warning", "agent", "reach.connector_undeclared")
 #
 # Three of these are owner: user, which is unusual — every other agent-fixable
 # code in this table is owned by the agent. Consent is not a code defect: the
-# agent cannot author a grant on the user's behalf, cannot decide that a drifted
-# rubric is still acceptable, and cannot extend an expiry. Those three are
-# questions FOR the user, exactly like closure.lock_status_not_approved.
+# agent cannot consent on the user's behalf, cannot decide that a drifted
+# rubric is still acceptable, and cannot extend an expiry. In Desktop the agent
+# authors the capped proposal file, but the human act is the native supervisor
+# approval, so the owner stays user. Those three are questions FOR the user,
+# exactly like closure.lock_status_not_approved.
 _codes("error", "user",
        "grant.missing", "grant.spec_mismatch", "grant.expired")
 _codes("error", "agent",
@@ -1446,7 +1448,7 @@ if legacy_file:
          fix="delete the vendored field_mapper/ directory and import "
              "`nxd.experimental.field_mapper` instead; the grant's "
              "mapper_spec_id must then be recomputed with "
-             "`python -m nxd.experimental.field_mapper spec-id <spec.json>`")
+             "`python -m nxd.experimental.field_mapper spec-id <spec.json>` (developer/CI only; Desktop uses prepare_mapper)")
 
 # The verifier scan is UNCONDITIONAL and not grant-waivable — a grant authorizes
 # mapping in a transform, never in a contract verifier. This closes a hole Phase
@@ -1604,8 +1606,8 @@ if mapper_import:
         # asks for a fresh human yes would be the contradiction this branch is
         # least able to afford.
         #
-        # owner: user. Consent is the user's act — the agent cannot author a
-        # grant on the user's behalf, which is the whole point of a grant.
+        # Standalone consent is user-owned. Desktop files are agent-authored
+        # proposals only; native supervisor approval remains mandatory.
         gerr("grant.missing",
              f"{mapper_import_file} imports {mapper_import!r} and "
              f"{len(spec_files)} mapper spec(s) are present, but contracts/ "
@@ -1613,9 +1615,10 @@ if mapper_import:
              f"content to a model; that needs a recorded human yes bound to "
              f"the spec by hash.", "contracts/",
              ev={"specs": [str(p) for p in spec_files]},
-             fix="ask the user, then write the grant with the mapper_spec_id "
+             fix="Desktop: author the capped proposal and use prepare_mapper; "
+                 "standalone developer/CI: ask the user, then write the grant with the mapper_spec_id "
                  "printed by `python -m nxd.experimental.field_mapper "
-                 "spec-id <spec.json>`")
+                 "spec-id <spec.json>` (developer/CI only; Desktop uses prepare_mapper)")
     else:
         # --- Recompute each spec's bound id and pair a grant to it. --------
         # The id is computed by SUBPROCESSING THE INSTALLED HARNESS rather than
@@ -1672,7 +1675,7 @@ if mapper_import:
                          placeholder[0],
                          fix="replace it with the literal id from "
                              "`python -m nxd.experimental.field_mapper "
-                             "spec-id`")
+                             "spec-id` (developer/CI only; Desktop uses prepare_mapper)")
                     continue
                 bad = [str(g) for g, doc in grant_files
                        if not re.fullmatch(r"[0-9a-f]{32}",
