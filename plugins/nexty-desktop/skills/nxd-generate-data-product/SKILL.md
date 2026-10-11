@@ -14,7 +14,7 @@ allowed-tools:
   - Task
 metadata:
   author: nextdata
-  version: 0.54.35
+  version: 0.55.0
 ---
 
 # nxd-generate-data-product skill
@@ -452,6 +452,8 @@ capture contract; `build-record.json` remains generated, never hand-authored.
 ### Step 6b — Defer adversarial review to the job loop after capture
 Under workflow-v2, call the `check_data_product` MCP tool on the authoring
 closure before returning it and fix every failing finding; it needs no shell.
+For a mapper closure pass `mode:"structural"`: full mode refuses it with
+`mapper_approval_required`.
 The shell-based Step 7 helpers are optional evidence. If they exist, the agent may run the
 closure-root self-check, lock verification, structural checks, and connector
 checks described in the reference docs. Record them as optional evidence only;

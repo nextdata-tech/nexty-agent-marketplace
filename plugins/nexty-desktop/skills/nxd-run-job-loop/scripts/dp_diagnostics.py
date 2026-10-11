@@ -729,9 +729,11 @@ _register(
 # already spent.
 #
 # The owner split is the unusual part. Three codes are owner: user, because
-# consent is not a code defect — the agent cannot author a grant on the user's
-# behalf, cannot decide that a drifted rubric is still acceptable, and cannot
-# extend an expiry. The remaining four are agent-fixable closure defects.
+# consent is not a code defect — the agent cannot consent on the user's behalf,
+# cannot decide that a drifted rubric is still acceptable, and cannot extend an
+# expiry. In Desktop the agent authors the capped proposal file, but the human
+# act is the native supervisor approval, so the owner stays user. The remaining
+# four are agent-fixable closure defects.
 _register_table(
     "s1_structure",
     (

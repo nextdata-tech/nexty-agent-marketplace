@@ -14,7 +14,7 @@ existing references.
 - [Templates and cases](#templates-and-cases)
 - [Meaningful progress](#meaningful-progress)
 - [Approval or clarification](#approval-or-clarification)
-- [Asking the user to open a file](#asking-the-user-to-open-a-file)
+- [Asking for source access](#asking-for-source-access)
 - [Declined or cancelled approval](#declined-or-cancelled-approval)
 - [Blocker](#blocker)
 - [Retry](#retry)
@@ -86,33 +86,26 @@ raw error into a bracket.
 Ask for approval only after the user can understand the proposed choice. A
 technical delivery question is not approval.
 
-### Asking the user to open a file
+### Asking for source access
 
-> Your API key has to come from you, so I've left a placeholder for it. Run this
-> to open the file:
->
-> ```
-> open -e /Users/you/nxd-jobs/orders/infra-profile.yaml
-> ```
->
-> Find the line `auth_token: REPLACE_ME`, put your key where `REPLACE_ME` is,
-> save, and tell me when you're done.
+A credentialed database or API source reaches the build only through an
+environment variable your tooling already inherits
+([source-materialization.md](source-materialization.md) § Where credentials
+land). Desktop has no secure credential-intake surface yet, so when that route
+does not apply, the source is blocked here. Say so in business terms:
 
-**Never leave the user to find or open the file themselves.** Naming a path
-assumes they know how to reach it, which editor opens a `.yaml`, and that they
-are comfortable in a terminal. Give a runnable command on its own line so it can
-be clicked or copied with no other knowledge:
+> This source needs a password or access key, and I can't take one safely in
+> this conversation yet. If you can export the same data to a file, I'll build
+> from that instead. Please don't paste the credential here.
 
-- macOS: `open -e <absolute path>`. The `-e` forces TextEdit, rather than
-  whichever application happens to claim the extension; a `.yaml` can otherwise
-  open in Xcode or in nothing at all.
-- Linux: `xdg-open <absolute path>`.
-- To show it in a file browser instead of opening it: `open -R <absolute path>`.
-
-Then name the exact field to change and what to change it to, and say to save and
-come back. The command carries a path, never a secret, so it is safe in
-transcript. This applies to every file the user is asked to edit, not only
-credential files.
+Never ask a Desktop user to run commands, edit YAML, create a credential file,
+or fill credential placeholders. Do not invent an intake tool or pretend that
+a chat connector supplies runtime credentials. Agent-owned authoring is the
+agent's job; source access comes from the environment route or is blocked;
+human spending consent belongs to the protected approval prompt. One cannot
+substitute for another. Provider keys remain supervisor-managed.
+For a deliverable or business plan, share only a verified user-facing file/link
+through the supported host surface, not a terminal command or internal path.
 
 ### Declined or cancelled approval
 

@@ -140,16 +140,8 @@ credential out of a subagent's prompt (`reference/scheduling.md`) applies to the
 main thread, which is also a transcript. So prefer a route where you never see
 the value:
 
-1. **The user writes it.** Generate the closure with a placeholder in each slot,
-   then name the slots and ask the user to fill them in directly. Give them a
-   runnable command that opens the file rather than only its path, per
-   [user-facing-language.md](user-facing-language.md) § Asking the user to open a
-   file; a non-technical user handed a path alone is stuck before they start.
-   That file is already `0600`, gitignored and marked `SENSITIVE` — it is the
-   surface designed to hold the value. Wait for their confirmation, then run the
-   connectivity check. This is the human-boundary form of the subagent's
-   placeholder + `credential_slots` hand-back.
-2. **An environment variable already visible to your own tooling.** This route is
+1. **An environment variable already visible to your own tooling.** This is
+   the only off-transcript route Desktop and Cowork have today. It is
    narrower than it sounds. A variable the user exports in their interactive
    shell *after* the session starts is not visible to your tool calls, which run
    in a separate process: reading it raises `KeyError`, or yields an empty string
@@ -161,17 +153,32 @@ the value:
    which lands the value in the transcript exactly as a paste would. Have that
    script fail loudly on a missing or empty key rather than write a profile with
    a hollow credential in it, and when the variable turns out not to be visible,
-   fall back to route 1 rather than asking the user to re-export and retry.
+   go to route 2 rather than asking the user to re-export and retry.
    `generic-secrets` stores a literal string and does not interpolate, so the
-   substitution happens at write time, not at run time.
+   substitution happens at write time, not at run time. The agent owns the
+   write, preserving `0600`, `.gitignore` and `SENSITIVE`, then checks
+   connectivity without echoing the value.
+2. **Otherwise, an access blocker.** Desktop has no secure credential-intake
+   surface yet: no MCP tool or `get_workflow_capabilities` field accepts a
+   source credential off-transcript, and a chat connector does not hand its
+   credentials to the runtime. So when route 1 does not apply, a credentialed
+   database or API source is **blocked in Desktop**. Say so plainly, per
+   [user-facing-language.md](user-facing-language.md) § Asking for source
+   access, and offer what does work: a file export of the same data, or a
+   source that needs no credential. Never ask the user to run commands, edit
+   YAML, create credential files or fill placeholders in place of the missing
+   surface, and never invent an intake tool. When the runtime adds a named
+   intake surface, this route is where it goes.
 3. **Pasted into chat — last resort.** If the user supplies it this way anyway,
    do not echo it back, and say plainly that it now lives in conversation history
    where no closure guard reaches it, so the credential should be rotated after
    the build.
 
-Never invite route 3 when route 1 is available: "paste your token" and "fill in
-`auth_token` in `infra-profile.yaml`" cost the user the same keystrokes and
-differ only in where the secret comes to rest.
+Never invite route 3: report the blocker instead of asking for the credential.
+If the user pastes it anyway, route 3 applies and the build can proceed.
+
+Mapper provider keys are a separate matter: they stay in the supervisor's
+secure store and never reach the profile.
 
 ## Host path handoff
 
