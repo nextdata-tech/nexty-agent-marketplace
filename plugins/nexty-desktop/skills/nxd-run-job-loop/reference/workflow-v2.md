@@ -789,8 +789,21 @@ conversation child returns; it is not a supervisor-launched review.
 
 After every `advance_workflow` response, discard earlier action parameters and
 follow only its new `next_actions`. Start supervisor-owned validation with the
-returned `start_requirement` action and current revision. Then use the returned
+returned `start_requirement` action and current revision. A queued or running
+operation is pending work: poll `inspect_workflow` without dispatching another
+validation. Continue only when validation is satisfied. Then use the returned
 `start_run` action with the current `revision` and `invalidation_epoch`.
+
+An admitted `start_run` response identifies the run but can precede transform
+execution and publication. Poll `inspect_run` with that run ID and
+`inspect_workflow` for the current operation until it is terminal. Report a
+completed build and resume or render only when the supervisor reports
+publication. A terminal failure is a failure even though the original tool call
+returned successfully; inspect its diagnostic and follow its recovery guidance.
+Older supervisors may return terminal results directly, which need the same
+completion checks. Keep the MCP session open while its work advances. If a call
+response is lost, inspect or replay the exact request rather than starting a
+second validation or run; use each new snapshot's revision for the next action.
 
 ```json
 {
