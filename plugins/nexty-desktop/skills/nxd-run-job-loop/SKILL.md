@@ -13,7 +13,7 @@ allowed-tools:
   - Task
 metadata:
   author: nextdata
-  version: 0.58.0
+  version: 0.58.1
 ---
 
 # nxd-run-job-loop skill
@@ -298,8 +298,9 @@ latest response: follow the returned `start_requirement`
 action for supervisor validation, then the returned `start_run` action for
 admission and publication. Use the exact envelopes in
 [reference/workflow-v2.md](reference/workflow-v2.md); never reuse stale action
-parameters. A successful `start_run` response is the supervisor's proof of
-admission, publication, and the serving endpoint. A validation failure whose
+parameters. Validation can return a queued or running operation before it finishes. Poll `inspect_workflow` until validation is satisfied, then use its current revision and returned admission action.
+`start_run` can likewise return an admission before execution finishes: poll `inspect_run` with its run ID and `inspect_workflow` until publication succeeds. A successful tool call alone is not proof of publication. Resume or render the product only after the supervisor reports its published state.
+An older supervisor may finish these stages before returning; use the same terminal-state checks. Replaying the exact request observes the existing operation; never start a second run to recover a slow call. A validation failure whose
 `recovery` is `repair_then_retry` is repairable: follow **When validation
 fails** in workflow-v2.md and read [reference/failure-handling.md](reference/failure-handling.md) before asking the user anything. Any other failed or unavailable action is a blocker; do not retry through direct build/validation commands, local
 files, SQLite, raw SQL, pandas, or another database.
