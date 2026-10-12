@@ -46,14 +46,18 @@ question; only the human's native spending confirmation grants consent.
    its ID; a missing or invalid proposal is not synthesized.
 4. Resolve all findings before capture or consent. In particular,
    `workflow/mapper_model_unpriced` covers unknown or unpriced exact models.
-   Keep the user's explicit model choice when priced. Otherwise offer
-   business-readable alternatives from `mapper_preparation.models` and obtain
-   a choice, then update spec and proposal together. Catalog rows carry `id`,
+   Keep the user's explicit model choice when priced. Otherwise use the live
+   catalog to recommend one suitable priced model with a factual cost/scope
+   tradeoff in the complete prepared-plan echo-back; its plan approval confirms
+   the recommendation. Ask a separate model question only when material
+   ambiguity blocks preparation. If preflight reveals a mismatch after plan
+   approval, revise the complete spec and proposal and obtain the required
+   fresh plan and spending approvals. Catalog rows carry `id`,
    `display_name`, `provider`, `input_micro_usd_per_mtok`,
    `output_micro_usd_per_mtok`, `price_unit` and `price_source`; name models
    to the user by `display_name`. Prices are micro-USD per million tokens, not
-   proof of provider access or permission to spend. A primary family alias
-   (`haiku`, `sonnet`, `opus`, `fable`) is reported as
+   proof of provider access, observed quality, or permission to spend. A primary
+   family alias (`haiku`, `sonnet`, `opus`, `fable`) is reported as
    `model_resolution:"deferred_to_native_approval"` and resolves at native
    approval; corroboration models require exact installed IDs.
 5. Call `prepare_mapper` again after each repair until `findings` is empty.

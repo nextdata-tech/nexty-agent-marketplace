@@ -35,8 +35,10 @@ passed to the supervisor as the closure. Normalize existing artifacts into it
 before creating or checking any other artifact. Keep `infra-profile.yaml`,
 `connectivity_check.py`, `spec.py`, `models.py`, `transform/`, and
 `requirements.txt` inside that root: root-level artifacts are direct children,
-and nested artifacts are descendants. Credentialed closures also keep
-`.gitignore` and `SENSITIVE` inside that root. Do not place credentials,
+and nested artifacts are descendants. Legacy literal credential closures also
+keep `.gitignore` and `SENSITIVE` inside that root. A Desktop-local
+`attributesSecretRef` profile contains no authored secret value and needs
+neither sensitivity file. Do not place credentials,
 those sensitivity artifacts, or the profile beside or outside the root. Use the
 same root for the self-check, lock, and build.
 
@@ -271,6 +273,14 @@ standalone probe below is what distinguishes them.
 
 ## Payload inspection gate — before authoring
 
+For a Desktop-local `attributesSecretRef`, defer the direct credentialed probe.
+Author public topology and obtain the native connection first; admitted
+validation performs the real source fetch. Keep `connectivity_check.py` as a
+non-authoritative diagnostic only: it must report `deferred` for this ref and
+must not ask for or read a credential. A stored connection remains
+`stored_unverified` until a specific admitted fetch succeeds. The probe-first
+sequence below applies to legacy literal credentials only.
+
 After the plan is settled and explicit operator consent has been relayed,
 resolve exactly one absolute closure root. For an `api-source`, write the
 closure-local `connectivity_check.py` as the first closure artifact after
@@ -282,7 +292,7 @@ generated transform — Python's standard library is sufficient for the bounded
 HTTP request and response parsing. Supply credentials only through the
 authoring session's runtime secret input; never embed or print them.
 
-When credentials are available, execute that probe before writing any other
+For the legacy literal route, when credentials are available, execute that probe before writing any other
 closure artifact, using the actual resolved base URL and endpoint path plus the
 configured authentication and headers. It must make one bounded, read-only
 request per configured resource, assert a parseable response matching the
@@ -309,7 +319,7 @@ credential from the authoring session; it does not need the profile file to
 exist yet. If the probe cannot inspect every configured resource, stop with a
 bounded diagnostic rather than authoring from a guessed schema.
 
-If credentials are unavailable in-session, author the probe and then continue
+For the legacy literal route, if credentials are unavailable in-session, author the probe and then continue
 authoring the remaining closure from the settled plan. Mark **both** payload
 inspection and the connectivity self-check as **not run** and **unverified**;
 the plan is the source of the intended schema, not evidence that the source
@@ -321,12 +331,13 @@ fixtures, or assumptions.
 
 ## Credential handling — read this before shipping
 
-Same mechanism as the database connector: for CSV the committed connector
-config is a non-secret path; for a REST API it necessarily includes a real
-credential (bearer token, API key, or OAuth client secret). That value is
-delivered by writing it into the `api-source` service's `attributes` in
-`infra-profile.yaml` — the desktop supervisor's `generic-secrets` driver
-reads it from there and merges it into the transform's `secrets` dict.
+For a native Desktop connection, author only explicitly public request topology
+in the `api-source` service's `attributes` and attach the supervisor-returned
+`attributesSecretRef`. The credential is entered through a masked native prompt,
+not written into the profile or chat. The selected secret fields reach the
+same flat transform `secrets` map after admitted validation. See
+[`infra-profile-connections.md`](../../nxd-run-job-loop/reference/infra-profile-connections.md).
+The literal-attribute guidance below describes legacy compatibility only.
 **`secrets` is FLAT.** The supervisor merges every service named in
 `.secrets([...])` into one map. For a `generic-secrets` service the keys are
 exactly the `attributes` you wrote — the service name is not among them — so an `api-source` attribute `base_url` arrives as
@@ -343,7 +354,7 @@ already been resolved.
   marked `public: true`. They are non-secret topology and belong beside
   `base_url` in the same service — **not** in a companion file. See "Why the
   endpoints live in the profile" below.
-- The `api-source` service's `attributes` list carries the live payload as
+- On the legacy literal path, the `api-source` service's `attributes` list carries the live payload as
   **one entry per property**, each shaped `{"key": <property>, "value":
   <live value>, "public": <bool>}` — never one attribute holding a nested
   object (see the sensitivity classification under Credential handling for the
@@ -389,14 +400,14 @@ already been resolved.
   `auth_token`, `auth_username`, `auth_password`, `auth_api_key`,
   `auth_client_id`, `auth_client_secret` — are `public: false` (redacted
   fail-closed on export). Non-secret topology/config — `base_url`, `auth_type`,
-  `auth_refresh_path`, `auth_key_name`, `auth_key_location`, `region`, and every `header_*` — is `public: true` so it
+  `auth_refresh_path`, `auth_token_url`, `auth_key_name`, `auth_key_location`,
+  `region`, and every `header_*` — is `public: true` so it
   survives an export and the recipient only refills the credentials. **Never
   mark a credential `public: true`.** If the user explicitly designates an
   attribute's sensitivity, honor their choice over this default.
-- **Never fabricate a credential the user hasn't supplied**, and never
-  narrate a live token/key in chat — enter it into `infra-profile.yaml`
-  exactly as the user gave it, nowhere else.
-- **The closure directory itself now holds a live credential in plaintext.**
+- **Never fabricate or handle a credential value in the agent transcript.**
+  Use the native connection prompt when advertised by the runtime.
+- **A legacy literal closure directory holds a live credential in plaintext.**
   The `public:` flag only controls `export_data_product` redaction; it does not
   make `infra-profile.yaml` safe to commit, hand-zip, or hand off. Treat the
   whole closure directory as sensitive once this file carries a real token/key:
@@ -406,11 +417,13 @@ already been resolved.
   `export_data_product` tool — it strips every attribute not marked
   `public: true` fail-closed, so **never mark a credential attribute
   `public: true`** (`public: true` means "safe to ship in an export").
-- **Emit `.gitignore` and `SENSITIVE` in the same step that writes the
+- **For legacy literal credentials, emit `.gitignore` and `SENSITIVE` in the same step that writes the
   credential**, and `chmod 0600 infra-profile.yaml` where a shell can reach
-  the closure. The trigger is structural — any `*-source` service with a
-  populated `attributes` list — and Phase C fails the closure when the two
-  files are missing. `database-source.md`'s **Sensitivity artifacts** section
+  the closure. The trigger is a legacy literal secret value in a `*-source`
+  service's populated `attributes` list; public topology attributes paired
+  with a Desktop-local `attributesSecretRef` do not trigger these files. Phase C
+  fails a legacy literal closure when either file is missing.
+  `database-source.md`'s **Sensitivity artifacts** section
   is the canonical definition, including the exact file bodies; it applies
   unchanged here with `Keys: <service>.attributes -> auth_token` (or whichever
   auth keys this API uses). Writing the credential and not the artifacts is an
@@ -814,12 +827,11 @@ reports a table that never landed.
 below, under `spec.py` / `infra-profile.yaml` diffs, means this connector brings
 no *export* of its own — it does not mean the closure may not carry one. The supervisor materializes `transform/` and `data/` into the
 pinned snapshot for every closure, by path and not by connector type, so a
-`data/` tree an api closure authors itself travels with it. The same rule pins
-`csv-source-path`: keep it `data` in an api closure. Scratch validation resolves
-it for every closure, and any other directory (a `source-staging/`, say) is not
-copied into the pinned snapshot, so validation stops with a generic
-`validation/scratch_transform_failed` before the transform runs or the API is
-ever called. Do **not** inline
+`data/` tree an API closure authors itself travels with it. An API-only closure
+does not need `csv-source-path` or a placeholder CSV. When a closure actually
+declares a CSV source, keep its `csv-source-path` relative to `data`; other
+directories (a `source-staging/`, say) are not copied into the pinned snapshot.
+Do **not** inline
 the rows as a literal in the transform instead: `SKILL.md`'s "Reference data is
 landed, never hardcoded" invariant forbids exactly that, and it does not relax
 by connector.
@@ -997,8 +1009,8 @@ add it explicitly rather than assuming it's already covered.
   `.port("duckdb", ...)`, no `.semantic_tools()`) is identical to the CSV
   template.
 - `infra-profile.yaml`: third service named `api-source` (same driver
-  `nxd:generic-secrets:1.0.0`), with its `attributes` populated with the
-  live payload. No-auth example (a public API needing only a base URL):
+  `nxd:generic-secrets:1.0.0`), with public topology attributes. No-auth
+  example (a public API needing only a base URL):
 
   ```yaml
     - name: api-source
@@ -1021,10 +1033,9 @@ add it explicitly rather than assuming it's already covered.
   and redacting it would hand the recipient of an export a closure they cannot
   run without asking what the paths were.
 
-  When the API needs authentication, add `auth_type` plus that type's own
-  flat fields alongside `base_url` — never nest a whole credential under
-  one attribute's value. Bearer-token example (topology `public: true`, the
-  secret `public: false`):
+  When the API needs authentication, add public `auth_type` and other topology,
+  then obtain an opaque local reference through the native connection prompt.
+  Bearer-token service after native entry settles and inspection returns a ref:
 
   ```yaml
     - name: api-source
@@ -1042,14 +1053,16 @@ add it explicitly rather than assuming it's already covered.
         - key: auth_type
           value: bearer
           public: true
-        - key: auth_token
-          value: <the live bearer token the user supplied>
-          public: false
         # Optional: include only when this bearer flow supports refresh.
         - key: auth_refresh_path
           value: /auth/refresh
           public: true
   ```
+
+  The machine descriptor for that native request is
+  `{"key":"auth_token","entry":"masked_nonempty"}`. Do not fabricate the
+  reference or write a token into an attribute. Attach the actual
+  supervisor-returned reference as `attributesSecretRef` after native entry.
 
   When the API also requires a non-secret header, add one `header_*` attribute
   per header alongside these (`public: true` — see **Custom request headers**):
@@ -1060,65 +1073,22 @@ add it explicitly rather than assuming it's already covered.
           public: true
   ```
 
-  For the other three types, add that type's fields from the table in
-  Credential handling instead of `auth_token` (e.g. `auth_username` +
-  `auth_password` for `http_basic`) — one attribute per field, each marked
-  `public:` per the sensitivity classification (secrets `false`, non-secret
-  config like `auth_key_name`/`auth_key_location` `true`).
+  For the other three types, keep public config such as `auth_key_name` and
+  `auth_key_location` inline, and send each secret field as a native descriptor.
+  Ashby Basic uses `auth_username: masked_nonempty` and
+  `auth_password: literal_empty`, both present in the flat runtime map.
 
   **Required probe; no endpoint-map companion** — every api-source closure
   includes the closure-local `connectivity_check.py` probe. Its endpoint map
   lives in these attributes, not in a companion file; everything the transform
   reads at run time is an attribute on the `api-source` service.
 
-  **Every api-source closure using the desktop-supervisor workflow-v2 path still needs
-  `csv-source-path` and a non-empty `data/` tree before the desktop supervisor
-  will stage an api-only closure.** This is a staging preflight requirement, not an
-  api-source contract: the API connector does not read the placeholder as
-  source data. When this workflow-v2 preflight is exercised, it pins the
-  directory before the connector runtime runs, so the closure must satisfy it
-  even though it has no landed reference data.
-
-  In two consecutive live `crm-pipeline` runs — one hand-authored and one
-  through this skill — the supervisor spent a check cycle on this staging
-  preflight before any Python ran. If the kernel stops pinning a CSV directory
-  for api-only closures, remove this block.
-
-  Ship the `csv-source-path` file holding the relative export root, exactly as a
-  CSV closure does, and put at least one `.csv` under that root. Three findings
-  arrive in sequence if you supply less, none of them mentioning that a *file*
-  is required, and all of them before any Python runs — so they read as spec or
-  manifest problems:
-
-  ```
-  structure/definition_files_missing:
-    stage the kernel definition files: snapshot missing csv-source-path
-  structure/pin_failed:
-    definition runtime directory missing: <closure>/data
-  publish/csv_source_empty:
-    the pinned CSV source directory contains no .csv file
-  ```
-
-  An empty `csv-source-path` file is its own finding (`structure/csv_source_invalid`),
-  so blanking it is not a way out. For a closure with no landed reference data,
-  use a **flat** staging placeholder, not a model-shaped directory:
-
-  ```sh
-  printf 'data\n' > csv-source-path
-  mkdir -p data
-  printf 'placeholder\n' > data/api_source_placeholder.csv
-  ```
-
-  A flat file keeps `data/` from declaring `_unused` (or any other name) as a
-  base model during Phase A; `data/<model>/` would be interpreted as a real
-  source model and fail the base-model/data-directory check. None of this
-  declares a CSV connector: the closure still names only `api-source` in
-  `.secrets([...])`, and there is still no `csv-source` service in the profile.
-
-  > This documents a supervisor staging requirement that is separate from the
-  > api-source contract, not a design intent. If the kernel stops pinning a CSV
-  > directory for api-only closures, delete this block rather than the
-  > placeholder advice.
+  An API-only closure with no landed reference data needs neither
+  `csv-source-path` nor `data/`; do not manufacture a placeholder CSV. The
+  supervisor's source plan requires those artifacts only when the closure
+  declares a CSV source. If this API closure also uses real landed reference
+  data, retain that data under `data/<model>/<model>.csv` and read it through
+  the resource loop described above.
 
   For 2+ API sources, add one labeled service per
   instance instead (`api-source-<label>` / label-prefixed attribute keys such
@@ -1135,26 +1105,32 @@ offline self-check.
 1. The shipped `self_check.py` provides offline closure checks. Its Phase B
    cannot authenticate an API source, because the harness invokes `ingest()`
    with an empty secrets map.
-2. The authenticated connectivity smoke test is a real authoring-time probe.
-   It is the closure-local `connectivity_check.py` written first under the
-   gate above, not a manual `curl`, a fixture, or the `self_check.py` dry run.
-   With credentials it must run successfully before the first build, making
-   one bounded request per configured resource and asserting a parseable
-   response matching the expected shape — not an exact fixture count, since
-   remote data is not static. Missing NXD, dlt, DuckDB, or generated-transform
-   packages do not excuse it: the probe uses only the standard library.
+2. For legacy literal credentials, the authenticated connectivity smoke test
+   is a real authoring-time probe. It is the closure-local
+   `connectivity_check.py` written first under the gate above, not a manual
+   `curl`, a fixture, or the `self_check.py` dry run. With credentials it must
+   run successfully before the first build, making one bounded request per
+   configured resource and asserting a parseable response matching the
+   expected shape — not an exact fixture count, since remote data is not
+   static. Missing NXD, dlt, DuckDB, or generated-transform packages do not
+   excuse it: the probe uses only the standard library.
 
-The closure is complete only after that authenticated probe succeeds. When
+For the legacy literal route, the closure is complete only after that authenticated probe succeeds. When
 credentials are unavailable, retain the probe but report payload inspection
 and connectivity as **not run** and **unverified**; structural checks still
 run, while source validation and the complete happy path remain unverified.
-A manually issued `curl` or other exploratory fetch is useful for diagnosis
-but does **not** substitute for executing the closure-local probe. Apply the
-redaction rules below to every failure message.
+For a Desktop-local `attributesSecretRef`, retain the script but report its
+credentialed probe as **deferred**. It must not read the private credential;
+the admitted source fetch supplies source-validation evidence, and static
+checks alone leave that source **unverified**.
+For the legacy literal route, a manually issued `curl` or other exploratory
+fetch is useful for diagnosis but does **not** substitute for executing the
+closure-local probe. Apply the redaction rules below to every failure message.
 
 **Phase B of `self_check.py` cannot pass for this connector, and that is not a
-defect to code around.** Do not confuse that offline limitation with the
-authenticated `connectivity_check.py` above. Do not add a profile-reading
+defect to code around.** Do not confuse that offline limitation with a
+legacy authenticated `connectivity_check.py` run or an admitted native fetch.
+Do not add a profile-reading
 fallback to `self_check.py` to make Phase B green — that reintroduces the
 sidecar channel this file spends a section rejecting. Report Phase B as **not runnable**.
 In a workflow-v2-capable enrolled runtime, the supervisor's returned

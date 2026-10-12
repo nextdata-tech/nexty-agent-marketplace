@@ -13,7 +13,7 @@ allowed-tools:
   - Task
 metadata:
   author: nextdata
-  version: 0.57.0
+  version: 0.58.0
 ---
 
 # nxd-run-job-loop skill
@@ -21,7 +21,7 @@ metadata:
 These rules apply on every route before source gathering, whether references load or not:
 
 - No local commands during first-plan discovery; never ask the user to run them or use a CLI construction fallback.
-- Never ask for credential files, placeholders, YAML edits or secrets in chat; without an inherited env var, a credentialed source is blocked. For source-credential recovery, never ask for an env-variable name or give commands, OS setup or restart instructions. Never offer or solicit a chat-connector fetch or file substitute for a requested live in-product source; only an independent user request to change source scope permits that different product. If the user volunteers a credential anyway, don't echo it, and tell them it now sits in chat history and should be rotated after the build.
+- Never ask for credential files, placeholders, YAML edits, environment variables, or secrets in chat. For a credentialed source, check the live `infra_profile_connections.native_entry` capability and use the native masked prompt through the connection tools when available; see [native infra-profile connections](reference/infra-profile-connections.md). For source-credential recovery, never ask for an env-variable name or give commands, OS setup, or restart instructions. Report only an evidenced blocker and supported next action; never invent a login requirement or claim waiting cannot help. Never offer or solicit a chat-connector fetch or file substitute for a requested live in-product source; only an independent user request to change source scope permits that different product. If the user volunteers a credential anyway, do not echo or copy it; tell them it now sits in chat history and should be rotated.
 - Never guess spending protections, budgets, models or approval durations.
 - Use runtime capability calls before claiming anything about the environment.
 - Ask only for business meaning, source access and human consent.
@@ -133,7 +133,7 @@ into a closure is a materialization and waits for the user's reply. Per-kind
 rules — attached file, pasted table, database, REST API and host-path handoff —
 plus credential guidance are in [reference/source-materialization.md](reference/source-materialization.md).
 It requires exact-copy landing by default, with one declared projection for
-unneeded personal data; tell the user what was omitted and why without echoing it.
+unneeded personal data; tell the user what was omitted and why without echoing it. When the user asks where to enter a key and the credentialed source's nonsecret service is settled, open native masked entry from a dedicated source-preparation sibling of the executable closure (never its parent or ancestor); this can precede complete-plan approval but never authorizes a fetch, build, or paid work.
 
 ### Step 1b — Author `dp-blueprint.md`, the prose-first user plan
 
@@ -200,7 +200,7 @@ repeat inference within this boundary.
 
 ### Step 3 — Enroll, approve, then generate the runnable closure
 
-Before the approval turn, the main thread must establish the connected supervisor's v2 execution capability and enroll this exact prose/proposal pair: write and validate `dp-blueprint.proposal.json` beside the host-visible `dp-blueprint.md`, parse that complete object, call `get_workflow_capabilities`, require structured `execution_enabled: true`, then call `prepare_workflow` with `kind: "generated-data-product"`, the blueprint path, and the inline `typed_proposal` object. Omit `source_hash` from the caller-authored file and inline object; the supervisor inserts or replaces its canonical value. Proposal validation and binding happen before consent; the prepare request must carry the complete typed proposal object, not a path or placeholder. Keep the blueprint at `status: proposed` during prepare. Never set `status: approved` or invent approval hashes; approval remains only through the returned `session_decision` consent action. Use
+Before the approval turn, the main thread must establish the connected supervisor's v2 execution capability and enroll this exact prose/proposal pair: write and validate `dp-blueprint.proposal.json` beside the host-visible `dp-blueprint.md`, parse that complete object, call `get_workflow_capabilities`, require structured `execution_enabled: true`, then call `prepare_workflow` with `kind: "generated-data-product"`, the blueprint path, and the inline `typed_proposal` object. For an unspecified mapper model, use the live priced catalog to recommend one suitable option and a factual tradeoff in this one complete prepared-plan echo-back; ask a separate model question only if material ambiguity blocks preparation, and never infer provider access or observed quality from pricing. Omit `source_hash` from the caller-authored file and inline object; the supervisor inserts or replaces its canonical value. Proposal validation and binding happen before consent; the prepare request must carry the complete typed proposal object, not a path or placeholder. Keep the blueprint at `status: proposed` during prepare. Never set `status: approved` or invent approval hashes; approval remains only through the returned `session_decision` consent action. Use
 only its returned revision, invalidation epoch, requirement identities and
 `next_actions`. Do not present an approval prompt or ask for approval until
 `prepare_workflow` succeeds. Then present the prepared echo-back and relay the user's exact approval through the returned `session_decision` action only when it authorizes the complete prepared plan; access-check or drafting consent leaves plan consent pending. Genuine complete-plan approval may permit generation while paid scoring is separately withheld; native spending/budget verification and all admission gates still apply. A capability blocker or
@@ -216,7 +216,7 @@ the executable closure inputs — `spec.py`, `models.py`, `infra-profile.yaml`,
 `build-record.json`, `README.md`, and the connector artifact — from the approved
 `dp-blueprint.md`, inferred model, and connector config. Pass every source, its
 label and provenance, plus the resolved absolute `job_helper_dir`. The generator
-compiles the approved plan; it does not re-derive it, author supervisor YAML, or open a new policy turn. Follow its connector references and `reference/dlt.md` for the exact closure shape.
+compiles the approved plan; it does not re-derive it, author supervisor YAML, or open a new policy turn. Follow its connector references and `reference/dlt.md` for the exact closure shape. Preserve any Step 1 connection's bound public service identity and opaque ref, then inspect compatibility at the final root; zero matches needs native entry, multiple need an explicit choice, and stored metadata never proves source access ([infra-profile-connections.md](reference/infra-profile-connections.md)).
 The typed-v3 proposal sent to `prepare_workflow` is the consent candidate: every Decision is included in the exact echo-back and may remain `status: proposed` until the user approves. The supervisor's trusted materializer projects those Decisions to `locked` only after the subject-bound `session_decision`; `locked` is an approval-derived snapshot state, not authorization by itself. Do not change the proposal after prepare or consent. Any post-prepare or post-consent blueprint/proposal edit requires `reset_workflow` with the supervisor-returned graph-root requirement and a replacement blueprint, followed by complete regeneration, fresh prepare, and fresh consent. A closure-only behavior change resets the returned capture requirement, recaptures, and obtains a fresh review.
 The typed v3 contract inventory is executable handoff, not optional metadata: every
 Input expectation and Output promise must become exactly one closure verifier and
@@ -418,14 +418,13 @@ Query-answer wording and failure classification remain in their current owners.
   rows/retained values and recording drops, reasons, and both digests. Derive approved non-identifying
   continuity keys in memory before landing; omit the raw identifiers. Treat database and REST API sources
   as **read-only**: never write to them, fabricate a table/endpoint, or narrate a raw credential. A real
-  credential lands in exactly one place — the generated `infra-profile.yaml` connector service's
-  `attributes` — never elsewhere, never in chat, never in `dp-blueprint.md`, which names key names only.
-  **"Never in chat" covers a value you invited there**: derive *slot names* from the connector auth scheme, not a user's env-variable name; the value reaches the
-  profile off-transcript from an environment variable your tooling already inherits, or the source is
-  blocked unless the user volunteers the credential anyway
-  ([reference/source-materialization.md](reference/source-materialization.md)). Once landed, **the closure
-  directory itself is sensitive**: don't commit, zip, attach, or reuse it as a template without first
-  clearing the old credential, and *share* it only through `export_data_product` — never a hand-zip,
+  credential is entered only in the native masked prompt when the runtime advertises it;
+  the authored service holds explicitly public topology and an opaque local reference,
+  never a credential value. `dp-blueprint.md` names field roles only. Derive machine
+  slot names from the connector auth scheme; do not ask for values, env-variable names,
+  or a credential file. A stored reference is unverified until admitted execution
+  fetches the source ([reference/infra-profile-connections.md](reference/infra-profile-connections.md)).
+  Legacy literal profiles remain sensitive; share through `export_data_product`
   because its fail-closed redaction is the credential boundary
   ([reference/handoff-export.md](reference/handoff-export.md)).
 - **Label every source once there are 2+.** A single-source data product needs no label. With multiple

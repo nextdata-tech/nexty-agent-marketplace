@@ -120,6 +120,9 @@ ran and published — nothing about whether the numbers are right.
 
 ## Reattach playbook — resume first
 
+Resume never touches credentials: reattach to the published product without
+refreshing source data or reopening credential intake.
+
 When the user has an existing product but no live endpoint or token — the
 typical new session — **reattach, do not rebuild.** The supervisor exposes a
 cross-session catalog and a fast re-serve; use them:
@@ -189,9 +192,13 @@ candidate closures.
 
 ## Credential recovery for SENSITIVE closures
 
-If the closure carries a `SENSITIVE` marker, it reaches a live database or API
-through `infra-profile.yaml`, and a rebuild (only rebuild — resume never touches
-credentials) can fail two different ways with the same symptom:
+For a credentialed closure, a rebuild can fail even when a published result
+remains queryable. Resume only reopens that result; a fresh live fetch needs an
+admitted workflow and source access. For a Desktop-local reference, inspect the
+service at its current definition root and reuse a compatible local connection
+or open the native prompt to reconnect. Storage alone is unverified; a moved or
+exported closure needs a new destination connection. Legacy `SENSITIVE`
+closures can fail in these ways:
 
 - **The file is present** and the rebuild fails at connection time: the
   returned access evidence may identify an expired or rotated credential;

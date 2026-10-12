@@ -116,9 +116,10 @@ The call returns:
   value you meant to strip was **not** stripped — fix the name and re-export
   before handing the bundle off.
 - **`secret_ref_services` — services whose credentials come from an
-  `attributesSecretRef`.** Nothing was redacted for them, but each still needs a
-  refill after import (the reference points at a secret store the recipient does
-  not have) — flag them in the handoff alongside what the `IMPORT.md` header lists.
+  `attributesSecretRef`.** A Desktop-local reference carries no value in the
+  bundle. Mark it `reconnect_on_destination`: the recipient must use native
+  connection entry before an admitted rebuild. Descriptive field metadata is
+  not proof of access; do not claim the reference works in another data folder.
 
 ## What the recipient gets, and how they import it
 
@@ -127,8 +128,13 @@ The zip contains the whole closure —
 `requirements.txt`, `dp-blueprint.approved.md`, `dp-blueprint.lock.json`,
 `build-record.json`, `README.md`, the connector companion artifact where the type has one — and,
 for a credentialed source, `SENSITIVE` and `.gitignore`
-— with `infra-profile.yaml`'s credentials replaced by placeholders, plus the
-generated `IMPORT.md` and a machine-readable `export.json`.
+— plus the generated `IMPORT.md` and a machine-readable `export.json`. The
+sensitivity files in this frozen inventory apply to legacy literal profiles,
+whose credentials are replaced by placeholders in `infra-profile.yaml`. A
+Desktop-local reference has no value to replace: the exported profile retains
+only public topology and an opaque ref, with `reconnect_on_destination` in the
+manifest. It needs neither sensitivity file and cannot grant source access to
+the recipient without native reconnection.
 
 The recipient gets the plan and the outcome together and needs no separate
 document: `dp-blueprint.approved.md` is the approved plan byte for byte,
@@ -137,8 +143,9 @@ records what the build actually did — including any concession taken to reach
 green. Nothing in the bundle points outside itself.
 
 **Importing is reopen-through-workflow-v2 with the recipient's own credential.**
-The recipient unzips and refills the credentials the `IMPORT.md` header names (a
-file/CSV closure needs none), places the approved blueprint beside the imported
+The recipient unzips and reconnects any Desktop-local reference through native
+entry, or handles legacy literal credentials named by `IMPORT.md` (a file/CSV
+closure needs none), places the approved blueprint beside the imported
 closure, and follows the v2 construction sequence so capture, retained review,
 and admission remain mandatory. If the recipient's supervisor cannot admit the
 closure, report that blocker rather than substituting a direct build. Because
