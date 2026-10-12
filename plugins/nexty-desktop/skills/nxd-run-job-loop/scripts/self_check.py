@@ -2766,8 +2766,9 @@ for rel in scan:
              f"(dp-blueprint.approved.md / contracts/<name>.md / inert derived "
              f"model), never a ../ pointer.", rel, {"found": m})
 
-# C10 — sensitivity artifacts. The trigger is STRUCTURAL: a *-source service
-# carrying a populated `attributes:` list holds a live credential in plaintext.
+# C10 — sensitivity artifacts. A Desktop-local reference with only explicitly
+# public inline topology is structurally deferred to the supervisor. Legacy
+# populated attributes retain their existing fail-closed warning.
 # A CSV or file source keeps `attributes: []` and is exempt, so this cannot
 # false-positive on a healthy local closure. Names the missing FILES only —
 # never reads or echoes an attribute value, because a check that prints the
@@ -2784,10 +2785,255 @@ if profile.exists():
     #   block, zero-indent   `attributes:` / `- key: ...`     (also valid YAML)
     #   inline flow          `attributes: [{key: ...}]`
     # `attributes: []` and `attributes: [ ]` must NOT match in any form.
-    has_secret = (
-        re.search(r"^\s*attributes:\s*\n\s*-\s", text, re.MULTILINE) is not None
-        or re.search(r"^\s*attributes:\s*\[\s*[^\s\]]", text, re.MULTILINE) is not None
-    )
+    def populated_attributes(section: str) -> bool:
+        return (
+            re.search(r"^\s*attributes:\s*\n\s*-\s", section, re.MULTILINE) is not None
+            or re.search(r"^\s*attributes:\s*\[\s*[^\s\]]", section, re.MULTILINE) is not None
+        )
+
+    def flat_flow_parts(body: str):
+        # Consume the entire flow spelling. Unbalanced quotes/brackets and
+        # incomplete items cannot earn a public-only exemption.
+        parts, start, stack, quote, escaped = [], 0, [], None, False
+        index = 0
+        while index < len(body):
+            char = body[index]
+            if quote:
+                if quote == '"' and escaped:
+                    escaped = False
+                elif quote == '"' and char == "\\":
+                    escaped = True
+                elif char == quote:
+                    if quote == "'" and index + 1 < len(body) and body[index + 1] == "'":
+                        index += 1
+                    else:
+                        quote = None
+            elif char in "\"'":
+                quote = char
+            elif char in "[{":
+                stack.append(char)
+            elif char in "]}":
+                if not stack or {"[": "]", "{": "}"}[stack.pop()] != char:
+                    return None
+            elif char == "," and not stack:
+                parts.append(body[start:index].strip())
+                start = index + 1
+            index += 1
+        if quote or stack:
+            return None
+        parts.append(body[start:].strip())
+        return parts if all(parts) else None
+
+    def scalar_token(value: str) -> bool:
+        value = value.strip()
+        if not value or value[0] in "[{&*!|>" or "\n" in value:
+            return False
+        if value.startswith('"'):
+            import json
+            try:
+                return isinstance(json.loads(value), str)
+            except (ValueError, TypeError):
+                return False
+        if value.startswith("'"):
+            return re.fullmatch(r"'(?:[^']|'')*'", value) is not None
+        return not any(char in value for char in "[]{}\"'") and re.search(r":(?:\s|$)", value) is None
+
+    def credential_key(name: str) -> bool:
+        # Query/fragment names also use this base matcher: public attribute
+        # families do not exempt a credential parameter in a public URL.
+        return re.search(
+            r"password|passwd|passphrase|token|secret|credential|api[_-]?key|access[_-]?key|auth[_-]?username"
+            r"|private[_-]?key|signing[_-]?key|encryption[_-]?key"
+            r"|(?:^|[_-])(?:user|username|login|pass|pw|pwd|auth|oauth|authorization|authentication|dsn|connection[_-]?string|bearer|jwt)(?:$|[_-])",
+            name.lower(),
+        ) is not None
+
+    def public_key(name: str) -> bool:
+        # Header names can contain endpoint_ too; private header precedence
+        # prevents that spelling from inheriting the endpoint-model exemption.
+        header = re.search(r"(?:^|[_-])header[_-](.+)$", name)
+        if header and header[1] != "user_agent" and credential_key(header[1]):
+            return False
+        if re.search(r"(?:^|[_-])auth[_-](?:type|key[_-]name|key[_-]location|refresh[_-]path|token[_-]url)$", name):
+            return True
+        if header and header[1] == "user_agent":
+            return True
+        # Endpoint tails are model names, not credential-field names. Keep
+        # user/token model segments and the documented label prefix intact.
+        if re.search(r"(?:^|_)endpoint_[a-z_][a-z0-9_]*$", name):
+            return True
+        return not credential_key(name)
+
+    def query_credential_key(name: str) -> bool:
+        # Bare query/fragment aliases are wider than attribute names. Do not
+        # deny ordinary public attribute keys such as key/sig/signature here.
+        return credential_key(name) or name.lower() in {"key", "sig", "signature"}
+
+    def public_value(value: str) -> bool:
+        from urllib.parse import parse_qsl, urlsplit
+
+        if value.startswith('"'):
+            import json
+            value = json.loads(value)
+        elif value.startswith("'"):
+            value = value[1:-1].replace("''", "'")
+        # Unsupported decoded controls must not split an embedded authority
+        # or be silently stripped by the URL parser.
+        if any(ord(char) < 32 or ord(char) == 127 for char in value):
+            return False
+        # Also inspect embedded URLs (for example, a User-Agent contact URL).
+        # A path or query containing @ is not authority userinfo.
+        if re.search(r"://[^/?#\s]*@|(?:^|[\s(])//[^/?#\s]*@", value):
+            return False
+        try:
+            url = urlsplit(value)
+            if url.username is not None or url.password is not None:
+                return False
+            return not any(query_credential_key(key)
+                           for component, keep_blank in ((url.query, True), (url.fragment, False))
+                           for key, _ in parse_qsl(component.replace(";", "&"),
+                                                 keep_blank_values=keep_blank))
+        except ValueError:
+            return False
+
+    def public_mapping(fields) -> bool:
+        mapping = {}
+        for field in fields:
+            match = re.fullmatch(r"(key|value|public):[ \t]+(.+)", field)
+            if not match or match[1] in mapping or not scalar_token(match[2]):
+                return False
+            mapping[match[1]] = match[2].strip()
+        if set(mapping) != {"key", "value", "public"} or mapping["public"] != "true":
+            return False
+        key = re.fullmatch(r"['\"]?([A-Za-z_][A-Za-z0-9_-]*)['\"]?", mapping["key"])
+        return bool(key and public_key(key[1].lower()) and public_value(mapping["value"]))
+
+    def public_attributes(lines, indent: int) -> bool:
+        first = lines[0].split(":", 1)[1].strip()
+        if first:
+            if not first.startswith("[") or not first.endswith("]") or len(lines) != 1:
+                return False
+            items = flat_flow_parts(first[1:-1])
+            if not items:
+                return False
+            for item in items:
+                if not item.startswith("{") or not item.endswith("}"):
+                    return False
+                fields = flat_flow_parts(item[1:-1])
+                if not fields or not public_mapping(fields):
+                    return False
+            return True
+        entries, current, item_indent, field_indent = [], [], None, None
+        for line in lines[1:]:
+            if not line.strip() or line.lstrip().startswith("#"):
+                continue
+            item = re.match(r"^([ ]*)-([ ]+)(.+)$", line)
+            if item_indent is None:
+                if not item or len(item[1]) < indent:
+                    return False
+                item_indent = len(item[1])
+            if item and len(item[1]) == item_indent:
+                if current:
+                    entries.append(current)
+                current = [item[3]]
+                field_indent = item_indent + 1 + len(item[2])
+            elif current and len(line) - len(line.lstrip(" ")) == field_indent:
+                current.append(line.strip())
+            else:
+                return False
+        if current:
+            entries.append(current)
+        return bool(entries) and all(public_mapping(fields) for fields in entries)
+
+    def local_public_only(section: str) -> bool:
+        lines = section.splitlines()
+        item = re.match(r"^([ ]*)-([ ]+)(.+)$", lines[0])
+        if not item or "\t" in section:
+            return False
+        # Quoted/escaped mapping keys are outside the proven subset. They can
+        # spell duplicate attributes/ref fields even when a plain field exists.
+        if re.search(r"(?:^|[\s,{])['\"][^'\"]+['\"][ \t]*:", section):
+            return False
+        # Explicit keys, aliases, anchors and tags are outside this conservative
+        # grammar. Unsupported syntax retains the original whole-text scan.
+        if re.search(r"^[ ]*[?:](?:[ ]|$)|(?:^|[\s,{])[&*!]", section, re.MULTILINE):
+            return False
+        indent = len(item[1]) + 1 + len(item[2])
+        lines[0] = " " * indent + item[3]
+        direct = {}
+        for index, line in enumerate(lines):
+            match = re.match(r"^([ ]*)(attributes|attributesSecretRef):(?:[ ]+(.+)|[ ]*)$", line)
+            if match and len(match[1]) == indent:
+                if match[2] in direct:
+                    return False
+                direct[match[2]] = (index, match[3] or "")
+        if set(direct) != {"attributes", "attributesSecretRef"}:
+            return False
+        # Removing this service must not hide a second nested/ambiguous list.
+        if len(re.findall(r"(?:^|[\s,{])attributes[ ]*:", section)) != 1:
+            return False
+        ref = direct["attributesSecretRef"][1]
+        if not re.fullmatch(r"(?:nxd-desktop-keychain:v1:[A-Za-z0-9_-]+|'nxd-desktop-keychain:v1:[A-Za-z0-9_-]+'|\"nxd-desktop-keychain:v1:[A-Za-z0-9_-]+\")", ref):
+            return False
+        start = direct["attributes"][0]
+        stop = len(lines)
+        for index in range(start + 1, len(lines)):
+            line = lines[index]
+            if not line.strip() or line.lstrip().startswith("#"):
+                continue
+            depth = len(line) - len(line.lstrip(" "))
+            if depth < indent or (depth == indent and not line.lstrip().startswith("- ")):
+                stop = index
+                break
+        return public_attributes(lines[start:stop], indent)
+
+    # Only actual service-list items delimit services; key order is immaterial.
+    # Nested attributes and nested services headers never create extra spans.
+    lines = text.splitlines(keepends=True)
+    offsets, offset = [], 0
+    for line in lines:
+        offsets.append(offset)
+        offset += len(line)
+    service_sections = []
+    covered_until = 0
+    for index, line in enumerate(lines):
+        header = re.fullmatch(r"([ ]*)services:[ ]*(?:#.*)?\n?", line)
+        if not header or offsets[index] < covered_until:
+            continue
+        header_indent = len(header[1])
+        starts, item_indent, end = [], None, len(text)
+        for later in range(index + 1, len(lines)):
+            value = lines[later]
+            if not value.strip() or value.lstrip().startswith("#"):
+                continue
+            item = re.match(r"^([ ]*)-[ ]+\S", value)
+            depth = len(value) - len(value.lstrip(" "))
+            if item_indent is None:
+                if not item or len(item[1]) < header_indent:
+                    break
+                item_indent = len(item[1])
+            if depth < item_indent or (depth == item_indent and not item):
+                end = offsets[later]
+                break
+            if item and len(item[1]) == item_indent:
+                starts.append(offsets[later])
+        for position, start in enumerate(starts):
+            stop = starts[position + 1] if position + 1 < len(starts) else end
+            service_sections.append((start, stop))
+            covered_until = max(covered_until, stop)
+    exempt = [(start, stop) for start, stop in service_sections
+              if local_public_only(text[start:stop])]
+    if exempt:
+        say("Desktop-local connection: public topology is structurally visible; "
+            "authenticated binding, credential presence, and source access are deferred "
+            "to supervisor admission.")
+    remainder, cursor = [], 0
+    for start, stop in exempt:
+        remainder.append(text[cursor:start])
+        cursor = stop
+    remainder.append(text[cursor:])
+    # Keep the old whole-file check over EVERY byte not proven exempt.
+    has_secret = populated_attributes("".join(remainder))
     if has_secret:
         for name, code, why in (
             (".gitignore", "closure.gitignore_missing",

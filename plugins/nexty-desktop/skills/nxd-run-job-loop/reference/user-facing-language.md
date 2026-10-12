@@ -36,7 +36,8 @@ existing references.
 - Speak in friendly, plain language. Start with what changed for the user and
   what happens next.
 - Keep internal identifiers, stage or phase labels, hashes, internal paths,
-  ownership fields, and implementation framing out of chat by default.
+  ownership fields, authentication field names, wire formats, record tables,
+  and implementation framing out of chat by default.
 - Never echo raw tool errors, logs, traces, request identifiers, internal URLs,
   or credentials. A verified user-facing handle, durable deliverable path, or
   public result/download/source link may be shared when it is needed to use or
@@ -75,6 +76,12 @@ report plan for your review." Keep typed proposals, schema conversion and file
 plumbing in tool activity; do not repeatedly narrate a "document + typed version"
 or the writing of internal proposal files. Preserve result-changing choices and
 useful user-editable plan or deliverable names when needed for review or handoff.
+Show one complete prepared plan for approval, including a suitable priced model
+recommendation and its factual cost/scope tradeoff when the user has not chosen
+one. Its complete-plan approval confirms that recommendation; ask a separate
+model question only if material ambiguity blocks preparation. A live price
+catalog establishes neither provider access nor observed model quality. Do not
+ask for approval of a preliminary outline followed by another plan approval.
 An explicitly requested technical explanation may describe the process safely,
 without raw diagnostics, secret values or supervisor-owned paths.
 
@@ -101,21 +108,26 @@ technical delivery question is not approval.
 
 ### Asking for source access
 
-A credentialed database or API source reaches the build only through an
-environment variable your tooling already inherits
-([source-materialization.md](source-materialization.md) § Where credentials
-land). Desktop has no secure credential-intake surface yet, so when that route
-does not apply, the source is blocked here. Say so in business terms:
+A credentialed source uses Desktop's native masked connection prompt when the
+live capability advertises it ([infra-profile-connections.md](infra-profile-connections.md)).
+Once the source's nonsecret destination and scope are settled, open it when the
+user asks where to enter the key, even if the full build plan awaits review.
+Give the one actual next action in business terms:
 
-> The live source can't be connected safely through this conversation yet, so
-> the live build is blocked. I can continue defining the report without running
-> it. Please don't paste the credential here.
+> I'm opening Desktop's secure connection prompt for this source.
+> Please enter the requested connection details there; keep them out of this chat.
+> Saving them will not test access or start the report; I'll check the source
+> only in the approved run.
+
+If the runtime does not advertise native entry, report that the connection
+feature is unavailable there and give its documented Desktop update or
+connection action. Do not imply a stored key has been tested against the source.
 
 Never ask a Desktop user to run commands, edit YAML, create a credential file,
 or fill credential placeholders. Do not invent an intake tool or pretend that
 a chat connector supplies runtime credentials. Agent-owned authoring is the
-agent's job; source access comes from the environment route or is blocked;
-human spending consent belongs to the protected approval prompt. One cannot
+agent's job; source access comes from the native connection prompt;
+human spending consent belongs to its separate protected approval prompt. One cannot
 substitute for another. Provider keys remain supervisor-managed.
 For source-credential recovery, do not ask for an env-variable name or give
 commands, OS setup or restart instructions. Never offer or solicit a chat-connector
@@ -125,6 +137,10 @@ source scope, used only after an independent user request to change source scope
 does not provide fresh in-product fetching. Never solicit a pasted key. If the
 user volunteers one anyway, do not echo it; disclose that it now lives in chat
 history and should be rotated after the build, preserving the existing exception.
+For `state_unavailable`, say the connection state could not be read or stored
+and keep that source step blocked. Do not invent a login requirement, tell the
+user to open an app, or claim waiting cannot help. Resume the existing request
+after actual recovery, with no broader approval just to repeat access setup.
 For a deliverable or business plan, share only a verified user-facing file/link
 through the supported host surface, not a terminal command or internal path.
 
@@ -240,6 +256,8 @@ or scoring only when admitted-run evidence supports it.
 Pinned rules alone do not show that refreshing needs a new version. Use returned
 runtime capability/state evidence before claiming that requirement; preserve the
 documented behavior-changing revision/new-ID and explicit consent requirements.
+If the returned state supports a fresh admitted run under unchanged approved
+rules, describe that refresh without inventing a versioning prerequisite.
 
 ### Cumulative AI-scoring budget
 
@@ -248,8 +266,9 @@ folder. A folder-wide cap is opt-in and experimental; it counts recorded mapper
 ledgers across jobs and specifications in that folder. It excludes other Nexty
 folders, scoring outside Nexty, and sessions that were already running when the
 cap was turned on. The folder must not be replaced or restored from an older
-copy for the recorded total to remain meaningful. Tell the user to close other
-Nexty windows and sessions before opting in.
+copy for the recorded total to remain meaningful. At opt-in, explain the scope
+as this local Desktop workspace, not a raw folder path, and tell the user to
+close other Nexty windows and sessions before enabling the cap.
 `legacy` is an internal inspection status in the current API. Say "no cumulative
 cap is active" to the user; do not describe their setup as legacy or switch to
 older tools.
@@ -275,8 +294,13 @@ older tools.
 
 For a requested cap awaiting native approval, say:
 
-> The cap is not active yet. Native approval will include earlier verified
-> scoring recorded in this folder; I won't claim a total until it is verified.
+> The cap is not active yet. If you accept the protected approval, Desktop will
+> check for earlier AI scoring recorded in this local workspace and include it
+> if the history can be verified. The limit does not
+> cover other workspaces, activity outside Nexty, or Nexty sessions already
+> running; close those sessions before enabling it, since they stay outside
+> the limit until restarted. I'll report a total or an active limit only after
+> Desktop confirms them.
 
 Never say the cap excludes earlier recorded spending or starts counting only
 after acceptance. Never ask for a starting balance, remaining balance or a

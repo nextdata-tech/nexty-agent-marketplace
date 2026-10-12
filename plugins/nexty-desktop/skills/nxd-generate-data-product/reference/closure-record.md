@@ -163,13 +163,18 @@ fall back to an undeclared export root.
 
 ## Credentials (omit this section entirely when there are none)
 
-This closure holds a live credential in plaintext.
+For a legacy literal profile, this closure holds a live credential in plaintext.
 - File: `infra-profile.yaml` — service <service-name>, keys: <key names only>
 - Rotate: replace the `value:` entries and rebuild the data product.
 - Do not commit or hand-zip this directory with the credential intact.
   `.gitignore` covers `infra-profile.yaml`. To share the product, use the
   supervisor's `export_data_product` tool: it strips every credential fail-closed
   and emits an `IMPORT.md` naming what the recipient must refill.
+
+For a Desktop-local reference, replace this paragraph with: "This closure
+contains an opaque local connection reference, not a credential value. The
+connection is stored but unverified until an admitted source fetch succeeds.
+An exported or moved copy needs a new native connection at its destination."
 ```
 
 Omit the credentials section **entirely** for a file/CSV closure — an empty "no

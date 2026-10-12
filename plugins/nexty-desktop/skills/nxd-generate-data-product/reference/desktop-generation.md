@@ -34,12 +34,14 @@ signature when needed, never treat a different installed version as verified.
 | Approved custom contracts | Use [custom contracts](custom-contracts.md) for exactly the declared verifier/wiring inventory; an empty inventory has no placeholder. |
 | Approved Decisions | Apply [decision-ledger projection](pre-capture-audit.md#decision-ledger-projection) once per Decision from the current prepared and consented blueprint, including explicit user-approved review rulings. Do not invent Decisions from session facts or unapproved review claims. |
 
-For an API source, after plan consent write `connectivity_check.py` first. With
-source access available, inspect every configured resource successfully before
-writing dependent closure artifacts. Only then batch independent authoring of
-models, spec, profile, transform, requirements, README and declared verifiers
-from the settled plan and verified response shape; do not batch across that
-probe dependency. A failed probe stops dependent authoring.
+For an API source with a Desktop-local connection, after plan consent author
+the public topology service and request the native masked entry. The direct
+`connectivity_check.py` probe defers credentialed execution for that reference;
+admitted validation performs the first authoritative fetch. Keep the approved
+response shape provisional until the admitted fetch supplies evidence. For a
+legacy literal API source, use the existing probe-first order: inspect every
+configured resource successfully before dependent authoring, and stop on a
+failed probe.
 
 The existing missing-credential exception permits structural authoring only:
 payload inspection and connectivity are **not run** and **unverified**; the

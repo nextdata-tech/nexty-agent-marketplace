@@ -7,7 +7,7 @@ allowed-tools:
   - Grep
 metadata:
   author: nextdata
-  version: 0.57.0
+  version: 0.58.0
 ---
 
 # Review a generated closure — adversarially
@@ -57,7 +57,11 @@ full pass did not finish. Never invent a finding to fill the remaining time.
    `requirements.txt`, `dp-blueprint.approved.md`, `dp-blueprint.lock.json`,
    `build-record.json`, `README.md`, the connector companion artifact where the type has one — and,
    for a credentialed source, `SENSITIVE` and `.gitignore`
-   — plus `data/` where the connector is file-based.
+   — plus `data/` where the connector is file-based. The sensitivity files in
+   this frozen inventory apply to legacy literal credentials. A Desktop-local
+   `attributesSecretRef` profile contains only public topology and an opaque
+   reference, so those files may be absent; its presence does not prove a
+   source fetch occurred or that the reviewer can use the connection.
 2. **The exact retained blueprint** — the file supplied as
    `review_input.retained_blueprint_path`.
 3. **The sanitized original request** — every user question and supplied

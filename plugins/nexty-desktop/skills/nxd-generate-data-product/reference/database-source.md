@@ -10,6 +10,7 @@
 - `transform/main.py` diff from the CSV template
 - `requirements.txt` additions
 - `spec.py` / `infra-profile.yaml` diffs
+- Legacy literal-credential compatibility shape
 - Self-check (connectivity smoke test)
 
 This is a sibling of the proven CSV connector documented inline in
@@ -50,12 +51,14 @@ table name and the model name never need to match.
 
 ## Credential handling — read this before shipping
 
-For CSV, the committed "connector config" is just a non-secret path. For a
-database connector it necessarily includes a real credential (host, user,
-password). That value is delivered by writing it into the `db-source`
-service's `attributes` in `infra-profile.yaml` — the desktop supervisor's
-`generic-secrets` driver reads it from there and merges it into the
-transform's `secrets` dict.
+For a native Desktop connection, put explicitly public destination topology
+(host, port, database, schema) in the `db-source` service's `attributes` and
+attach only the supervisor-returned `attributesSecretRef`. Collect one or more
+secret scalar fields (such as `user` and `password`) through the native masked
+prompt. Admitted validation injects selected fields into the transform's flat
+`secrets` map. See
+[`infra-profile-connections.md`](../../nxd-run-job-loop/reference/infra-profile-connections.md).
+The literal-attribute instructions below describe legacy compatibility only.
 **`secrets` is FLAT.** The supervisor merges every service named in
 `.secrets([...])` into one map. For a `generic-secrets` service the keys are
 exactly the `attributes` you wrote — the service name is not among them — so a `db-source` attribute `host` arrives as
@@ -71,7 +74,7 @@ been resolved.
   `reference/multi-source.md`.
 - The companion file `db-source-tables` holds **only non-secret topology** —
   one line per model, `<model>=<schema-qualified source table name>`.
-- The `db-source` service's `attributes` list carries the live payload as
+- On the legacy literal path, the `db-source` service's `attributes` list carries the live payload as
   **one entry per connection field**, each shaped `{"key": <field>, "value":
   <live value>, "public": <bool>}` — `host`, `port`, `database`, `schema`,
   `user`, `password` (see the sensitivity classification under Credential
@@ -90,10 +93,9 @@ been resolved.
   export and the recipient only refills the credentials. **Never mark a
   credential `public: true`.** If the user explicitly designates an attribute's
   sensitivity, honor their choice over this default.
-- **Never fabricate a credential the user hasn't supplied**, and never
-  narrate a raw password in chat — enter it into `infra-profile.yaml` exactly
-  as the user gave it, nowhere else.
-- **The closure directory itself now holds a live credential in plaintext.**
+- **Never fabricate or handle a credential value in an agent transcript.**
+  Use the native connection prompt when the runtime advertises it.
+- **A legacy literal closure directory holds a live credential in plaintext.**
   The `public:` flag only controls `export_data_product` redaction; it does not
   make `infra-profile.yaml` safe to commit, hand-zip, or hand off. Treat the
   whole closure directory as sensitive once this file carries a real password:
@@ -103,7 +105,7 @@ been resolved.
   `export_data_product` tool — it strips every attribute not marked
   `public: true` fail-closed, so **never mark a credential attribute
   `public: true`** (`public: true` means "safe to ship in an export").
-- **Emit the sensitivity artifacts in the same step that writes the
+- **On the legacy literal route, emit the sensitivity artifacts in the same step that writes the
   credential** — see [Sensitivity artifacts](#sensitivity-artifacts) below.
   Writing the credential and not the artifacts is an incomplete step, not a
   later cleanup.
@@ -131,11 +133,14 @@ label-prefixed attribute keys (`orders_host`) /
 
 ## Sensitivity artifacts
 
-The trigger is **structural**, not a judgement call: any `*-source` service in
-`infra-profile.yaml` with a populated `attributes` list. A file or CSV source
-keeps `attributes: []` and needs none of this. Emit all three in the same step
-that writes the credential — Phase C fails the closure if the first two are
-missing while a populated `attributes` list is present.
+The trigger is **structural**, not a judgement call: a legacy literal secret
+value in a `*-source` service's populated `attributes` list in
+`infra-profile.yaml`. A file or CSV source keeps `attributes: []` and needs
+none of this. Public topology attributes paired with a Desktop-local
+`attributesSecretRef` also need none of these plaintext-credential artifacts;
+the masked native prompt stores the secret outside the closure. Emit all three
+in the same step that writes a legacy literal credential — Phase C fails that
+closure if the first two are missing.
 
 1. **`.gitignore`** at the closure root, ignoring the credential file only:
 
@@ -247,8 +252,8 @@ vendor driver matched to the user's database — `psycopg2-binary` for Postgres,
   `.port("duckdb", ...)`, no `.semantic_tools()`) is identical to the CSV
   template.
 - `infra-profile.yaml`: third service named `db-source` (same driver
-  `nxd:generic-secrets:1.0.0`), with its `attributes` populated with the
-  live connection credentials:
+  `nxd:generic-secrets:1.0.0`), with public destination topology. Attach
+  the actual supervisor-returned `attributesSecretRef` after native entry:
 
   ```yaml
     - name: db-source
@@ -266,13 +271,11 @@ vendor driver matched to the user's database — `psycopg2-binary` for Postgres,
         - key: schema
           value: <live schema>
           public: true
-        - key: user
-          value: <live user>
-          public: false
-        - key: password
-          value: <the live password the user supplied>
-          public: false
   ```
+
+  Request native `user` and `password` fields with `masked_nonempty` (or
+  `masked_allow_empty` only when the source contract permits an empty value).
+  The in-memory transform receives those keys along with public topology.
 
   **No CSV export is required.** `db-source-tables` is the database table map
   and stays non-secret topology only. The transform reads database rows through
@@ -285,22 +288,45 @@ vendor driver matched to the user's database — `psycopg2-binary` for Postgres,
   / label-prefixed attribute keys such as `secrets["orders_host"]`) — see
   `reference/multi-source.md`.
 
+## Legacy literal-credential compatibility shape
+
+Profiles authored before native entry may still carry these private attributes.
+Recognise and preserve them; never author new private values on this path.
+New native Desktop connections use
+the masked prompt and opaque reference described above; never solicit these
+values in chat.
+
+```yaml
+  - name: db-source
+    driver: nxd:generic-secrets:1.0.0
+    attributes:
+      - key: user
+        value: <existing user>
+        public: false
+      - key: password
+        value: <existing password>
+        public: false
+```
+
 ## Self-check (connectivity smoke test)
 
 A database connector needs live credentials to dry-run at all — unlike CSV
 or another local file connector, there's no offline structural check that
-proves the data actually loads. When credentials are available in the
-authoring session, do **not** reuse the full `pipeline.run(...)` ingestion
+proves the data actually loads. On the legacy literal route, when credentials
+are available in the authoring session, do **not** reuse the full `pipeline.run(...)` ingestion
 path unmodified — pulling entire production tables just to prove
 connectivity is wasteful and, for large or sensitive tables, unnecessary
 risk. Instead call `.add_limit(1)` on each resource before running the
 pipeline (`source.resources[table_map[model]].add_limit(1)`) so the
 connectivity check pulls at most one row per model, then assert
 `row_count > 0` per model — **not** an exact fixture count, since live data
-isn't static. When credentials are not available in-session, report the
-connectivity self-check as **not run** — do not claim it passed. Structural
-checks (naming invariant, no `.semantic_tools()`, import correctness) still
-run regardless.
+isn't static. For a Desktop-local `attributesSecretRef`, do not run a credentialed
+authoring-time probe or read the private value; admitted validation performs
+the selected source fetch. Until then, report connectivity as **deferred** and
+source access as **unverified**. When legacy credentials are not available
+in-session, report the connectivity self-check as **not run** — do not claim it
+passed. Structural checks (naming invariant, no `.semantic_tools()`, import
+correctness) still run regardless.
 
 **Never let a probe's traceback reach the transcript unredacted.** A failing
 connection raises through SQLAlchemy, which masks the password in its own

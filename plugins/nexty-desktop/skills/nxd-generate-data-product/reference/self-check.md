@@ -116,9 +116,12 @@ those two phases rather than an accident of how they were added.
     reference inside the approved plan is exactly the dangling pointer this
     design removes. No carve-out is needed anywhere, because the plan is
     *copied* rather than *pointed at*;
-  - and — when `infra-profile.yaml` carries a populated `attributes:` list, i.e.
-    a live credential in plaintext — that `.gitignore` and `SENSITIVE` exist and
-    that `.gitignore` names `infra-profile.yaml`. Unchanged. The credential check
+  - and — when `infra-profile.yaml` carries legacy populated attributes that
+    may contain a live credential — that `.gitignore` and `SENSITIVE` exist and
+    that `.gitignore` names `infra-profile.yaml`. An opaque Desktop-local
+    `attributesSecretRef` with only explicitly public inline topology is
+    structurally deferred; it cannot prove the credential is stored or usable.
+    The credential check
     reports missing FILES only; it never reads or echoes an attribute value,
     because a check that prints the secret it found turns a contained file leak
     into a transcript leak.

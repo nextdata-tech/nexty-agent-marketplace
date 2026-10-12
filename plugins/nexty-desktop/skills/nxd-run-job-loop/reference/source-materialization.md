@@ -134,76 +134,56 @@ scope, and disclose its snapshot boundary; an agent-proposed choice is not that 
 
 ## Where credentials land
 
-A database or API credential lands in exactly one place: the generated
-`infra-profile.yaml` connector service's `attributes`. Never in chat, never in
-`dp-blueprint.md` (which names key names only), never in a subagent's prompt or
-return. Per-type shape is in `nxd-generate-data-product`'s `reference/database-source.md`
-and `reference/api-source.md`; labeled instances in its
-`reference/multi-source.md`.
+A database, API, storage, compute, or governance profile can need one or more
+scalar secret fields. Author its service with only explicitly public topology
+in `attributes`; keep credential values out of chat, `dp-blueprint.md`, agent
+prompts, and authored files. Read
+[`infra-profile-connections.md`](infra-profile-connections.md) for the native
+connection sequence and the distinction between stored and usable access.
+Per-type field shape is in `nxd-generate-data-product`'s connector references.
 
-**How the value gets there, in order of preference.** A pasted credential is in
-conversation history for good, and history is the one surface `SENSITIVE`,
-`.gitignore` and `chmod 0600` cannot reach — the same reasoning that keeps a
-credential out of a subagent's prompt (`reference/scheduling.md`) applies to the
-main thread, which is also a transcript. So prefer a route where you never see
-the value:
+Before asking for source access, check `get_workflow_capabilities` and the live
+MCP catalog. When `infra_profile_connections.native_entry` is true, author the
+nonsecret service in a dedicated source-preparation sibling of the executable
+closure, never its parent or ancestor, once its public destination and scope
+are settled. For example, `…/nxd-jobs/<workflow>/source-preparation/` is beside
+`…/nxd-jobs/<workflow>/closure/`, not their shared parent. Only public topology
+and the opaque reference belong in this sibling; no executable artifacts. This separate source step
+can happen before the complete build plan is approved, including when the user
+asks where to enter a key. Inspect reusable connections for that service, then
+use `begin_infra_profile_connection` only if none is uniquely compatible. The
+user enters each field in a masked native prompt. Attach only the returned
+opaque `attributesSecretRef` to the service. Do not generate an executable
+closure or fetch source data to collect the credential. Preserve the service's
+bound public identity when the approved plan later generates the closure, and
+inspect compatibility at that final root before reusing the reference. A
+stored connection is `stored_unverified`: admitted source execution must still
+fetch successfully. A changed destination or scope needs a new native binding.
+Rotation and disconnection are explicit connection actions; native storage
+approves neither a workflow nor spending.
 
-A names-only shell environment probe establishes only which variable names are
-visible to the checking process. Presence or absence does not establish the
-supervisor's startup environment, selected profile or credential allowlist,
-nonempty credential validity, or usable source permissions. Keep three claims
-distinct: no safe native intake surface exists; this particular probe found no
-credential name; authoritative runtime evidence verified source access. Neither
-presence nor absence in a names-only probe proves the third claim. Without that
-authoritative evidence, report "Runtime source access remains unverified";
-do not claim the supervisor has or lacks access from the shell probe alone.
-This diagnostic check must not read or print secret values, inspect secret
-configuration or invent an intake/status tool. It does not replace or prohibit
-the authorized off-transcript substitution route below, whose write-time check
-rejects a missing or empty value without exposing it.
+For source-credential recovery, never ask for an env-variable name or give
+commands, OS setup, or restart instructions. If the capability is unavailable,
+report the source-access blocker and an evidenced action to connect an updated
+Desktop runtime. For `state_unavailable`, report that connection state could
+not be read or stored and keep this source step blocked. Do not infer a login
+requirement, tell the user to open an app, or claim waiting cannot help. Resume
+the existing request after actual recovery; do not ask for broader approval
+just to repeat this access step. Never request a YAML credential edit, a file
+containing a key, or a value in chat. A chat connector does not supply the
+Desktop runtime credential. If the user volunteers a value anyway, do not echo
+or copy it; explain that it is in conversation history and should be rotated.
+Do not substitute a file export for a requested live source unless the user
+independently changes source scope.
 
-1. **An environment variable already visible to your own tooling.** This is
-   the only off-transcript route Desktop and Cowork have today. It is
-   narrower than it sounds. A variable the user exports in their interactive
-   shell *after* the session starts is not visible to your tool calls, which run
-   in a separate process: reading it raises `KeyError`, or yields an empty string
-   you would then write into the profile as though it were the credential. It
-   works only when the variable is already in the environment your tools inherit
-   — this is an already-present condition, not a setup instruction for the user.
-   Given that, substitute it when writing the profile by reading `os.environ`
-   **inside** the script — never as a shell-expanded `$TOKEN` on a command line,
-   which lands the value in the transcript exactly as a paste would. Have that
-   script fail loudly on a missing or empty key rather than write a profile with
-   a hollow credential in it, and when the variable turns out not to be visible,
-   go to route 2 rather than asking the user to re-export and retry.
-   `generic-secrets` stores a literal string and does not interpolate, so the
-   substitution happens at write time, not at run time. The agent owns the
-   write, preserving `0600`, `.gitignore` and `SENSITIVE`, then checks
-   connectivity without echoing the value.
-2. **Otherwise, an access blocker.** Desktop has no secure credential-intake
-   surface yet: no MCP tool or `get_workflow_capabilities` field accepts a
-   source credential off-transcript, and a chat connector does not hand its
-   credentials to the runtime. So when route 1 does not apply, a credentialed
-   database or API source is **blocked in Desktop**. Say so plainly, per
-   [user-facing-language.md](user-facing-language.md) § Asking for source
-   access. Only after an independent user request to change source scope to a file
-   export or a source needing no credential, record that changed scope; never offer
-   or solicit that substitute. Never ask the user to run commands, edit
-   YAML, create credential files or fill placeholders in place of the missing
-   surface, and never invent an intake tool. When the runtime adds a named
-   intake surface, this route is where it goes.
-   For source-credential recovery, never ask for an env-variable name, offer OS
-   setup, or tell the user to export a variable, set launch-time environment or
-   restart the app. No current secure intake surface can be inferred from a
-   connector attachment or the existence of a native spending prompt.
-3. **Pasted into chat — last resort, only if already volunteered.** This is
-   handling for an unsolicited value, never an offered intake option. If the user supplies it this way anyway,
-   do not echo it back, and say plainly that it now lives in conversation history
-   where no closure guard reaches it, so the credential should be rotated after
-   the build.
-
-Never invite route 3: report the blocker instead of asking for the credential.
-If the user pastes it anyway, route 3 applies and the build can proceed.
+A names-only shell environment probe establishes only which variable names
+are visible to the checking process. Presence or absence does not establish
+the supervisor's startup environment, selected profile or credential allowlist,
+nonempty credential validity, or usable source permissions. Runtime source
+access remains unverified; do not claim the supervisor has or lacks access
+from the shell probe alone. This diagnostic check must not read or print
+secret values, and must not be run during first-plan discovery. Native
+connection and admitted source-execution evidence remain authoritative.
 
 Mapper provider keys are a separate matter: they stay in the supervisor's
 secure store and never reach the profile.

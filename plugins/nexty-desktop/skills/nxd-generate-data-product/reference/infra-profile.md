@@ -43,8 +43,11 @@ exists — no extra service, no extra secret, no profile change.
 **Other connector types.** Only the third service's *name* changes; see the
 [source types index](source-types.md) for canonical service names and recipes.
 `csv-source` and `file-source`
-carry no credential and keep `attributes: []`; `db-source` and `api-source`
-populate `attributes` with the real credential — see
+carry no credential and keep `attributes: []`. For `db-source` and `api-source`,
+the Desktop-native route keeps only public topology in `attributes`, attaches
+the supervisor-returned `attributesSecretRef`, and collects secret fields in a
+masked native prompt. The legacy literal route populates `attributes` with the
+real credential — see
 [`database-source.md`](database-source.md) and [`api-source.md`](api-source.md).
 For 2+ instances of one type, emit one service per instance, per
 [`multi-source.md`](multi-source.md).
@@ -53,9 +56,11 @@ For 2+ instances of one type, emit one service per instance, per
 
 **`attributes` is live input, not documentation.** For every service the
 transform names in `.secrets([...])`, the supervisor reads that service's
-`attributes` and delivers them to `ingest(...)` as its `secrets` argument. This
-is the whole delivery mechanism for a credential: nothing else in the closure
-carries one, and nothing else needs to.
+authored `attributes`. On an admitted Desktop-native run, it resolves the
+selected service's `attributesSecretRef` outside the closure and adds its
+private fields to the same flat map delivered to `ingest(...)` as `secrets`.
+The authored profile carries only public topology and the opaque reference on
+that route; the legacy literal route keeps credential values in `attributes`.
 
 Four properties follow from how it delivers them, and each one has bitten a
 closure that assumed otherwise:
@@ -66,9 +71,10 @@ closure that assumed otherwise:
   `secrets["host"]` — there is no `secrets["db-source"]` or `secrets["db_source"]`
   level to index first, and reading one raises `KeyError` at transform time,
   after the credential has already been resolved.
-- **Only declared services contribute.** A populated `attributes` list on a
-  service absent from `.secrets([...])` delivers nothing. The profile declares
-  what exists; `spec.py` decides what the transform receives.
+- **Only declared services contribute.** An authored attribute or native
+  private field on a service absent from `.secrets([...])` delivers nothing to
+  the transform. The profile declares what exists; `spec.py` decides what the
+  transform receives.
 - **`attributes: []` contributes no attribute *keys*** — but the service is not
   therefore absent from the map. `csv-source` and `file-source` receive their
   export root as a single key contributed by their own driver, so an ordinary
@@ -107,7 +113,7 @@ supervisor-compiled and hand-authoring it is forbidden.
 
 ## `csv-source-path`
 
-The closure also carries `csv-source-path` — one line, the **relative** path
+An actual CSV-source closure also carries `csv-source-path` — one line, the **relative** path
 from the closure root to the CSV export root (e.g. `data`). The supervisor
 resolves it inside the pinned snapshot; an absolute path escapes the snapshot
 and fails.
