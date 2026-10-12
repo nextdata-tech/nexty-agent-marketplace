@@ -15,6 +15,7 @@ do not fall back to a direct CLI or local substitute.
 - [Run and report the review](#run-and-report-the-review)
 - [Follow returned actions through admission](#follow-returned-actions-through-admission)
 - [Mapper approval](#mapper-approval)
+  - [Cumulative folder budget](#cumulative-folder-budget)
 - [When validation fails](#when-validation-fails)
 - [Reset after behavior changes](#reset-after-behavior-changes)
 
@@ -137,6 +138,19 @@ covered as its own path: list `v3:terms[<id>].priority` in `echo.coverage` for
 each such term, next to that term's `.text` entry. The prose sentence alone
 fails with `v3.echo.default_uncovered`.
 
+This priority describes glossary-term importance, used to filter or sort
+definitions; it is not an issue's business priority, score or rank by default.
+An omitted, platform-fixed value needs no separate priority-selection question.
+Keep the required disclosure brief and group terms that share the same default,
+naming every affected term and retaining literal `P3` and `default`. For example:
+"The Open issue, Priority score and Rank definitions use standard glossary
+importance (P3 default); issue ordering follows the scoring rules above."
+Use that distinction only when the approved plan does not use glossary importance
+as a business or governance rule. Preserve explicit priorities, their disclosures
+and any result-changing governance choice; approval still covers the whole
+prepared plan. The current checker requires raw `P3`/default disclosure in the
+human echo, so a guidance-only clarification cannot remove it.
+
 Input expectation and output promise source entries each have exactly `id`,
 `model`, `guarantee`, `rule`, and `fields`. Compiled contracts each have exactly
 `id`, `attachment`, `model`, `phase`, `guarantee`, `rule`, and `fields`; copy the
@@ -199,6 +213,20 @@ consumers, but it is only a location hint: even when it is present, regenerate
 the complete proposal.
 
 ### Revised or successor plan
+
+Approved rules and code remain pinned; this does not freeze live source data.
+Each admitted live-source run refetches source data. When a mapper is part of the
+approved plan, that run invokes its bound mapper under the applicable spending
+approval and all admission gates. Querying or
+reopening an existing publication alone does not refetch or rescore it. Claim a
+fresh fetch or mapper execution only from evidence of that admitted run; never
+substitute a chat-connector fetch or agent-scored file for in-product execution.
+Pinned state alone does not establish that a refresh requires a new version.
+Use returned runtime capability/state evidence before claiming that requirement;
+preserve the documented behavior-changing revision/new-ID and explicit consent
+requirements. A source-access blocker is not a request to change source scope:
+never offer or solicit a chat/file substitute, even as a separate publication.
+Only an independent user request to change source scope permits that different plan.
 
 A refresh, new-version, or successor request starts here, before you draft the
 plan, and not only after a failure. The source may have changed since the
@@ -369,6 +397,23 @@ itself; do not change the proposal after consent.
 
 Find the consent action in `next_actions`. After the user approves the exact
 blueprint read-back, call `advance_workflow` with `session_decision`.
+
+Interpret authorization by the explicitly authorized object and limits, never
+the word "approved" alone. Permission to inspect access, check connectivity or
+draft a plan is not consent to the complete prepared blueprint. For example,
+"Approved to check whether Nexty already has access. Do not start paid scoring
+until the shared spending limit is accepted and the recorded usage is verified."
+authorizes only that access check: keep plan consent pending, do not relay this
+quote as the plan's `session_decision`, and do not generate, build or publish.
+Perform only supported checks within the user's authorization; an access-check
+permission does not authorize pre-consent closure artifacts or bypass their
+generation gate. If the user has not approved the complete prepared read-back,
+ask for that specific approval before relaying plan consent.
+
+Conversely, explicit approval of the complete prepared plan may satisfy plan
+consent and permit generation even when the user separately withholds paid
+scoring. That plan approval does not accept a cumulative budget, grant mapper
+spending or bypass native approval, verified budget state or any admission gate.
 
 A bare reply such as "yes", "sure", "fine" or "ok" that names nothing settles
 nothing. It is not approval of the read-back, and it does not choose among
@@ -895,6 +940,75 @@ confirms, a recapture, a fresh review and a fresh OS approval. Never
 widen a grant yourself to get past a refusal. Never retry `start_requirement`
 in a loop: each call can put a dialog in front of the user.
 
+### Cumulative folder budget
+
+The per-approval and per-mapper-spec ceilings above remain in force. A separate
+experimental cumulative cap is optional and applies to recorded mapper ledgers
+in one Nexty data folder: every specification and workflow, including earlier
+approvals, revoked ledgers, verified tombstones, uncertain attempts and open
+reservations. It does not cover other Nexty folders, scoring outside Nexty, or
+other sessions that were already running when the cap was enabled. It assumes
+the folder is not replaced or restored from an older copy. Reset, refresh,
+repair, removal and specification changes cannot reset or lower its ceilings
+or floors; removal may settle a reservation and increase recorded usage.
+
+First call `get_workflow_capabilities` and read its structured
+`mapper_budget` field. It reports `availability`, the runtime-provided
+`inspect_tool` and `proposal_tool` names, `scope: data_folder`,
+`experimental: true` and `reset_supported: false`. Treat the capability as
+available only when `availability` is `available`; a tool-catalog listing is
+not a substitute. When available, call the returned inspection tool before
+paid scoring and use its returned data-folder identity and status. Call the
+returned proposal tool only with limits the user explicitly stated; never fill
+missing dimensions from examples or ask for a starting balance. A proposal
+records requested limits but does not activate them.
+If a required limit is missing, ask only for that limit before proposing.
+Convert USD to integer millionths for `max_usd_micros` ($1 is 1,000,000);
+divide returned `usd_micros` by 1,000,000 when reporting dollars.
+
+Inspection distinguishes `status: legacy|proposed|established`,
+`state: open|exhausted|integrity|null`, and
+`completeness: not_applicable|complete|unknown`. Legacy or proposed records
+have no established budget state (`state: null` and
+`completeness: not_applicable`). The cap becomes active only after native
+approval succeeds and inspection confirms an established, complete, open
+budget. If the user requested a cumulative cap but `mapper_budget` is missing
+or does not report `availability: available`, stop paid scoring and report
+that the connected install cannot enforce it; unpaid work may continue. Do not
+invent a command or alternate tool. Without a user request for a cumulative
+cap, preserve the existing approval and per-spec behavior.
+
+For legacy/proposed status, `state: null`, `completeness: not_applicable`,
+`unknown_reasons: []` and null `used`/`remaining` mean no active cumulative cap;
+they are not an integrity failure or a reason to demand a starting balance.
+`legacy` is a no-accepted-cap state in the current API, not an instruction to
+switch to old APIs or compatibility commands. Keep using the advertised current
+MCP tools; tell the user that no cumulative cap is active rather than calling
+their setup legacy.
+When the capability is available and the user stated all three limits, call the
+returned proposal tool for a legacy/proposed folder, then await native Establish
+approval and inspect again. Establish re-verifies and adopts the earlier
+recorded ledger history, including earlier approvals, in that same active
+runtime data folder. It does not count only spending since acceptance. Until
+verified inspection supplies totals, do not assert an earlier amount, ask for
+remaining balance, consult a provider dashboard, or ask the user to estimate
+past usage. Do not propose around an established unknown/integrity or exhausted
+budget; those states still stop paid scoring.
+
+The inspection's `data_dir` identifies the active runtime folder whose ledger
+history is counted. An authoring, export or job folder is distinct: it neither
+selects the budget folder nor removes its earlier history. Keep the runtime
+folder identity internal; never choose another folder to escape a cap.
+
+For `completeness: unknown` or `state: integrity`, `used` and `remaining` are
+null. Pause paid scoring, continue unpaid work where possible, and never
+reinterpret null as zero or ask the user to estimate historical usage. For
+`state: exhausted`, paid scoring in this folder is finished. Do not propose a
+raise, reset or disable. Report verified call, token and USD amounts only when
+inspection provides them. A recorded zero means only that no earlier AI
+scoring is recorded in this data folder; it never means the whole test or
+experiment spent zero.
+
 | Code | Meaning | Tell the user | Next action |
 |---|---|---|---|
 | `workflow/mapper_scope_invalid` | The grant is missing, malformed, not strictly typed, or has an unknown key. `provider` must be exactly `anthropic`, `max_calls` and `max_tokens` positive integers, `max_usd` positive, `expires_at` a future RFC3339 time, `recurring` a bool. Also raised when both grant paths exist or the spec is missing. No prompt was shown. | The grant needs correcting before it can be shown for approval. | Fix the grant shape in the authoring closure (confirm any scope value with the user), reset capture, recapture, review, then request approval again. |
@@ -910,7 +1024,11 @@ in a loop: each call can put a dialog in front of the user.
 | `workflow/approval_cooldown` | A request for the same mapper subject came too soon after a decline or cancel. | A short wait applies after a decline. | Do not poll. Tell the user, and request again only when they ask after the cooldown. |
 | `workflow/approval_interrupted` | The supervisor restarted while a prompt was open. | The prompt was lost when the supervisor restarted. | Ask whether to prompt again; request again only on their yes. |
 | `workflow/approval_surface_unavailable` | The OS dialog could not be shown. | Approval cannot be collected on this machine right now. | Stop and report the code. Never substitute a chat "yes" for the dialog. |
-| `workflow/approval_ceiling_reached` | The approval's call, token or USD ceiling, or the spec's lifetime USD ceiling, is spent. | The approved budget is used up. | Stop and report spend. A new budget needs a fresh approval that the user asks for; follow only the returned actions. |
+| `workflow/approval_ceiling_reached` | The per-approval call, token or USD ceiling, or the mapper-spec lifetime USD ceiling is spent. | The current approval or spec limit is used up. | Stop this run and report. A wider per-approval or per-spec grant requires fresh approval only if the user asks; it cannot raise an established cumulative folder cap. If that folder cap is exhausted, paid scoring there remains finished. |
+| `workflow/mapper_budget_reached` | The cumulative folder-wide call, token or USD cap is exhausted; an in-flight attempt may still settle at its full reservation. | Paid scoring in this data folder is finished. | Stop paid scoring. Do not retry, move folders, or propose a higher cap. |
+| `workflow/mapper_budget_unknown` | The cumulative total cannot be verified, including when its integrity key or recorded history is unavailable. | I can’t verify the cumulative total for this data folder, so paid scoring is paused. | Continue unpaid work where possible. Do not claim zero, estimate past usage, or edit supervisor state. |
+| `workflow/mapper_budget_changed` | The approval binding no longer matches the folder budget state. | The folder budget changed before this approval could be used. | Inspect current state and follow returned actions for a fresh approval; do not reuse a stale binding. |
+| `workflow/mapper_budget_mismatch` | A proposed limit differs from the established folder cap. | This folder’s existing cap cannot be changed in this version. | Keep the established limit; do not raise, reset or disable it. |
 | `workflow/mapper_subject_changed` | The approved capture no longer matches what is being admitted. | The approved closure changed, so the approval no longer applies. | Stop and report. Do not retry; a legitimate change goes through reset, recapture, review and fresh approval. |
 | `workflow/mapper_integrity` | The approval or spend ledger failed its integrity check, the supervisor's state key is unavailable, or a lookup the gate depends on failed. The supervisor fails closed. | Approval records could not be verified. | Stop and report the code. Do not edit or delete supervisor state. |
 
@@ -927,7 +1045,7 @@ report. Every other contract failure still fails.
 | `validation/mapper_scope_invalid` | `repair_then_retry` | The supervisor could not read the mapper proposal (spec or grant). Fix the files in the authoring closure, then reset capture, recapture, review and validate again. |
 | `validation/mapper_approval_missing` | `stop` | The mapper closure reached validation with no approval binding. Report it; do not work around it. |
 | `validation/mapper_subject_changed` | `stop` | The pinned closure does not match the approved one. Report it as a bug or tampering; do not retry. |
-| `validation/mapper_ceiling_exceeded_in_scratch` | `repair_then_retry` | The scratch run would exceed the approved ceilings. Reduce what the transform maps, or ask the user whether they want to approve a larger budget (edit, recapture, review, fresh approval). |
+| `validation/mapper_ceiling_exceeded_in_scratch` | `repair_then_retry` | The scratch run would exceed the per-approval or per-spec ceilings. Reduce what the transform maps, or ask whether the user wants to widen that per-run grant (edit, recapture, review, fresh approval). This does not raise an established cumulative folder cap; when that cap is exhausted, paid scoring in the folder stops. |
 | `validation/mapper_grant_refused` | `repair_then_retry` | The transform asked for a model outside the grant, or sent a request shape the broker refuses. Make the transform use the granted model and an allowed request; a different model needs the user's fresh approval. |
 | `validation/mapper_provider_unavailable` | `stop` | The validation stub is not available in this supervisor build, or the scratch run tried to reach a real provider. Report it. |
 | `validation/mapper_output_unverified` | advisory | Not a failure. Report that mapper outputs were not checked against their contracts in scratch. |

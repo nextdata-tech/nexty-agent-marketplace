@@ -177,9 +177,13 @@ not receive a DLT loader or connection context.
 
 For a true database or API source, do not pretend the same local runtime can
 run a custom input expectation. Explain that input custom verification is not
-supported on the CSV-first desktop path and either obtain a CSV export or omit
-the executable expectation. Never emit a decorative script that is not wired
-to an input.
+supported on the CSV-first desktop path and stop the current approved inventory.
+Do not omit its verifier or offer a live API-to-CSV workaround. A change to the
+phase or guarantee requires an explicit recorded scope decision, amended proposal,
+fresh prepare and fresh consent; a supported output promise is not a mechanical
+substitute for a pre-transform guarantee. A different source scope is permitted
+only after an independent user request. Never emit a decorative script that is
+not wired to an input.
 
 An output promise may be generated for another connector only when the actual
 output storage and contract compute context are known to support the verifier.
