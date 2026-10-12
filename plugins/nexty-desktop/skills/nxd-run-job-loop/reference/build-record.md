@@ -684,7 +684,7 @@ honesty is visible in the file rather than only in someone's head.
 |---|---|---|---|
 | structural (`struct.`, `closure.`, `policy.`) | `agent` | must self-heal, bounded | `healed`, `healed_with_concessions`, `caps_exhausted`, `blocked` |
 | runtime user code (`runtime.`) | `agent` | must self-heal, bounded | same |
-| runtime environment (`env.`, some `publish.`) | `environment` | retry, or ask for a credential; **does not count against materialization** | `retry_environmental` |
+| runtime environment (`env.`, some `publish.`) | `environment` | retry only when justified by supervisor-returned evidence; restore source access through the existing supported route in [source-materialization.md](source-materialization.md#where-credentials-land), otherwise report the blocker; never solicit a secret, whole profile or env/OS setup, or loop on known-blocked access; **does not count against materialization** | `retry_environmental` |
 | blocker (`blocker.`, and `spec.` findings the agent must not invent) | `user` | write back into `open_questions`; the spec un-approves | `blocked` |
 | concession (`concession.`) | `agent` | green **with a disclosed concession** | `healed_with_concessions` |
 

@@ -303,9 +303,29 @@ refusal reaches the harness as `GrantError`, and an exhausted ceiling as
 `BudgetExceededError`. Never put a key, token or base URL in the closure or
 the environment as a workaround.
 
-**Widening needs a fresh approval.** A new model, higher ceilings, a later
-expiry or `recurring: true` changes the grant. That means recapture, a fresh
-review and a new OS approval. With `recurring: false`, an approval is spent by
+An optional experimental cumulative cap can also cover every mapper ledger in
+one Nexty data folder, across specifications and workflows. First read
+`get_workflow_capabilities.mapper_budget`; only when it reports
+`availability: available` use its returned inspection and proposal tool names.
+When available, inspect before paid scoring; the folder-wide cap is active only
+when its returned state is established, complete and open. The proposal records
+limits but does not activate them and must use only limits the user explicitly
+stated. If the user requested a cap but the capability is missing or
+unavailable, stop paid scoring while unpaid work may continue. Unknown or
+integrity-failed totals pause paid scoring; exhausted totals end paid scoring in
+that folder.
+The cumulative cap excludes other data folders, scoring outside Nexty, and
+sessions that were already running when it was enabled. Folder replacement or
+restore from an older copy is outside its guarantee. Do not ask the user for
+historical usage or describe no earlier recorded scoring as zero for the whole
+test. The `nxd-run-job-loop` skill's `reference/workflow-v2.md` defines
+inspection, consent, states and refusals.
+
+**Widening a per-run grant needs a fresh approval.** A new model, higher
+per-approval or mapper-spec ceilings, a later expiry or `recurring: true` changes
+the grant. That means recapture, a fresh review and a new OS approval. The
+cumulative folder cap cannot be raised, reset or disabled in this version. With
+`recurring: false`, an approval is spent by
 the first publication it admits. After that, admission reports it as
 `workflow/approval_expired`. Recapturing a changed closure moves the subject
 and invalidates the approval on purpose.

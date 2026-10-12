@@ -115,16 +115,20 @@ declared CSV source-aligned input bound to the `csv-source` service. A product
 whose source is a REST API or a database declares no such input — there is
 nowhere to attach one — so those expectations cannot execute at that phase.
 
-State the guarantee under the corresponding **Output's `#### Promises`**
-instead, against the landed relation. Same rule, same columns, verified after
-the transform rather than before it. On this runtime the landed relations *are*
-DuckDB tables, so that is where they are checkable at all.
+Stop the current approved inventory and preserve the live source. A phase change
+requires an explicit recorded scope decision, amended proposal, fresh prepare and
+fresh consent; do not silently move the expectation to an Output or offer a CSV
+export as a workaround. A different source scope is allowed only after an
+independent user request.
 
-The cost is worth naming in a Decision, because it is real and one-directional:
-a violation is caught after the rows have landed rather than before, so a bad
-fetch produces a failed promise rather than a refused ingest. What it does not
-cost is the guarantee — the same predicate over the same columns still runs, and
-still fails the build.
+If the user approves post-transform verification, the same predicate and
+columns may become a corresponding **Output's `#### Promises`** only when the
+landed relation includes those columns and the actual output storage and
+contract compute context support that verifier. Record the phase shift in a
+Decision: a violation is then caught after rows land, as a failed promise rather
+than a refused ingest. Until that runtime support is verified, do not claim the
+promise will execute or fail the build; explain the gap and keep the guarantee
+as prose with no executable contract if the user chooses that scope.
 
 Authoring an API- or database-backed Input with executable expectations is not
 caught by the prose validators; it surfaces as
@@ -179,6 +183,13 @@ The extraction layer derives a stable local id and NXD-compatible metadata:
 term in this document. External glossary DPs, URLs, and implicit external
 definitions are not supported. Omitted priority uses NXD's P3 default and is
 disclosed in the echo-back.
+This is glossary-term importance for filtering or sorting definitions, not a
+business issue score or rank by default. An omitted platform-fixed value is not
+a separate user decision: group its required disclosure briefly by affected
+term names, retaining `P3`, `default` and each term's coverage. Preserve explicit
+priorities and any approved business or governance use of glossary importance;
+do not treat those consequences as incidental metadata. The current checker
+still requires the raw default disclosure in the human echo.
 
 ### A Term relative to the clock must name its anchor
 

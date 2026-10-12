@@ -14,7 +14,7 @@ allowed-tools:
   - Task
 metadata:
   author: nextdata
-  version: 0.56.0
+  version: 0.57.0
 ---
 
 # nxd-generate-data-product skill
@@ -39,10 +39,10 @@ Compile faithfully: keep every Model and Output name exactly as approved and cov
 
 **Connector types** — see the [source types index](reference/source-types.md) for the canonical source matrix and source-specific recipes. Names are for exactly one instance of a type; for 2+, label each per `reference/multi-source.md`.
 
-For `api-source`, the only absent companion is the endpoint map from `endpoint_<model>` profile attributes; require the closure-local `connectivity_check.py` probe and make it pass before authoring. Specialized API profiles keep the `api-source` service name, add a non-secret `source_kind`, and require an atomic eval covering pagination, credential, authorization, and row shape. The **desktop supervisor** compiles `spec.py` into kernel definition YAML, pins and boots the output directory, runs the transform, verifies staging, and stands up the semantic MCP endpoint. Return facts and a structured handoff to `nxd-run-job-loop`; the owning loop translates status, failures, costs, and publication state into plain chat without copying raw internal output; see [user-facing language](../nxd-run-job-loop/reference/user-facing-language.md).
+For `api-source`, the only absent companion is the endpoint map from `endpoint_<model>` profile attributes; require the closure-local `connectivity_check.py` probe and make it pass before dependent authoring when source access is available. The explicitly unverified missing-credential exception below permits structural authoring only. Specialized API profiles keep the `api-source` service name, add a non-secret `source_kind`, and require an atomic eval covering pagination, credential, authorization, and row shape. The **desktop supervisor** compiles `spec.py` into kernel definition YAML, pins and boots the output directory, runs the transform, verifies staging, and stands up the semantic MCP endpoint. Return facts and a structured handoff to `nxd-run-job-loop`; the owning loop translates status, failures, costs, and publication state into plain chat without copying raw internal output; see [user-facing language](../nxd-run-job-loop/reference/user-facing-language.md).
 ## The closure layout
 
-Choose and normalize one absolute `<dp-root>` — the exact directory submitted through the supervisor's returned `capture` action — **BEFORE authoring any artifact**. Move or recreate existing closure files into it before creating/checking another. Every closure artifact must be inside `<dp-root>`: root-level artifacts are direct children, nested artifacts are descendants. This includes `spec.py`, `models.py`, `transform/`, `requirements.txt`, `infra-profile.yaml`, connector-specific artifacts such as `connectivity_check.py` for API sources, and (for credentialed sources) `.gitignore` and `SENSITIVE`. A declared custom contract additionally requires exactly one verifier under `contracts/expectations/` or `contracts/promises/` plus its matching `spec.py` wiring; an empty inventory has no contract placeholder. For an `api-source`, write the closure-local `connectivity_check.py` first **after** `prepare_workflow` returns its consent subject and the operator's explicit approval has been relayed through `session_decision`; it is the first post-consent closure artifact, not a pre-consent exception. Until its credentialed probe has inspected every configured endpoint successfully, do not write `infra-profile.yaml`, `.gitignore`, `SENSITIVE`, `spec.py`, `models.py`, `transform/`, `requirements.txt`, or `README.md`. Then use it for the payload-inspection gate described in [reference/api-source.md](reference/api-source.md#payload-inspection-gate--before-authoring).
+Choose and normalize one absolute `<dp-root>` — the exact directory submitted through the supervisor's returned `capture` action — **BEFORE authoring any artifact**. Move or recreate existing closure files into it before creating/checking another. Every closure artifact must be inside `<dp-root>`: root-level artifacts are direct children, nested artifacts are descendants. This includes `spec.py`, `models.py`, `transform/`, `requirements.txt`, `infra-profile.yaml`, connector-specific artifacts such as `connectivity_check.py` for API sources, and (for credentialed sources) `.gitignore` and `SENSITIVE`. A declared custom contract additionally requires exactly one verifier under `contracts/expectations/` or `contracts/promises/` plus its matching `spec.py` wiring; an empty inventory has no contract placeholder. For an `api-source`, write the closure-local `connectivity_check.py` first **after** `prepare_workflow` returns its consent subject and the operator's explicit approval has been relayed through `session_decision`; it is the first post-consent closure artifact, not a pre-consent exception. When source access is available, until the probe has inspected every configured endpoint successfully, do not write `infra-profile.yaml`, `.gitignore`, `SENSITIVE`, `spec.py`, `models.py`, `transform/`, `requirements.txt`, or `README.md`. Missing credentials permit structural authoring from the settled plan only: mark payload inspection and connectivity **not run** and **unverified**, leave the closure incomplete, and never claim source validation or invent an intake workaround. Follow the single payload-inspection gate described in [reference/api-source.md](reference/api-source.md#payload-inspection-gate--before-authoring).
 Never place credentials, `SENSITIVE`, `.gitignore`, or the profile beside/above `<dp-root>`; split artifacts must be consolidated first. Use this same root for capture; supervisor capture owns reserved metadata and trusted checks.
 
 The author emits **executable closure inputs only**. Supervisor capture
@@ -104,6 +104,7 @@ keys.
 ## Workflow
 
 When the connected desktop supervisor advertises v2 execution, the owning job-loop must use its capability-gated construction sequence in the nxd-run-job-loop skill's `reference/workflow-v2.md`: call `get_workflow_capabilities` and `prepare_workflow`, relay `session_decision` exactly, capture and review retained paths, report through `report_requirement`, and follow `next_actions` through admitted `start_run`. This skill never supplies a legacy construction fallback.
+Use [current Desktop generation](reference/desktop-generation.md) to select the source, mapper and approved-inventory references once; the existing compiler consumes authored Python, not a turnkey scaffold.
 **Workflow-v2 contract inventory is a hard generation invariant.** Every typed-v3
 Input expectation and Output promise (and every proposal contract derived from
 them) produces exactly one verifier script under `contracts/` and exactly one
@@ -112,10 +113,10 @@ name, attachment, model, phase, guarantee, rule, and fields through unchanged;
 ordinary `.promise(model)` does not satisfy a custom contract. Add no extra
 custom contract, placeholder, or decorative unwired script: supervisor capture
 and preflight reject both missing and extra inventory. For an API source, a
-custom input expectation is unsupported on the CSV-first runtime; fail/ask and
-move the approved guarantee to a supported output promise rather than emitting
-an unwired decorative contract; ask for an approved supported output-promise
-phase or a CSV export. Wire each output promise when its runtime is supported;
+custom input expectation is unsupported on the CSV-first runtime; stop the current
+inventory rather than emitting an unwired decorative contract or omitting it.
+A phase/guarantee change requires an explicit recorded scope decision and fresh
+prepare/consent; never offer a live API-to-CSV workaround. Wire each output promise when its runtime is supported;
 do not invent contracts from inferred schema facts.
 The nxd-run-job-loop handoff MUST carry `job_helper_dir`, an already-resolved absolute installed-skill directory. Set `JOB_HELPER_DIR` to that exact value; if it is absent, return to nxd-run-job-loop — never reconstruct it from the closure or this skill's cwd.
 **Selective-install dependency:** this skill needs **nxd-run-job-loop** at runtime for the approved-spec validator, lock writer, and build-record helpers. A selective install must include both skills; installing `nxd-generate-data-product` alone is not a supported substitute for that handoff. For any `api-source`, follow the single authoring gate in [reference/api-source.md](reference/api-source.md#payload-inspection-gate--before-authoring): the closure-local stdlib probe is authored first and, when credentials are available, runs before the remaining closure artifacts. Missing credentials permit structural authoring from the settled plan only; payload inspection and connectivity are then **not run** and **unverified**, so source validation and the complete happy path must not be claimed.
@@ -127,14 +128,13 @@ The nxd-run-job-loop handoff MUST carry `job_helper_dir`, an already-resolved ab
   its `Models` and `Transform` sections are the plan, its explicit `Outputs`
   are the only user-visible products, and `Decisions` becomes `data/nxd_decisions/nxd_decisions.csv` through the one-to-one mechanical projection in [reference/pre-capture-audit.md](reference/pre-capture-audit.md): typed `locked` becomes ledger `confirmed`, typed `proposed` remains `proposed`, and `provenance` comes from authorship rather than lifecycle.
   Procedures resolve from Transform steps or
-  reference Models, never from the Decisions ledger. Re-run
-  `"$JOB_HELPER_DIR/scripts/validate_dp_spec.py"` before authoring — a spec that fails is not a
-  settled plan — and treat any closure value appearing in no spec section as one
+  reference Models, never from the Decisions ledger. The v3-capable
+  `"$JOB_HELPER_DIR/scripts/validate_dp_spec.py"` remains supported; skip repeat standalone validation only for the exact unchanged already prepared and consented blueprint/proposal. A changed plan or plan-invalidating error needs current validation, fresh prepare and fresh consent. Treat any closure value appearing in no spec section as one
   the user never approved. Schema and compile map: **nxd-run-job-loop**'s
   `reference/dp-blueprint.md`. **Never write it into the closure**: it is upstream,
   and a closure file pointing at `../dp-blueprint.md` is the escaping reference Phase
-  C fails; the approved revision is byte-copied in as `dp-blueprint.approved.md` under
-  a lock at Step 6a.
+  C fails; supervisor capture copies the approved revision and creates its lock
+  as described in Step 6a; the author does not create either surface.
 - The intent (the spec's `name` / `intent` / `questions`) gives the DP `name`,
   description, and which questions the semantic layer must answer.
 - The inferred model gives each base model's primary key, dimensions, joins,
@@ -410,8 +410,8 @@ Contract facts baked into that shape — keep every one:
 
 ### Step 5 — `infra-profile.yaml`: the desktop-local profile (emitted prerequisite)
 
-The desktop closure ships its own infra profile declaring the three local
-services the spec references (`duckdb`, `python-compute`, `csv-source`). Emit it
+For a CSV source, the desktop closure ships the three local
+services the spec references (`duckdb`, `python-compute`, `csv-source`). Emit that CSV profile
 **verbatim** from [reference/infra-profile.md](reference/infra-profile.md);
 `metadata.name` is `desktop-local` and MUST match `infra_profile=` in `spec.py`.
 Copy the fixed driver IDs exactly: `duckdb` = `nxd:local/duckdb/storage:0.1.0`,
@@ -421,7 +421,7 @@ The `csv-source` service (driver `nxd:local/file/storage:0.1.0`) delivers the
 **relative** `csv-source-path` into `secrets[...]` (an absolute path escapes the
 pinned snapshot and fails).
 
-**Other connector types** change only the third service's name and its
+**Other connector types** use their source-specific recipe instead of CSV artifacts; never add a dummy `csv-source-path` or export. They change the third service's name and its
 `attributes` — the rules, and what derived models do not change, are in
 [reference/infra-profile.md](reference/infra-profile.md).
 
@@ -454,10 +454,10 @@ Under workflow-v2, call the `check_data_product` MCP tool on the authoring
 closure before returning it and fix every failing finding; it needs no shell.
 For a mapper closure pass `mode:"structural"`: full mode refuses it with
 `mapper_approval_required`.
-The shell-based Step 7 helpers are optional evidence. If they exist, the agent may run the
-closure-root self-check, lock verification, structural checks, and connector
-checks described in the reference docs. Record them as optional evidence only;
-they do not authorize capture, replace the trusted supervisor checker, or relax
+The developer self-check recipes are optional evidence outside this activated Desktop route.
+They must not create Desktop reserved records/checker copies, edit retained captures,
+or execute a paid mapper outside admission. Use the current MCP structural check;
+optional evidence does not authorize capture, replace the trusted supervisor checker, or relax
 strict admission. Bash may be unavailable under OAuth, so never stall or
 substitute hand-authored hashes, locks, records, or checker copies when those
 tools cannot run. Return the authored executable closure to the job loop, which

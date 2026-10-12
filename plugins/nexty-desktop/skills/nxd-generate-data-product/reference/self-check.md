@@ -2,6 +2,7 @@
 
 ## Contents
 
+- Current Desktop route versus developer recipe
 - What the phases are
 - What this script does NOT cover
 - The JSON report and the build record
@@ -9,9 +10,24 @@
 - The script
 - Reading a failure
 
+## Current Desktop route versus developer recipe
+
+For an activated workflow-v2 Desktop build, use the current MCP
+`check_data_product` on the authoring closure (`mode:"structural"` for a mapper),
+then the returned capture action. Supervisor capture owns the trusted checker,
+approved snapshots, lock and build record. Do not copy a checker or create those
+reserved files before capture, modify retained captures, or run a paid mapper
+through an optional local self-check outside admission. Structural setup is not
+live source validation or permission to spend.
+
+The shell commands below are developer/CI recipes outside that activated route,
+not additional Desktop construction gates. Use
+[current Desktop generation](desktop-generation.md) for the selected source and
+approved contract inventory; required source probes and admission gates remain.
+
 ## What the phases are
 
-The dry-run for Step 7 of nxd-generate-data-product, in six phases. They run in
+The developer dry-run has six phases. They run in
 the order **A → E → G → B → C → D**, not in name order — E and G both run before
 B because B executes the transform, and a verdict about what the transform may
 reach or spend is worthless once it already has. That ordering is the point of
@@ -20,9 +36,9 @@ those two phases rather than an accident of how they were added.
 - **Phase A — structural check of `models.py` and `spec.py`.** Parses both files
   with `ast` and checks them against the pinned DSL surface in
   [reference/nxd-spec-api.md](nxd-spec-api.md). Nothing is imported and nothing
-  is executed, because the `nxd` wheel is an internal package on a private index
-  and is NOT installable here — a real import raises
-  `ModuleNotFoundError: No module named 'nxd'`.
+  is executed: this phase uses AST inspection by design. Dependency availability
+  depends on the actual developer environment; do not infer that the Desktop
+  SDK is absent from this no-import check.
 - **Phase E — reach gate.** Static, import-level scan of `transform/main.py`,
   plus a model-SDK-only scan of every `contracts/**/*.py` verifier, enforcing that **the transform never calls a listed model SDK** and
   reaches the network only through the connector `spec.py` declares. **It runs
@@ -497,9 +513,9 @@ rubric CSV is legitimately independent too.
 
 ## The script
 
-The shipped file is `nxd-run-job-loop/scripts/self_check.py` in the installed
-skill tree. Copy it into the closure first — there is nothing to run until you
-do — then run it from the closure root:
+For the developer/CI recipe outside activated Desktop, the shipped file is
+`nxd-run-job-loop/scripts/self_check.py` in the installed skill tree. The following
+copy/run commands are not instructions to modify a Desktop authoring or retained closure:
 
 ```bash
 cp "$JOB_HELPER_DIR/scripts/self_check.py" <closure>/self_check.py

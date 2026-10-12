@@ -23,6 +23,7 @@ existing references.
 - [Unavailable runtime or source](#unavailable-runtime-or-source)
 - [Partial result or preview](#partial-result-or-preview)
 - [Resume versus rebuild](#resume-versus-rebuild)
+- [Cumulative AI-scoring budget](#cumulative-ai-scoring-budget)
 - [Model-call cost and publication state](#model-call-cost-and-publication-state)
 - [Artifact failure while querying remains available](#artifact-failure-while-querying-remains-available)
 - [Concession](#concession)
@@ -43,6 +44,10 @@ existing references.
   internal.
 - A workflow id is a user-facing handle only when the documented resume flow
   uses it; otherwise treat it as an internal identifier.
+- Engineering tracker references never belong in setup or failure narration,
+  including references found in source prose. Finding such a reference does not make it the
+  user's issue or explain their blocker. Verified source business identifiers
+  may appear when needed to use or cite the requested report's actual results.
 - Preserve legitimate business terms such as source, invoice, customer,
   metric, date range, approval, preview, and published data.
 - A request for technical detail does not remove this boundary. Explain the
@@ -64,6 +69,14 @@ Use this shape for a status update:
 Give one useful business detail or result when it is available. Before a
 multi-minute operation, say what you are doing and what the user can expect
 next; do not name internal steps or leave the conversation silent.
+
+During preparation, describe the business work: "I'm preparing the issue-priority
+report plan for your review." Keep typed proposals, schema conversion and file
+plumbing in tool activity; do not repeatedly narrate a "document + typed version"
+or the writing of internal proposal files. Preserve result-changing choices and
+useful user-editable plan or deliverable names when needed for review or handoff.
+An explicitly requested technical explanation may describe the process safely,
+without raw diagnostics, secret values or supervisor-owned paths.
 
 When an action is needed, give one clear next action. Keep alternatives for a
 later turn unless the user must choose between them now.
@@ -94,9 +107,9 @@ environment variable your tooling already inherits
 land). Desktop has no secure credential-intake surface yet, so when that route
 does not apply, the source is blocked here. Say so in business terms:
 
-> This source needs a password or access key, and I can't take one safely in
-> this conversation yet. If you can export the same data to a file, I'll build
-> from that instead. Please don't paste the credential here.
+> The live source can't be connected safely through this conversation yet, so
+> the live build is blocked. I can continue defining the report without running
+> it. Please don't paste the credential here.
 
 Never ask a Desktop user to run commands, edit YAML, create a credential file,
 or fill credential placeholders. Do not invent an intake tool or pretend that
@@ -104,6 +117,14 @@ a chat connector supplies runtime credentials. Agent-owned authoring is the
 agent's job; source access comes from the environment route or is blocked;
 human spending consent belongs to the protected approval prompt. One cannot
 substitute for another. Provider keys remain supervisor-managed.
+For source-credential recovery, do not ask for an env-variable name or give
+commands, OS setup or restart instructions. Never offer or solicit a chat-connector
+fetch or file substitute for a requested live in-product source, even as a new
+publication or an alternative approval choice. A file export is a different
+source scope, used only after an independent user request to change source scope; disclose that it
+does not provide fresh in-product fetching. Never solicit a pasted key. If the
+user volunteers one anyway, do not echo it; disclose that it now lives in chat
+history and should be rotated after the build, preserving the existing exception.
 For a deliverable or business plan, share only a verified user-facing file/link
 through the supported host surface, not a terminal command or internal path.
 
@@ -179,6 +200,16 @@ If the local analysis service is confirmed unavailable:
 
 Name the missing user-facing prerequisite, not the internal process or raw
 diagnostic.
+Use the restore/reconnect templates only when an actual advertised or documented
+recovery action is available on the user's current surface. Name that concrete
+action; never send the user hunting for settings or connection controls that are
+not exposed, or offer to manufacture a credential-intake/status tool. When no
+supported source-access action is available, report the evidenced source blocker;
+if access has not been authoritatively verified, say access remains unverified.
+The live build is blocked; continue unpaid planning where useful. Do not infer
+an unavailable local service from unavailable source credentials. Preserve the
+supported resume path and legitimate service reconnection when evidence supports
+them; neither supplies source credentials or substitutes for admission gates.
 
 ### Partial result or preview
 
@@ -201,20 +232,86 @@ When the published data is unavailable:
 
 Do not describe a rebuild as a reattach. Do not expose a path or promise that a
 live connection will survive the current session.
+Approved rules/code remain pinned; each admitted live-source run refetches
+source data. When a mapper is part of the approved plan, that run invokes its
+bound mapper under its approval. Querying or
+reopening an existing publication alone is not a fresh run. Report fresh fetching
+or scoring only when admitted-run evidence supports it.
+Pinned rules alone do not show that refreshing needs a new version. Use returned
+runtime capability/state evidence before claiming that requirement; preserve the
+documented behavior-changing revision/new-ID and explicit consent requirements.
+
+### Cumulative AI-scoring budget
+
+Describe only the budget state and totals returned for the active Nexty data
+folder. A folder-wide cap is opt-in and experimental; it counts recorded mapper
+ledgers across jobs and specifications in that folder. It excludes other Nexty
+folders, scoring outside Nexty, and sessions that were already running when the
+cap was turned on. The folder must not be replaced or restored from an older
+copy for the recorded total to remain meaningful. Tell the user to close other
+Nexty windows and sessions before opting in.
+`legacy` is an internal inspection status in the current API. Say "no cumulative
+cap is active" to the user; do not describe their setup as legacy or switch to
+older tools.
+
+- **Legacy:** no cumulative folder cap is active. Continue under the existing
+  approval and mapper-spec ceilings; do not imply that no earlier usage exists.
+  `completeness: not_applicable`, empty unknown reasons and null usage are normal
+  here, not an integrity failure. With a requested cap and all limits stated,
+  propose those limits; native Establish re-verifies and adopts earlier recorded
+  ledger history in the same active runtime data folder. The authoring folder
+  does not define the budget's scope.
+- **Proposed:** the cap is not active until the user accepts the native
+  approval and inspection confirms it is established.
+- **Complete and open:** report the verified used and remaining call, token and
+  USD amounts for this folder. Uncertain attempts count at their full
+  reservation; never count them again on top of settled usage.
+- **Unknown or integrity failure:** when `used` and `remaining` are null, say
+  the total cannot be verified and paid scoring is paused. Unpaid work may
+  continue. Do not call it zero, edit supervisor state, or ask the user to
+  estimate historical usage.
+- **Exhausted:** say paid scoring in this data folder is finished. Do not offer
+  a raise, reset, disable, or move to another folder as a workaround.
+
+For a requested cap awaiting native approval, say:
+
+> The cap is not active yet. Native approval will include earlier verified
+> scoring recorded in this folder; I won't claim a total until it is verified.
+
+Never say the cap excludes earlier recorded spending or starts counting only
+after acceptance. Never ask for a starting balance, remaining balance or a
+provider dashboard. Established unknown/integrity or exhausted states are not
+an invitation to propose a replacement cap.
+
+When the inspected folder records no earlier AI scoring, say only:
+
+> No earlier AI scoring is recorded in this data folder.
+
+Never turn that folder-specific count into a claim that the whole test or
+experiment spent zero. Do not infer a zero from the current workflow alone.
+Legacy/proposed `not_applicable` inspection with null totals cannot establish
+that no earlier spending occurred. If session-run evidence confirms that no new
+paid scoring started, say only: "I have not started new paid AI scoring in this
+session." That is a session activity statement, not a cumulative or provider
+spend total; never infer it from null budget totals alone.
 
 ### Model-call cost and publication state
 
 State these facts separately when they matter:
 
-> The analysis model was not contacted, so there was no model-call cost. Nothing
-> was published.
+> The analysis model was not contacted in this run, so this run incurred no
+> model-call cost. This run did not publish a result.
 
 or:
 
-> The analysis model was contacted, which may incur a model-call cost. The
-> result **[has not been published / is published and ready to use]**.
+> The analysis model was contacted in this run, which may incur a model-call
+> cost for this run. This run's result **[has not been published / is published
+> and ready to use]**.
 
 Do not claim a model call, cost, or publication unless the record supports it.
+These templates concern only the evidenced run, never cumulative or provider
+spend history. Before a run exists, use only the evidenced session-activity
+statement above; do not fabricate run evidence.
 
 ### Artifact failure while querying remains available
 

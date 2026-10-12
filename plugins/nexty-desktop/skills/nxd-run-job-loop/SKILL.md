@@ -13,27 +13,27 @@ allowed-tools:
   - Task
 metadata:
   author: nextdata
-  version: 0.56.0
+  version: 0.57.0
 ---
 
 # nxd-run-job-loop skill
 
-## If a reference cannot be loaded
-
-If a reference cannot be read at the announced base directory, locate this
-skill's own sibling paths through the host's plugin directory only after an
-exact skill name + `metadata.version` match to this SKILL.md. Never substitute
-another version. If still unavailable, say "Some guidance could not be loaded"
-and retain these essential first-plan rules:
+These rules apply on every route before source gathering, whether references load or not:
 
 - No local commands during first-plan discovery; never ask the user to run them or use a CLI construction fallback.
-- Never ask for credential files, placeholders, YAML edits or secrets in chat; without an inherited env var, a credentialed source is blocked; if the user volunteers one anyway, don't echo it, and tell them it now sits in chat history and should be rotated after the build.
+- Never ask for credential files, placeholders, YAML edits or secrets in chat; without an inherited env var, a credentialed source is blocked. For source-credential recovery, never ask for an env-variable name or give commands, OS setup or restart instructions. Never offer or solicit a chat-connector fetch or file substitute for a requested live in-product source; only an independent user request to change source scope permits that different product. If the user volunteers a credential anyway, don't echo it, and tell them it now sits in chat history and should be rotated after the build.
 - Never guess spending protections, budgets, models or approval durations.
 - Use runtime capability calls before claiming anything about the environment.
 - Ask only for business meaning, source access and human consent.
-- Read back result-changing plan choices before materialization; the agent owns authoring.
+- Read back result-changing plan choices before materialization; the agent owns authoring. Interpret approval by its explicitly authorized object and limits, never the word "approved" alone. Permission to inspect access, check connectivity or draft a plan is not complete prepared-plan consent; do not relay it as `session_decision` or use it to generate, build or publish.
 - Require native spending acceptance and all admission gates; setup checks are not scoring.
-- Keep diagnostics internal and answer only from published semantic query evidence.
+- Keep diagnostics internal and answer only from published semantic query evidence; engineering tracker references never belong in setup/failure narration or explain the user's blocker, while verified business identifiers may cite the requested results.
+
+## If a reference cannot be loaded
+
+If a reference cannot be read at the announced base directory, locate this skill's own sibling paths through the host's plugin directory only after an exact skill
+name + `metadata.version` match to this SKILL.md. Never substitute another version.
+If still unavailable, say "Some guidance could not be loaded"; keep the rules above.
 
 A missing document never implies the runtime is unavailable. Check the tools;
 never tell the user to "open Claude Desktop" to recover a missing reference.
@@ -203,10 +203,11 @@ repeat inference within this boundary.
 Before the approval turn, the main thread must establish the connected supervisor's v2 execution capability and enroll this exact prose/proposal pair: write and validate `dp-blueprint.proposal.json` beside the host-visible `dp-blueprint.md`, parse that complete object, call `get_workflow_capabilities`, require structured `execution_enabled: true`, then call `prepare_workflow` with `kind: "generated-data-product"`, the blueprint path, and the inline `typed_proposal` object. Omit `source_hash` from the caller-authored file and inline object; the supervisor inserts or replaces its canonical value. Proposal validation and binding happen before consent; the prepare request must carry the complete typed proposal object, not a path or placeholder. Keep the blueprint at `status: proposed` during prepare. Never set `status: approved` or invent approval hashes; approval remains only through the returned `session_decision` consent action. Use
 only its returned revision, invalidation epoch, requirement identities and
 `next_actions`. Do not present an approval prompt or ask for approval until
-`prepare_workflow` succeeds. Then present the prepared echo-back and relay the user's exact
-approval through the returned `session_decision` action. A capability blocker or
+`prepare_workflow` succeeds. Then present the prepared echo-back and relay the user's exact approval through the returned `session_decision` action only when it authorizes the complete prepared plan; access-check or drafting consent leaves plan consent pending. Genuine complete-plan approval may permit generation while paid scoring is separately withheld; native spending/budget verification and all admission gates still apply. A capability blocker or
 failed prepare/consent action stops construction; it does not bypass supervisor
 admission with a direct tool or local substitute.
+
+Before paid mapper scoring, read `get_workflow_capabilities.mapper_budget`; use returned tools only when `availability: available` and inspect before scoring. With `status: legacy` and no cap request, keep the existing per-approval/per-spec flow. Legacy/proposed `completeness: not_applicable` with null usage is normal absence of an active cap, not Unknown. With legacy/proposed status and all limits user-stated, call the returned proposal tool; native Establish re-verifies and adopts earlier recorded ledger history in the inspected active runtime data folder, not the authoring folder. A requested cap needs native acceptance and established, complete, open inspection before scoring; any established cap must be complete and open. Propose only stated limits; never ask for starting balance or historical usage, a remaining balance or provider dashboard; a proposal is not active. Never propose around an established unknown/integrity or exhausted budget. Unsupported requested caps or unknown, integrity-failed and exhausted states stop paid scoring. Unknown is not zero; never infer whole-test zero. Close other Nexty sessions before opting in; existing sessions are outside the cap until restarted. See `reference/workflow-v2.md` for details.
 
 The successful returned `session_decision` action is the generation gate.
 Invoke **nxd-generate-data-product** after that gate succeeds to assemble
@@ -419,7 +420,7 @@ Query-answer wording and failure classification remain in their current owners.
   as **read-only**: never write to them, fabricate a table/endpoint, or narrate a raw credential. A real
   credential lands in exactly one place — the generated `infra-profile.yaml` connector service's
   `attributes` — never elsewhere, never in chat, never in `dp-blueprint.md`, which names key names only.
-  **"Never in chat" covers a value you invited there**: ask for *slot names*; the value reaches the
+  **"Never in chat" covers a value you invited there**: derive *slot names* from the connector auth scheme, not a user's env-variable name; the value reaches the
   profile off-transcript from an environment variable your tooling already inherits, or the source is
   blocked unless the user volunteers the credential anyway
   ([reference/source-materialization.md](reference/source-materialization.md)). Once landed, **the closure
@@ -488,11 +489,11 @@ Query-answer wording and failure classification remain in their current owners.
   unfiltered. Landing an `is_transfer` dimension and expecting callers to filter on it is that same silent
   failure wearing a column.
 - **The supervisor data dir is off-limits.** Everything under the supervisor's `--data-dir` (its `state/`
-  tree) — pinned snapshots in `definitions/<id>/`, `state.sqlite*`, `staging/` — is immutable
-  supervisor-owned state; never `chmod`, edit, or hand-write it, and a `.../staging/run-<id>/data.duckdb`
+  tree) — pinned snapshots in `definitions/<id>/`, `state.sqlite*`, `staging/` — is immutable supervisor-owned state;
+  never `chmod`, edit, or hand-write it, and a `.../staging/run-<id>/data.duckdb`
   path inside a pinned `manifest.yaml` is its own resolved runtime path, not a defect. If a served closure
-  is wrong, fix **your** source dir and re-`serve` — the supervisor re-pins.
+  is wrong, fix **your** source dir and re-`serve` — the supervisor re-pins. Approved rules/code stay pinned; each admitted live-source run refetches source data. When a mapper is part of the approved plan, that run invokes its bound mapper. Querying or reopening a publication alone is not a fresh run; claim freshness only from admitted-run evidence. Pinned state alone does not establish that a refresh requires a new version: use returned runtime capability/state evidence, preserving the behavior-changing revision and new-ID consent rules above.
 - **Bearer only as a tool parameter** — keep it out of narration, never persist or print it. **Never
   present a preview or truncated result as verified data**, and never stall silently.
 ## Reference docs (this skill)
-Use [dp-blueprint](reference/dp-blueprint.md), [build record](reference/build-record.md), [failure handling](reference/failure-handling.md), [user-facing language](reference/user-facing-language.md), [direct CLI lifecycle](reference/direct-cli-lifecycle.md), [source materialization](reference/source-materialization.md), [scripts bootstrap](reference/scripts-bootstrap.md), [scheduling](reference/scheduling.md), [context and resume](reference/context-and-resume.md), [inference](reference/inference.md), [handoff export](reference/handoff-export.md), [catalog resources](reference/catalog-resources.md), [query grammar](reference/query-grammar.md), and [dlt](reference/dlt.md) for named details.
+Use [dp-blueprint](reference/dp-blueprint.md), [build record](reference/build-record.md), [failure handling](reference/failure-handling.md), [user-facing language](reference/user-facing-language.md), [workflow-v2](reference/workflow-v2.md) for mapper budget status and codes, [direct CLI lifecycle](reference/direct-cli-lifecycle.md), [source materialization](reference/source-materialization.md), [scripts bootstrap](reference/scripts-bootstrap.md), [scheduling](reference/scheduling.md), [context and resume](reference/context-and-resume.md), [inference](reference/inference.md), [handoff export](reference/handoff-export.md), [catalog resources](reference/catalog-resources.md), [query grammar](reference/query-grammar.md), and [dlt](reference/dlt.md) for named details.

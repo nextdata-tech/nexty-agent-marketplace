@@ -194,18 +194,28 @@ through `infra-profile.yaml`, and a rebuild (only rebuild — resume never touch
 credentials) can fail two different ways with the same symptom:
 
 - **The file is present** and the rebuild fails at connection time: the
-  credential expired or rotated. Ask the user for the new value, replace the
-  `value:` entry that `SENSITIVE` names, and rebuild.
+  returned access evidence may identify an expired or rotated credential;
+  connection failure alone does not establish that cause. Restore source access
+  only through the existing supported route in
+  [source-materialization.md](source-materialization.md#where-credentials-land),
+  with agent-owned profile authoring when access is available. Otherwise report
+  the source-access blocker. Never ask for a new secret, a credential file or
+  env/OS setup; do not retry a known-blocked source in a loop.
 - **The file is absent** — the usual case for a closure obtained as a clone or
   copy, because `.gitignore` excludes it by design. This is not a broken
   closure, and you **cannot** reconstruct the file from `SENSITIVE`: that marker
   lists only credential *key names*, while `infra-profile.yaml` also carries the
   non-secret connection topology (host, port, database, schema for a database;
   base URL for an API) and the `duckdb` / `python-compute` / `<connector>-source`
-  service skeleton. Ask the user for the whole file — or for the topology plus
-  their own credential — and rebuild against `nxd-generate-data-product`'s
-  `reference/database-source.md` / `api-source.md`. Never invent a host or a
-  credential to fill the gap, and never echo a credential in chat.
+  service skeleton. Use verified nonsecret topology already supplied; ask only
+  for genuinely missing nonsecret connection details. The agent authors the
+  service skeleton against `nxd-generate-data-product`'s
+  `reference/database-source.md` / `api-source.md` and obtains access only through
+  the existing supported source-access route above. Never request the whole
+  profile or its secret values, invent a host or credential, or offer env/OS
+  setup. Resume does not refresh data or reopen credential intake; when access
+  is blocked, report it and keep the published result's status distinct from a
+  workflow-v2 rebuild. Retry only after access is restored and a retry is justified.
 
 ## Optional session ledger
 

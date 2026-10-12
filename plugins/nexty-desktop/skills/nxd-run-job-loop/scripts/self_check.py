@@ -2920,7 +2920,8 @@ if _spec_tree is not None:
     # Without this check the author learns that from a bare
     # contract_inventory_mismatch, AFTER a whole closure exists, and the obvious
     # way to make it green is to wire them as output promises - which silently
-    # moves a phase the user approved. Name it, and name the three ways out.
+    # moves a phase the user approved. Name it and require a scope decision
+    # without suggesting a substitute source the user did not request.
     if is_v3_lock and v3_pre_transform_contracts and "csv-source" not in declared_sources:
         cerr(
             "closure.contract_phase_unsupported",
@@ -2931,12 +2932,16 @@ if _spec_tree is not None:
             f"csv-source. This runtime runs a custom input expectation only for "
             f"a declared CSV source-aligned input, so these cannot execute at "
             f"that phase and the inventory cannot be satisfied. Resolve it in "
-            f"dp-blueprint.md, not here: state the guarantee under the matching "
-            f"Output's Promises (verified post-transform against the landed "
-            f"relation), keep it as prose with no executable contract, or supply "
-            f"a CSV export. Each is a spec edit needing re-approval - wiring an "
-            f"input expectation as an output promise to clear this check moves a "
-            f"phase the user approved.",
+            f"dp-blueprint.md, not here: after an explicit scope decision and "
+            f"re-approval, state the guarantee under the matching Output's "
+            f"Promises if the runtime supports its verifier (checked "
+            f"post-transform against the landed relation), or keep it as "
+            f"prose with no executable contract. Preserve the approved live "
+            f"source; do not offer a CSV export to clear this finding. A "
+            f"different source scope requires an independent user request, "
+            f"amended proposal, fresh prepare and fresh consent. Wiring an "
+            f"input expectation as an output promise without that decision "
+            f"moves a phase the user approved.",
             "spec.py",
             {"pre_transform_contracts": sorted(v3_pre_transform_contracts),
              "declared_sources": sorted(declared_sources)},

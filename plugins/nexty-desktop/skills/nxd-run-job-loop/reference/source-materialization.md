@@ -122,7 +122,15 @@ values. Treat access as **read-only** and never fabricate an endpoint.
 
 For both kinds: you gather the *shape* of the credential here. The value itself
 reaches the closure by one of the routes in **Where credentials land**, and
-asking the user to type it into chat is the last of them.
+must never be solicited in chat. Connector credential slot names come from the
+declared auth scheme; they are not a request for the user's env-variable name.
+
+A requested live in-product source must use its generated connector/fetch in
+the admitted product. A chat-connector fetch staged as a file is not that
+behavior and does not provide fresh in-product fetching. Never offer or solicit
+a chat-connector fetch or file substitute as an access workaround, including a
+new publication. Use it only after an independent user request to change source
+scope, and disclose its snapshot boundary; an agent-proposed choice is not that request.
 
 ## Where credentials land
 
@@ -140,6 +148,20 @@ credential out of a subagent's prompt (`reference/scheduling.md`) applies to the
 main thread, which is also a transcript. So prefer a route where you never see
 the value:
 
+A names-only shell environment probe establishes only which variable names are
+visible to the checking process. Presence or absence does not establish the
+supervisor's startup environment, selected profile or credential allowlist,
+nonempty credential validity, or usable source permissions. Keep three claims
+distinct: no safe native intake surface exists; this particular probe found no
+credential name; authoritative runtime evidence verified source access. Neither
+presence nor absence in a names-only probe proves the third claim. Without that
+authoritative evidence, report "Runtime source access remains unverified";
+do not claim the supervisor has or lacks access from the shell probe alone.
+This diagnostic check must not read or print secret values, inspect secret
+configuration or invent an intake/status tool. It does not replace or prohibit
+the authorized off-transcript substitution route below, whose write-time check
+rejects a missing or empty value without exposing it.
+
 1. **An environment variable already visible to your own tooling.** This is
    the only off-transcript route Desktop and Cowork have today. It is
    narrower than it sounds. A variable the user exports in their interactive
@@ -147,7 +169,7 @@ the value:
    in a separate process: reading it raises `KeyError`, or yields an empty string
    you would then write into the profile as though it were the credential. It
    works only when the variable is already in the environment your tools inherit
-   — set in the user's shell profile, or exported before the session began.
+   — this is an already-present condition, not a setup instruction for the user.
    Given that, substitute it when writing the profile by reading `os.environ`
    **inside** the script — never as a shell-expanded `$TOKEN` on a command line,
    which lands the value in the transcript exactly as a paste would. Have that
@@ -164,12 +186,18 @@ the value:
    credentials to the runtime. So when route 1 does not apply, a credentialed
    database or API source is **blocked in Desktop**. Say so plainly, per
    [user-facing-language.md](user-facing-language.md) § Asking for source
-   access, and offer what does work: a file export of the same data, or a
-   source that needs no credential. Never ask the user to run commands, edit
+   access. Only after an independent user request to change source scope to a file
+   export or a source needing no credential, record that changed scope; never offer
+   or solicit that substitute. Never ask the user to run commands, edit
    YAML, create credential files or fill placeholders in place of the missing
    surface, and never invent an intake tool. When the runtime adds a named
    intake surface, this route is where it goes.
-3. **Pasted into chat — last resort.** If the user supplies it this way anyway,
+   For source-credential recovery, never ask for an env-variable name, offer OS
+   setup, or tell the user to export a variable, set launch-time environment or
+   restart the app. No current secure intake surface can be inferred from a
+   connector attachment or the existence of a native spending prompt.
+3. **Pasted into chat — last resort, only if already volunteered.** This is
+   handling for an unsolicited value, never an offered intake option. If the user supplies it this way anyway,
    do not echo it back, and say plainly that it now lives in conversation history
    where no closure guard reaches it, so the credential should be rotated after
    the build.
