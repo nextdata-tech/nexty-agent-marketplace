@@ -9,6 +9,7 @@
 - [Typed exits, and caps you count instead of estimate](#typed-exits-and-caps-you-count-instead-of-estimate)
 - [A blocker is an open question found late](#a-blocker-is-an-open-question-found-late)
 - [After a failed supervisor operation: inspect once, then classify](#after-a-failed-supervisor-operation-inspect-once-then-classify)
+- [Keychain credential and saved-state access outcomes](#keychain-credential-and-saved-state-access-outcomes)
 - [User-facing narration](#user-facing-narration)
 - [The commands](#the-commands)
 
@@ -327,6 +328,106 @@ fixed.
   acceptance run.
 - Label the patched one **failed evidence**, and keep it alongside its
   diagnostic.
+
+## Keychain credential and saved-state access outcomes
+
+Treat these as distinct local permissions, with separate consequences:
+
+1. **Credential read access** lets the supervisor read a provider key or a
+   source credential from macOS Keychain. It does not grant permission to use
+   the credential against its provider or source.
+2. **Protected workflow-state access** lets the supervisor read the key used to
+   authenticate saved workflow state. It does not grant credential access.
+3. **Spending approval** is the user's separate native approval for paid model
+   calls. Neither Keychain permission grants it.
+
+For Keychain access outcomes, do not claim the app is asleep, offline,
+unavailable, or needs sign-in. Never ask for a Mac password, a key, or any
+credential in chat. Do not give terminal commands or environment-variable
+edits as Keychain access recovery, or suggest deleting credentials, resetting
+spending history, or reinstalling. Provider-key setup for a missing key is a
+separate one-time setup outcome described below.
+
+When advertised in `get_workflow_capabilities.operations`,
+`provider_credential_status` is a read-only, no-argument check with one bounded
+20-second read, below the bridge's 60-second deadline. It never returns a key
+and never contacts the provider. With `access: success`, `present: yes` means a
+credential is present, `no` means it is missing, and `unknown` means presence
+was not established. `access: missing` also establishes that no credential is
+present and reports `retryable: false`. Other access failures establish
+neither presence nor absence. The
+`permission: provider_credential_read` field describes credential-read access
+only. `source` reports `keychain`, `startup_environment`, or `null`; null means
+no source was reported. Do not infer source access, protected workflow-state
+access, or spending approval from these fields.
+
+Use the reported `reason` when present. If it is absent, explain only the
+reported code and retryability; do not guess why macOS refused or delayed the
+read. The table below is the canonical reason-to-action mapping for provider
+status, mapper credential-access errors, source-connection errors, and saved
+workflow-state errors. For saved workflow-state errors, describe the protected
+state key rather than a provider or source credential.
+
+The missing credential rows below apply only to provider or source
+credentials. If a saved-workflow-state error carries `reason: missing`, say
+only that the protected state key could not be read; do not direct the user to
+provider or source credential entry. Stop and report; never retry to fix a
+missing state key or create, replace, reset, or recreate it.
+
+Retry the same access action only when the returned `retryable` value is
+`true`, with the same request and revision; otherwise stop and report. The
+single `pending` re-check described in the table is a bounded status check, not
+another access retry. Integrity always stops, even if another field says
+retryable. `missing` is never fixed by retrying; provider-key missing status
+reports `retryable: false`.
+
+| Reason or status | Tell the user | One next action |
+|---|---|---|
+| `access_not_granted` | macOS has not granted this app access to read the credential or protected state key. | Allow the read when macOS asks, then retry the same action only when `retryable: true`. |
+| `interaction_not_allowed` | macOS could not allow this read in the current session. This can mean a locked Keychain or no GUI session; the result cannot distinguish them. | Use the Mac in an interactive, unlocked session; retry only when `retryable: true`. |
+| `keychain_unavailable` / `unavailable` | macOS Keychain could not complete this read. | Unlock or sign in to the Mac's login Keychain session, then retry the same action only when `retryable: true`. |
+| `timeout` | The bounded read did not finish; this does not mean access was denied. macOS may still be waiting for permission, possibly in a window behind others. | If macOS asks, allow the read; then retry the same action only when `retryable: true`. Do not claim a prompt is visible. |
+| `pending` | Another Keychain access is already in progress. | Re-check once after the user confirms the request completed or was dismissed, or after a short wait. If still pending, report it and stop. Do not poll repeatedly or start another read. |
+| `integrity` | The protected credential or saved state could not be verified, so access was refused. | Stop and report the refusal; do not attempt recovery. |
+| `unsupported` | This runtime does not support this Keychain read. | Stop and report the limitation; do not suggest reinstalling. |
+| `failed` | The bounded access check failed. | Retry the same action only when `retryable: true`; otherwise stop and report. |
+| Provider missing: `access: missing`, or `access: success` with `present: no` | No provider key is stored. This is one-time setup, not access recovery. | Re-run the installer with `ANTHROPIC_API_KEY` set, or pipe the key into `<bin> credentials set-provider-key --provider anthropic`. The key never goes in chat; the agent never runs the command or handles the key. |
+| Source credential missing | No credential is stored for this source. | Inspect and reuse a compatible source connection. Native masked entry is available only for infra-profile source connections when the runtime offers it. |
+
+The user's confirmation that a macOS request was completed or dismissed is a
+trigger to re-check, not an access action. Re-check once with
+`provider_credential_status` when advertised, or retry the same provider action
+only when it is retryable. Without confirmation, one re-check after a short
+wait is allowed. If the result remains `pending`, report it and stop.
+`provider_credential_status` is provider-only; it does not establish
+source-credential readability or protected workflow-state access. For a source
+or saved-state outcome, retry only that exact source/state action when it is
+retryable; inspect an uncertain native-entry request before retrying. Do not use
+the provider status tool as a source or saved-state check.
+
+The provider mapper code `mapper_provider_credential_missing` identifies a
+missing-key setup outcome. After setup, check `provider_credential_status`; if
+it confirms the key is present, resume the same request and revision. The
+`mapper_provider_credential_access_{not_granted,interaction_not_allowed,unavailable,timeout,pending,integrity,unsupported,failed}`
+codes describe provider credential acquisition/read failures; they do not
+prove whether a credential exists. A failed provider acquisition at
+`start_run` happens before the request is queued. After setup is confirmed or
+an allowed access retry resolves, resume only the same supervisor action with
+the same request and revision; do not reset, rewrite, or start a duplicate run.
+
+`workflow/state_mac_key_unavailable` may carry a `reason`; when it is absent,
+say only that protected workflow state could not be read and do not guess the
+cause. Follow the table and general retry rule above. Integrity always stops.
+`workflow/state_mac_key_invalid` is always an integrity refusal: report it and
+never reset or recreate saved state. Source
+`source_connection/protected_access_timeout` means the bounded protected read
+timed out even when its optional `reason` is absent; that is not a denial. Use
+the table's timeout guidance and retry only when the operation is retryable.
+The code may also carry a `reason`, which adds detail without replacing the
+timeout meaning. `source_connection/state_mac_key_unavailable` is a separate
+protected-state outcome and may carry a `reason`; without one, say only that
+protected state could not be read. Follow the table and general retry rule
+above. Do not guess a cause.
 
 ## User-facing narration
 

@@ -98,10 +98,27 @@ request. Never use that option for an ordinary new connection. A connection's pu
 `stored_unverified`; storage says nothing about remote permission or validity.
 Submitting the native prompt authorizes local credential storage only; it does
 not approve the plan, source execution, a build, or paid scoring.
-The first release has no direct credential probe. Only a successful admitted
-source execution shows that a particular fetch worked at that time. Keep
+The first release has no direct probe for an infra-profile source credential.
+Only a successful admitted source execution shows that a particular fetch
+worked at that time. Keep
 native connection creation separate from source use, workflow consent, mapper
 approval, and model spending authority.
+
+A stored reference can still fail when macOS is asked to read it. The
+`source_connection/protected_access_timeout` code remains the bounded
+protected-access timeout and may include an optional `reason`;
+`source_connection/state_mac_key_unavailable` identifies access to protected
+saved workflow state and may also include an optional `reason`. Apply the
+shared plain-language mapping in
+[failure-handling.md](failure-handling.md#keychain-credential-and-saved-state-access-outcomes).
+Credential-read permission, protected-state access, and spending approval are
+separate. A timeout does not establish denial, and a running SecurityAgent
+process does not prove a prompt is visible. A user's confirmation that a macOS
+request was completed or dismissed triggers one re-check of the existing
+supervisor action; without confirmation, one re-check after a short wait is
+allowed. If it is still `pending`, report that and stop. Retry only when
+`retryable: true`, with the same request and revision. Inspect an uncertain
+native-entry request before retrying it; never open a duplicate entry window.
 
 Use `rotate_infra_profile_connection` when replacing fields on the same
 destination. A changed endpoint, database, or scope needs a fresh native

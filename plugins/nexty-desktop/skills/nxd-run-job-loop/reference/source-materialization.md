@@ -162,14 +162,28 @@ fetch successfully. A changed destination or scope needs a new native binding.
 Rotation and disconnection are explicit connection actions; native storage
 approves neither a workflow nor spending.
 
-For source-credential recovery, never ask for an env-variable name or give
-commands, OS setup, or restart instructions. If the capability is unavailable,
+For native source-connection entry, never ask for an env-variable name or give
+commands, OS setup, or restart instructions. Keychain access recovery follows
+the canonical reason-to-action mapping in
+[failure-handling.md](failure-handling.md#keychain-credential-and-saved-state-access-outcomes).
+If the capability is unavailable,
 report the source-access blocker and an evidenced action to connect an updated
 Desktop runtime. For `state_unavailable`, report that connection state could
 not be read or stored and keep this source step blocked. Do not infer a login
 requirement, tell the user to open an app, or claim waiting cannot help. Resume
-the existing request after actual recovery; do not ask for broader approval
-just to repeat this access step. Never request a YAML credential edit, a file
+the existing request after actual recovery only when `retryable: true`; do not
+ask for broader approval just to repeat this access step. Typed
+`source_connection/protected_access_timeout` remains a bounded access timeout
+and may carry a `reason`; `source_connection/state_mac_key_unavailable` is a
+separate protected-workflow-state outcome and may also carry a `reason`. Use
+the reason mapping in [failure-handling.md](failure-handling.md#keychain-credential-and-saved-state-access-outcomes).
+When the user confirms they completed or dismissed a macOS request, re-check
+the same supervisor action once; without confirmation, one re-check after a
+short wait is allowed. If it is still `pending`, report and stop. Retry only
+when `retryable: true`, with the same request and revision. Inspect an uncertain
+native-entry request before any retry; do not start another request or open a
+duplicate entry window. Never
+request a YAML credential edit, a file
 containing a key, or a value in chat. A chat connector does not supply the
 Desktop runtime credential. If the user volunteers a value anyway, do not echo
 or copy it; explain that it is in conversation history and should be rotated.
@@ -184,9 +198,13 @@ access remains unverified; do not claim the supervisor has or lacks access
 from the shell probe alone. This diagnostic check must not read or print
 secret values, and must not be run during first-plan discovery. Native
 connection and admitted source-execution evidence remain authoritative.
+This names-only shell probe is not normal recovery for a Keychain access
+outcome; do not direct users to terminal commands or environment-variable edits.
 
 Mapper provider keys are a separate matter: they stay in the supervisor's
-secure store and never reach the profile.
+secure store and never reach the profile. The provider-only
+`provider_credential_status` tool cannot establish that a source reference is
+readable or that the source is reachable.
 
 ## Host path handoff
 

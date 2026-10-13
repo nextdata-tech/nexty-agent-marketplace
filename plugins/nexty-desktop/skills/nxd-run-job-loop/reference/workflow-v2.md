@@ -15,6 +15,7 @@ do not fall back to a direct CLI or local substitute.
 - [Run and report the review](#run-and-report-the-review)
 - [Follow returned actions through admission](#follow-returned-actions-through-admission)
 - [Mapper approval](#mapper-approval)
+  - [Provider credential access](#provider-credential-access)
   - [Cumulative folder budget](#cumulative-folder-budget)
 - [When validation fails](#when-validation-fails)
 - [Reset after behavior changes](#reset-after-behavior-changes)
@@ -788,7 +789,12 @@ conversation child returns; it is not a supervisor-launched review.
 ## Follow returned actions through admission
 
 After every `advance_workflow` response, discard earlier action parameters and
-follow only its new `next_actions`. Start supervisor-owned validation with the
+follow only its new `next_actions`. Once the review is clear, and before you
+start validation, call `check_data_product` once more on the unchanged authoring
+closure (`mode:"structural"` for a mapper closure), so the last successful check
+follows the last review. Edit nothing between that check and the run. If it
+fails, the authoring closure no longer matches the capture: repair, reset and
+recapture rather than validate. Then start supervisor-owned validation with the
 returned `start_requirement` action and current revision. A queued or running
 operation is pending work: poll `inspect_workflow` without dispatching another
 validation. Continue only when validation is satisfied. Then use the returned
@@ -953,6 +959,96 @@ confirms, a recapture, a fresh review and a fresh OS approval. Never
 widen a grant yourself to get past a refusal. Never retry `start_requirement`
 in a loop: each call can put a dialog in front of the user.
 
+### Provider credential access
+
+Read permission for a provider key, read permission for a source credential,
+access to the protected saved-workflow-state key, and approval to spend are
+separate. One never grants another. Keep provider and source credential values
+in their supported Desktop storage flows; never ask for a Mac password, a key,
+or a credential in chat. For Keychain access recovery, use the canonical table
+linked below; terminal or environment-variable setup applies only to its separate
+missing-provider-key outcome.
+
+When `provider_credential_status` appears in the live
+`get_workflow_capabilities.operations`, it is a read-only tool with no
+arguments. It makes one bounded 20-second read, well below the bridge's
+60-second deadline, never returns a key, and never contacts the provider.
+Its response has this shape:
+
+```json
+{
+  "provider": "anthropic",
+  "present": "yes|no|unknown",
+  "access": "success|missing|access_not_granted|interaction_not_allowed|keychain_unavailable|timeout|pending|integrity|unsupported|failed",
+  "retryable": false,
+  "permission": "provider_credential_read",
+  "source": "keychain|startup_environment|null",
+  "explanation": "macOS permission to read the provider key, access to protected saved workflow state, and approval to spend money are separate. One never grants another."
+}
+```
+
+With `access: success`, `present: yes` means a key is present, `no` means it is
+missing, and `unknown` means presence was not established. `access: missing`
+also establishes that no key is present and reports `retryable: false`. Other
+access errors establish neither
+presence nor absence. Treat the `permission` field as provider-key read access
+only. `source` reports `keychain`, `startup_environment`, or `null`; null means
+no source was reported. These fields say nothing about source access, saved
+workflow-state access, or spending approval.
+
+Use [failure-handling.md](failure-handling.md#keychain-credential-and-saved-state-access-outcomes)
+for the canonical reason-to-action mapping for provider, source, and protected
+workflow-state Keychain outcomes. A concurrent provider-key read returns
+`pending` immediately without opening a second prompt. After the user confirms
+the request completed or was dismissed, re-check once; without confirmation,
+one re-check after a short wait is allowed. If it is still pending, report
+that and stop. `provider_credential_status` is provider-only. After missing-key
+setup, check that it confirms the key is present, then resume the same request
+and revision. For an access error, retry only the same request and revision
+when `retryable: true`. A failed provider acquisition at `start_run` happens
+before the request is queued. Do not reset or recreate workflow state.
+
+The code `mapper_provider_credential_missing` identifies a missing-key setup
+outcome; follow its provider setup directions in the canonical table. The
+codes `mapper_provider_credential_access_not_granted`,
+`mapper_provider_credential_access_interaction_not_allowed`,
+`mapper_provider_credential_access_unavailable`,
+`mapper_provider_credential_access_timeout`,
+`mapper_provider_credential_access_pending`,
+`mapper_provider_credential_access_integrity`,
+`mapper_provider_credential_access_unsupported`, and
+`mapper_provider_credential_access_failed` identify provider credential
+acquisition/read failures and do not establish whether a key exists. Use the
+canonical table for their reason-to-action mapping.
+
+
+The installer may verify and activate successfully while its optional provider
+presence check remains unresolved. Report activation as successful and
+credential access as unresolved; point to `provider_credential_status` for a
+later check. Do not recommend reinstalling.
+
+`workflow/state_mac_key_unavailable` may carry an optional `reason`.
+Without a reason, say only that protected workflow state could not be read.
+Use the canonical table in
+[failure-handling.md](failure-handling.md#keychain-credential-and-saved-state-access-outcomes)
+for its action. If the reason is `missing`, stop and report; never retry to
+fix a missing state key or direct the user to provider/source credential entry.
+For other access outcomes, retry the same action with the same request and
+revision only when `retryable: true`. Integrity always stops.
+`workflow/state_mac_key_invalid` is an integrity refusal: report it and never
+reset or recreate saved state.
+
+Source errors keep their code contracts: `source_connection/protected_access_timeout`
+means the bounded source-access read timed out even when its optional `reason`
+is absent; it does not mean access was denied. Use the canonical table for its
+action, without claiming a prompt is visible. `source_connection/state_mac_key_unavailable`
+is a separate protected-state error and may carry an optional `reason`; without
+one, say only that protected state could not be read. If the reason is `missing`,
+stop and report without credential entry or state replacement. Otherwise retry
+the same source action with the same request and revision only when
+`retryable: true`. Stop on integrity refusal. See [native infra-profile
+connections](infra-profile-connections.md) for the source-entry lifecycle.
+
 ### Cumulative folder budget
 
 The per-approval and per-mapper-spec ceilings above remain in force. A separate
@@ -1043,8 +1139,8 @@ experiment spent zero.
 | `workflow/mapper_budget_changed` | The approval binding no longer matches the folder budget state. | The folder budget changed before this approval could be used. | Inspect current state and follow returned actions for a fresh approval; do not reuse a stale binding. |
 | `workflow/mapper_budget_mismatch` | A proposed limit differs from the established folder cap. | This folder’s existing cap cannot be changed in this version. | Keep the established limit; do not raise, reset or disable it. |
 | `workflow/mapper_subject_changed` | The approved capture no longer matches what is being admitted. | The approved closure changed, so the approval no longer applies. | Stop and report. Do not retry; a legitimate change goes through reset, recapture, review and fresh approval. |
-| `workflow/state_mac_key_unavailable` | The supervisor could not access its protected workflow state key before restarting or admitting a mapper run. The response says whether retry is supported. | Nexty couldn't access its protected workflow records on this machine. This attempt did not start AI processing. | If `retryable=true`, allow the macOS Keychain request and retry the same workflow action. Do not reset approval or delete state. If `retryable=false`, stop and report the code. |
-| `workflow/state_mac_key_invalid` | The stored workflow state key has an invalid length, so existing state cannot be authenticated. | Nexty couldn't verify the saved workflow records. | Stop and report the code. Do not reset approval, delete state, or claim that unlocking Keychain fixes it. |
+| `workflow/state_mac_key_unavailable` | The supervisor could not read the protected saved-workflow-state key; an optional `reason` identifies the access result. | The protected workflow state could not be read. This is separate from source/provider credential access and spending approval. | When `retryable=true`, use the matching local action in [failure-handling.md](failure-handling.md#keychain-credential-and-saved-state-access-outcomes), then retry the same action with the same request and revision. Otherwise stop and report. Never reset or recreate state. |
+| `workflow/state_mac_key_invalid` | The protected saved-workflow-state key failed integrity verification. | The saved workflow state could not be verified. | Stop and report. Never reset or recreate state or suggest that another permission grants integrity. |
 | `workflow/mapper_integrity` | The approval or spend ledger failed an integrity check, or a lookup the gate depends on failed. The supervisor fails closed. | Approval records could not be verified. | Stop and report the code. Do not edit or delete supervisor state. |
 
 Validation in mapper mode runs the scratch build against a stub: it makes no
@@ -1073,10 +1169,14 @@ model not granted, or an approval past its expiry). `mapper_request_refused`
 means it refused a disallowed request shape, such as server tools, images or
 streaming. The mapper raised `GrantError` for both. `mapper_integrity` means
 the spend ledger or the run's mapper setup could not be verified. For all
-four, stop and report. Do not rerun to "try again". If the transform's error
-names `mapper_provider_credential_missing`, the supervisor has no provider key
-installed. The user fixes that through Desktop setup, never by pasting a key
-into chat or into the closure. Never supply a key, token or base URL yourself.
+four, stop and report. Do not rerun to "try again". If `start_run` reports
+`mapper_provider_credential_missing`, follow the provider setup directions in
+the canonical table in
+[failure-handling.md](failure-handling.md#keychain-credential-and-saved-state-access-outcomes).
+Provider acquisition fails before the run is queued. After setup, check that
+`provider_credential_status` reports the key present, then resume the same
+`start_run` request. Never supply a key, token or base URL yourself; never
+place them in chat or the closure.
 
 ## When validation fails
 
