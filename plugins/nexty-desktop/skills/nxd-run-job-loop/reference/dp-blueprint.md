@@ -102,10 +102,30 @@ reported numbers and the source does not settle it:
 - whether totals and other aggregates span every categorical state, including
   closed or terminal ones, or only some of them;
 - which source fields the connector fetches (state it under Inputs), versus which
-  the output keeps (its Output projection).
+  the output keeps (its Output projection);
+- how identifiers are normalised (trimmed, coerced from numbers) and what happens
+  to a record with no usable identifier;
+- how a non-text value in a categorical or status field is treated;
+- the rounding or precision of each landed measure and timestamp.
 
 Review blocks on unwritten conventions, and each block costs a reset and a fresh
-approval.
+approval. A review that names conventions one round at a time can use up every
+re-approval before validation ever runs. So, before the first capture of every
+plan:
+
+1. **Sweep the transform you wrote.** Read it top to bottom and list every
+   choice the source does not settle: each normalisation, coercion, rounding,
+   truncation, default, fallback, tie-break and exclusion, beyond the list above.
+2. **Record each one as a Decision** marked as authored by you, not by the user,
+   so it lands as a row in the decisions table. Plan prose alone does not count:
+   review grades a convention as disclosed only when it is a landed row.
+3. **When a review names a convention you missed,** sweep the whole transform
+   again and record every missed one in the same revision, not only the one
+   named.
+4. **Answer each review finding with the smallest disclosing change:** a Decision
+   row, or a promise reworded so it claims no more than its check does. Never add
+   a model, relation or promise the user did not ask for to settle a finding.
+   Each addition is new surface for the next review.
 
 ### Where an Input expectation can actually run
 
