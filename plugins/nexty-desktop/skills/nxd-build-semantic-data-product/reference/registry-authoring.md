@@ -36,11 +36,12 @@ and is absent from `describe_model` (see `overview.md`). A description decides
 whether it is queryable *correctly*: `describe_model` is the entire basis on
 which a consuming agent maps a question to a concept, so a dimension that
 arrives as a bare name gives it nothing to choose on. Declare a role on every
-field **a metric does not already aggregate**, a `description` on every
-**dimension and metric** role, and a `.description(...)` on every
-`semantic_model`. `primary_key()` and `join()` accept no
-`description` — do not try to attach one, and never fall back to putting it on
-the enclosing `field()`, which never reaches the agent.
+field **a metric does not already aggregate**, a description for every
+**dimension and metric**, inherited from its field or declared on its role,
+and a `.description(...)` on every `semantic_model`. `primary_key()` and
+`join()` accept no `description` — do not attach one to those roles. A field
+description documents a dimension or metric that inherits it; it does not
+make a column with only a key or join role into a queryable concept.
 
 ---
 
@@ -283,9 +284,11 @@ dimension is not propagated to the related metrics.
   `semantic_model` a `.description(...)`. A `semantic_view` may carry one too
   (`semantic_view(..., description=)`); the gates do not require it. A concept the agent cannot tell apart from its
   neighbours is as unusable as one that was never declared.
-- Put the description **inside** the role builder. `field(description=...)` and
-  `metric_field(description=...)` are attribute descriptions and never reach
-  the querying agent.
+- Prefer the description on the enclosing `field(description=...)` or
+  `metric_field(description=...)`. A dimension or metric without its own
+  description inherits the field's, so it reaches the querying agent.
+  Explicit role descriptions still take precedence but are deprecated.
+  A named role with neither a non-empty field nor role description is incomplete.
 - Use a unique, non-null source key for every physical model. Do not synthesize
   a key just to make the model compile.
 - Keep physical names and field names identical to the actual table and source
