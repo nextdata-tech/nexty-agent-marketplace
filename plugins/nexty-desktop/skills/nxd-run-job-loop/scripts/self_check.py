@@ -445,12 +445,20 @@ def documents_concept(entry):
     keyword, the string element of the tuple form, and a role's own
     `description=` (deprecated upstream, still honoured and still first).
     """
+    # Classify only literal whitespace overrides; do not evaluate expressions.
+    for role in describable_roles(entry):
+        for keyword in role.keywords:
+            if keyword.arg == "description":
+                value = keyword.value
+                if isinstance(value, ast.Constant) and isinstance(value.value, str) \
+                        and value.value and not value.value.strip():
+                    return False
     if isinstance(entry, ast.Call) and call_name(entry) in ("field", "metric_field"):
-        if any(k.arg == "description" and desc_str(k.value) for k in entry.keywords):
+        if any(k.arg == "description" and (desc_str(k.value) or "").strip() for k in entry.keywords):
             return True
-    if isinstance(entry, ast.Tuple) and any(desc_str(e) for e in entry.elts):
+    if isinstance(entry, ast.Tuple) and any((desc_str(e) or "").strip() for e in entry.elts):
         return True
-    return any(any(k.arg == "description" and desc_str(k.value)
+    return any(any(k.arg == "description" and (desc_str(k.value) or "").strip()
                    for k in role.keywords)
                for role in describable_roles(entry))
 
@@ -597,11 +605,12 @@ def parse_models(src, path):
                 # on the field, on the role, or (tuple form) on neither call.
                 if describable_roles(v) and not documents_concept(v):
                     bad("struct.role_no_description",
-                        f"{where}: this dimension/metric carries no description "
-                        f"on its field or its role — it reaches describe_models "
-                        f"as a bare name the agent cannot choose on. Write it "
-                        f"once on the field: field(..., description=...) / "
-                        f"metric_field(..., description=...)", where)
+                        f"{where}: this dimension/metric has no effective nonempty "
+                        f"description for describe_models. Prefer writing it once "
+                        f"on the field: field(..., description=...) / "
+                        f"metric_field(..., description=...). Remove or fill a "
+                        f"whitespace-only role description, which overrides the "
+                        f"field's description.", where)
                 field_roles = {call_name(sub) for sub in ast.walk(v)}
                 if not in_view and "primary_key" in field_roles \
                         and "dimension" not in field_roles:
