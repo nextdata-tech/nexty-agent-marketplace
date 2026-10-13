@@ -13,7 +13,7 @@ allowed-tools:
   - Task
 metadata:
   author: nextdata
-  version: 0.58.5
+  version: 0.59.0
 ---
 
 # nxd-run-job-loop skill
@@ -218,6 +218,8 @@ the executable closure inputs — `spec.py`, `models.py`, `infra-profile.yaml`,
 label and provenance, plus the resolved absolute `job_helper_dir`. The generator
 compiles the approved plan; it does not re-derive it, author supervisor YAML, or open a new policy turn. Follow its connector references and `reference/dlt.md` for the exact closure shape. Preserve any Step 1 connection's bound public service identity and opaque ref, then inspect compatibility at the final root; zero matches needs native entry, multiple need an explicit choice, and stored metadata never proves source access ([infra-profile-connections.md](reference/infra-profile-connections.md)).
 The typed-v3 proposal sent to `prepare_workflow` is the consent candidate: every Decision is included in the exact echo-back and may remain `status: proposed` until the user approves. The supervisor's trusted materializer projects those Decisions to `locked` only after the subject-bound `session_decision`; `locked` is an approval-derived snapshot state, not authorization by itself. Do not change the proposal after prepare or consent. Any post-prepare or post-consent blueprint/proposal edit requires `reset_workflow` with the supervisor-returned graph-root requirement and a replacement blueprint, followed by complete regeneration, fresh prepare, and fresh consent. A closure-only behavior change resets the returned capture requirement, recaptures, and obtains a fresh review.
+Full replacement reset sends both `replacement_blueprint_path` and the complete
+matching inline `replacement_proposal`; never send the blueprint path alone.
 The typed v3 contract inventory is executable handoff, not optional metadata: every
 Input expectation and Output promise must become exactly one closure verifier and
 one matching `custom(...)` wiring at its declared attachment and phase. Preserve
@@ -300,10 +302,7 @@ admission and publication. Use the exact envelopes in
 [reference/workflow-v2.md](reference/workflow-v2.md); never reuse stale action
 parameters. Validation can return a queued or running operation before it finishes. Poll `inspect_workflow` until validation is satisfied, then use its current revision and returned admission action.
 `start_run` can likewise return an admission before execution finishes: poll `inspect_run` with its run ID and `inspect_workflow` until publication succeeds. A successful tool call alone is not proof of publication. Resume or render the product only after the supervisor reports its published state.
-An older supervisor may finish these stages before returning; use the same terminal-state checks. Replaying the exact request observes the existing operation; never start a second run to recover a slow call. A validation failure whose
-`recovery` is `repair_then_retry` is repairable: follow **When validation
-fails** in workflow-v2.md and read [reference/failure-handling.md](reference/failure-handling.md) before asking the user anything. Any other failed or unavailable action is a blocker; do not retry through direct build/validation commands, local
-files, SQLite, raw SQL, pandas, or another database.
+An older supervisor may finish these stages before returning; use the same terminal-state checks. Replaying the exact request observes the existing operation; never start a second run to recover a slow call. Route every `phase: capture` diagnostic to the capture-code table in **Reset after behavior changes**; `workflow/capture_proposal_blueprint_mismatch` needs full replacement, not capture-only reset. For `recovery: reprepare`, reset the graph root with `reprepare_retained: true`, follow returned actions, and trust whether consent is pending or carried forward. A validation failure with `recovery: repair_then_retry` is repairable; follow **When validation fails** in workflow-v2.md and read [reference/failure-handling.md](reference/failure-handling.md) before asking the user anything. Other failed or unavailable actions are blockers; do not bypass them with direct build/validation commands, local files, SQLite, raw SQL, pandas, or another database.
 
 ### Step 4a — Render the pinned static artifact
 
