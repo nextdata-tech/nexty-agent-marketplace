@@ -399,6 +399,18 @@ itself; do not change the proposal after consent.
 Find the consent action in `next_actions`. After the user approves the exact
 blueprint read-back, call `advance_workflow` with `session_decision`.
 
+At this consent point, ask once: "Would you like your consent to carry forward
+if the supervisor re-prepares this same plan after an update?" This is
+optional; never set `carry_forward_unchanged_plan` without the user's explicit
+opt-in. Omit the field unless the user opted in; older supervisors reject
+unknown fields. When opted in, include `"carry_forward_unchanged_plan": true`
+in the same approved `session_decision`. It is valid only with `approved: true`. Re-preparation always computes a new consent
+subject. Consent carries only when the blueprint semantics, policy, review
+scope, budget, and proposal identity are unchanged and only supervisor tooling
+identity changed. Otherwise ask for fresh consent. Tell the user when the
+snapshot reports that consent was carried forward; a later denial still
+revokes it.
+
 Interpret authorization by the explicitly authorized object and limits, never
 the word "approved" alone. Permission to inspect access, check connectivity or
 draft a plan is not consent to the complete prepared blueprint. For example,
@@ -453,6 +465,12 @@ request.
     }
   }
 }
+```
+
+Only after the explicit opt-in, add this field to the parameters above:
+
+```json
+"carry_forward_unchanged_plan": true
 ```
 
 The approval authorizes the already presented plan and the proposal bound during
@@ -1184,6 +1202,15 @@ A failed `start_requirement` for validation returns a bounded `phase`, `code`,
 `detail`, and `recovery`. The supervisor deliberately omits compiler and
 subprocess output from that diagnostic.
 
+- Any diagnostic with `phase: capture` uses the capture-code table under
+  **Reset after behavior changes**, even when surfaced by validation or run
+  admission. In particular, `workflow/capture_proposal_blueprint_mismatch`
+  requires full replacement of the blueprint and regenerated proposal, not a
+  capture-only reset.
+- `recovery: reprepare` means reset the supervisor-returned graph root with
+  `reprepare_retained: true`, then follow the returned actions. Consent may be
+  pending or carried forward; trust the returned requirement state.
+
 - `recovery: repair_then_retry` means the retained closure has a defect you can
   fix. Call `check_data_product` on the authoring closure to read the specific
   structure, runtime, contract, and semantic findings. For a closure that uses
@@ -1235,13 +1262,37 @@ If the blueprint or typed proposal changes after `prepare_workflow` succeeds,
 do not retry the old operation or patch its binding. Call `reset_workflow` with
 the supervisor-returned graph-root requirement (the activated contract
 currently returns consent) and the new host-visible
-`replacement_blueprint_path`. Then regenerate the complete proposal and obtain
-fresh prepare and consent state. If the edit happens after consent, the same
-reset/replacement/fresh-consent rule applies; old consent never transfers to an
-edited blueprint or proposal. Do not invent the root id; read it from the
+`replacement_blueprint_path` plus the complete matching inline
+`replacement_proposal`. The replacement proposal has the same complete typed-v3
+shape used by `prepare_workflow`; do not omit it or send a summary. Then obtain
+fresh consent when the plan changed. If the edit happens after consent, the
+same reset/replacement rule applies. Do not invent the root id; read it from the
 current requirements/actions. If only the generated closure changes behavior,
 reset the returned capture requirement and set `replacement_blueprint_path` to
-null. Then follow the returned actions from the new generation and epoch.
+null. For an update that made the retained proposal's materializer identity
+stale, use `reprepare_retained: true` at the graph root instead of copying the
+proposal into the request. This option is mutually exclusive with replacement
+inputs and re-prepares the stored blueprint and typed proposal using the
+running supervisor. Then follow the returned actions from the new generation
+and epoch.
+
+Capture failure diagnostics have phase `capture` and stable public codes. Use
+the diagnostic recovery value and follow this table:
+
+| Code | Meaning | Recovery |
+|---|---|---|
+| `workflow/capture_materializer_stale` | The retained proposal is intact and bound to this blueprint, but was prepared by a different materializer version. | Reset the graph root with `reprepare_retained: true`; consent is pending unless the user opted into unchanged-plan carry-forward and every plan-bound field still matches. |
+| `workflow/capture_proposal_blueprint_mismatch` | The proposal is bound to different blueprint semantics. | Regenerate the proposal, reset with both replacement inputs, and obtain consent for the changed plan. |
+| `workflow/capture_proposal_integrity` | The retained proposal is missing, unreadable, malformed, or has a digest mismatch. | Stop and report the code. Recovery requires a full replacement blueprint plus regenerated proposal and renewed consent; retained re-preparation is refused. |
+| `workflow/capture_blueprint_integrity` | Retained blueprint bytes do not match their content address. | Stop and report the code. |
+| `workflow/capture_retained_integrity` | The retained capture is unreadable, conflicts with its digest, or changed while sealing. | Stop and report the code. |
+
+Other capture codes identify input limits, reserved artifacts, or a specific
+materialization failure and carry their own recovery disposition. Do not infer
+a cause from diagnostic prose or weaken integrity checks.
+The same typed proposal classification is repeated when validation starts and
+when a run is admitted, so an update between capture and either boundary still
+returns `workflow/capture_materializer_stale` with re-preparation guidance.
 Re-capture, re-review, and re-run validation as indicated; stale evidence
 cannot satisfy admission.
 
@@ -1251,7 +1302,29 @@ cannot satisfy admission.
   "workflow": "<workflow>",
   "expected_revision": 10,
   "requirement_id": "<returned-graph-root-or-capture>",
-  "replacement_blueprint_path": "/host-visible/new-blueprint.md"
+  "replacement_blueprint_path": "/host-visible/new-blueprint.md",
+  "replacement_proposal": {
+    "schema": "nxd-dp-spec-proposal-v3",
+    "authoring_version": "nxd-dp-spec-authoring-v1",
+    "proposal": { "<complete typed proposal payload>": "from dp-blueprint.proposal.json" },
+    "provenance": { "<complete provenance map>": "from dp-blueprint.proposal.json" },
+    "source_spans": { "<complete source-span map>": "from dp-blueprint.proposal.json" },
+    "anchors": { "<complete anchors map>": "from dp-blueprint.proposal.json" },
+    "echo": { "text": "<complete natural-language echo-back>", "coverage": ["<all covered paths>"] }
+  }
+}
+```
+
+For re-preparation after a supervisor update, use this mutually exclusive form
+at the graph-root requirement:
+
+```json
+{
+  "request_id": "reset-<workflow>-<unique>",
+  "workflow": "<workflow>",
+  "expected_revision": 10,
+  "requirement_id": "<returned-graph-root>",
+  "reprepare_retained": true
 }
 ```
 
