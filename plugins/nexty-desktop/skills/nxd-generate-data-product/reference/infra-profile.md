@@ -52,6 +52,12 @@ real credential — see
 For 2+ instances of one type, emit one service per instance, per
 [`multi-source.md`](multi-source.md).
 
+Desktop storing the opaque reference does not prove macOS can read it or that
+the source is reachable. Keep source-credential read permission separate from
+protected saved-workflow-state access and from spending approval. For typed
+Keychain access failures and their local recovery, follow the job loop's
+[failure-handling guidance](../../nxd-run-job-loop/reference/failure-handling.md#keychain-credential-and-saved-state-access-outcomes).
+
 ## What the supervisor does with `attributes`
 
 **`attributes` is live input, not documentation.** For every service the

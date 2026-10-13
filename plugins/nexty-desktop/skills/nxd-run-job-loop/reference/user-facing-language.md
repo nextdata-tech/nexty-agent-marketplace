@@ -15,6 +15,7 @@ existing references.
 - [Meaningful progress](#meaningful-progress)
 - [Approval or clarification](#approval-or-clarification)
 - [Asking for source access](#asking-for-source-access)
+- [Keychain credential and saved-state access](#keychain-credential-and-saved-state-access)
 - [Declined or cancelled approval](#declined-or-cancelled-approval)
 - [Blocker](#blocker)
 - [Retry](#retry)
@@ -123,14 +124,16 @@ If the runtime does not advertise native entry, report that the connection
 feature is unavailable there and give its documented Desktop update or
 connection action. Do not imply a stored key has been tested against the source.
 
-Never ask a Desktop user to run commands, edit YAML, create a credential file,
-or fill credential placeholders. Do not invent an intake tool or pretend that
-a chat connector supplies runtime credentials. Agent-owned authoring is the
-agent's job; source access comes from the native connection prompt;
-human spending consent belongs to its separate protected approval prompt. One cannot
-substitute for another. Provider keys remain supervisor-managed.
-For source-credential recovery, do not ask for an env-variable name or give
-commands, OS setup or restart instructions. Never offer or solicit a chat-connector
+For source-connection setup, never ask a Desktop user to run commands, edit
+YAML, create a credential file, or fill credential placeholders. Do not invent
+an intake tool or pretend a chat connector supplies runtime credentials.
+Agent-owned authoring is the agent's job; source access comes from the native
+connection prompt; human spending consent belongs to its separate protected
+approval prompt. One cannot substitute for another. Provider keys remain
+supervisor-managed.
+For native source-connection entry, do not ask for an env-variable name or give
+commands, OS setup or restart instructions. For Keychain access recovery, use
+the canonical reason-to-action mapping linked below. Never offer or solicit a chat-connector
 fetch or file substitute for a requested live in-product source, even as a new
 publication or an alternative approval choice. A file export is a different
 source scope, used only after an independent user request to change source scope; disclose that it
@@ -138,11 +141,57 @@ does not provide fresh in-product fetching. Never solicit a pasted key. If the
 user volunteers one anyway, do not echo it; disclose that it now lives in chat
 history and should be rotated after the build, preserving the existing exception.
 For `state_unavailable`, say the connection state could not be read or stored
-and keep that source step blocked. Do not invent a login requirement, tell the
-user to open an app, or claim waiting cannot help. Resume the existing request
-after actual recovery, with no broader approval just to repeat access setup.
+and keep that source step blocked until the reported access issue is resolved.
+Do not invent a login requirement, tell the user to open an app, or claim
+waiting cannot help. Resume the existing request after actual recovery, with
+no broader approval just to repeat access setup. For typed Keychain reasons,
+use [Keychain credential and saved-state access](#keychain-credential-and-saved-state-access).
 For a deliverable or business plan, share only a verified user-facing file/link
 through the supported host surface, not a terminal command or internal path.
+
+### Keychain credential and saved-state access
+
+Explain which local permission is involved. Reading a provider or source
+credential, reading the protected key for saved workflow state, and approving
+paid model use are separate decisions; one never grants another. Use the
+canonical reason-to-action mapping in
+[failure-handling.md](failure-handling.md#keychain-credential-and-saved-state-access-outcomes)
+for Keychain access results. Keychain access outcomes do not mean the app is
+asleep, offline, unavailable, or needs sign-in. Never ask for a Mac password,
+key, or credential in chat.
+
+When advertised, `provider_credential_status` is a read-only, no-argument
+check that makes one bounded 20-second read, returns no key, and never
+contacts the provider. It cannot establish source-credential or protected
+workflow-state access. If it reports a missing provider key, say this is
+one-time setup, not access recovery; follow the provider setup directions in
+the canonical table. The status is `retryable: false`, so do not retry the
+missing-key outcome. The key never goes in chat, and the agent never runs the
+setup command or handles the key.
+
+For `access_not_granted`, the user allows the read when macOS asks, then the
+same action is retried only when `retryable: true`. A user confirmation that
+the request was completed or dismissed triggers one re-check; dismissal does
+not itself grant access. For a concurrent provider-key read, the runtime
+returns `pending` immediately and does not open another prompt. Re-check once
+after the user confirms completion or dismissal, or after a short wait. If it
+is still pending, report that and stop; do not poll again.
+
+For `workflow/state_mac_key_unavailable` with no `reason`, say only that
+protected workflow state could not be read. Follow the canonical table and
+retry rule. `workflow/state_mac_key_invalid` is an integrity refusal: report
+it and never reset or recreate saved state.
+
+`source_connection/protected_access_timeout` remains a bounded timeout even
+when its optional `reason` is absent. Use the canonical table for its meaning
+and next action. `source_connection/state_mac_key_unavailable` is a separate
+protected-state outcome; without a reason, say only that the protected state
+could not be read. If its reason is `missing`, do not direct the user to
+provider or source credential entry or create/replace the state key. For
+source or saved-state access, retry only that exact action when
+`retryable: true`; otherwise stop and report. A saved-state `reason: missing`
+stops and is never fixed by retrying. The provider status tool cannot establish
+or recover those reads.
 
 ### Declined or cancelled approval
 
