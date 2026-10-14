@@ -815,7 +815,14 @@ fails, the authoring closure no longer matches the capture: repair, reset and
 recapture rather than validate. Then start supervisor-owned validation with the
 returned `start_requirement` action and current revision. A queued or running
 operation is pending work: poll `inspect_workflow` without dispatching another
-validation. Continue only when validation is satisfied. Then use the returned
+validation. Continue only when validation is satisfied. Do not end the turn, or
+ask the user to say "continue", while that validation or a run you started is
+queued or running. A rate-limited or paginated source can keep it running for
+several minutes, and a hand-back returns control with nothing to decide: the
+next message can change the plan and discard a validation that was about to
+pass. Keep polling until the operation is terminal. Hand back mid-operation only
+when `inspect_run` reports it as unknown rather than in progress, or when a
+decision only the user can make is waiting. Then use the returned
 `start_run` action with the current `revision` and `invalidation_epoch`.
 
 An admitted `start_run` response identifies the run but can precede transform

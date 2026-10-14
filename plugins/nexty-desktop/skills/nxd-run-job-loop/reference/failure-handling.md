@@ -243,7 +243,14 @@ producing the identical error:
   when the same message ends with "can you decide?": the user has said someone else
   owns the answer. Decline both questions, say what stays open and what you would do
   under each answer, and do not re-prepare, edit, capture, validate, run or publish
-  anything that depends on them until the user rules. Other drift decisions, such
+  anything that depends on them until the user rules. A later message that hands
+  the same question back ("I don't know, you tell me") ends the deferral: it is a
+  delegation, so apply the rule above. Once the user has ruled on or delegated
+  every decision a prepared plan depends on, an approval of that plan that says
+  "after resolving the open business decision" (or names any decision the plan
+  already records a ruling or recorded assumption for) is an approval: relay it,
+  and say in the same reply which recorded decision you took it to mean. Ask which
+  decision is meant only when the plan still leaves one open. Other drift decisions, such
   as how to treat a new category value, keep the usual rule: explain the options and
   ask again. Never add a new category or stage value to the accepted set on your own
   authority, whatever the user later rules (include it, leave it out, or publish it
