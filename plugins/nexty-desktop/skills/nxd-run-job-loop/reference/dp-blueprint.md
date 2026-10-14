@@ -126,6 +126,16 @@ plan:
    row, or a promise reworded so it claims no more than its check does. Never add
    a model, relation or promise the user did not ask for to settle a finding.
    Each addition is new surface for the next review.
+5. **Check every claim the plan makes against the code you wrote,** in the same
+   pass and before the first capture, because each overclaim the review finds costs
+   a fresh approval. Three kinds recur:
+   - **What is fetched:** say "received, then dropped before anything is stored"
+     unless the request itself asks the source for fewer fields.
+   - **Who decided it:** mark each Decision as the user's only when the user said
+     it in their own words, and as yours (adopted by approval) otherwise.
+   - **What a promise checks:** word each promise exactly as its check behaves,
+     for example "at least one current row has an amount", not "every amount is
+     present".
 
 ### Where an Input expectation can actually run
 
