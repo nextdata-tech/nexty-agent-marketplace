@@ -239,9 +239,15 @@ producing the identical error:
   An explicit hand-back of a renamed-key decision ("you decide", "you tell me",
   "your call"), including after you explained the trade-off, is a delegation, not
   a non-answer: do not keep re-asking and do not default to stopping. A deferral
-  ("I need to check with Finance") is not a hand-back, and other drift decisions,
-  such as how to treat a new category value, keep the usual rule: explain the
-  options and ask again. Nor does this apply to approving a review finding, where
+  ("I need to check with Finance") is not a hand-back, and it stays a deferral even
+  when the same message ends with "can you decide?": the user has said someone else
+  owns the answer. Decline both questions, say what stays open and what you would do
+  under each answer, and do not re-prepare, edit, capture, validate, run or publish
+  anything that depends on them until the user rules. Other drift decisions, such
+  as how to treat a new category value, keep the usual rule: explain the options and
+  ask again. Never add a new category or stage value to the accepted set on your own
+  authority, whatever the user later rules (include it, leave it out, or publish it
+  flagged as a warning). Nor does this apply to approving a review finding, where
   the same words remain a deflection; a mapping recorded under this rule is a
   Decision the review grades against, not a finding to re-ask. The rename is
   like-for-like when exactly one field the transform read is gone; exactly one new
