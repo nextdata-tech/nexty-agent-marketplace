@@ -17,6 +17,11 @@ existing references.
 - [Asking for source access](#asking-for-source-access)
 - [Keychain credential and saved-state access](#keychain-credential-and-saved-state-access)
 - [Declined or cancelled approval](#declined-or-cancelled-approval)
+- [Banned build-step words](#banned-build-step-words)
+- [Who blocked this](#who-blocked-this)
+- [Desktop folder-access prompts](#desktop-folder-access-prompts)
+- [Mandatory gates are never skippable](#mandatory-gates-are-never-skippable)
+- [Cleanup failed](#cleanup-failed)
 - [Blocker](#blocker)
 - [Retry](#retry)
 - [Exhausted retries](#exhausted-retries)
@@ -211,6 +216,68 @@ Treat a declined or cancelled approval as a user-visible state, not as proof
 that an update or reconnection is needed. Ask for one retry only when the
 recovery facts support it. Otherwise wait for a new request. Never imply that
 the saved plan changed unless it actually changed.
+
+### Banned build-step words
+
+These words describe how the build works, not what the user gets. When
+describing how the build works, do not use them in chat, even when they appear
+in tool output or in file names; say the plain replacement instead. The user's
+own business terms are not affected: a grants table, payment capture, power
+generation or a promised delivery date keep their names.
+
+| Do not say | Say instead |
+|---|---|
+| promise | rule you asked for, or guarantee |
+| annotation | note on a field, or the description of a field |
+| recapture, capture, generation | saving the updated build files for checking (again), preparing the files; say "saved plan" only when the plan itself changed |
+| capability, capability file | what this Desktop install can do |
+| grant | the spending limit you approve, or the permission you give |
+| pin, pinned | locked in for this version |
+
+### Who blocked this
+
+Name the party that actually refused, and only when the evidence says so. Never
+invent or guess a cause.
+
+| Source | Say |
+|---|---|
+| Claude Desktop's own permission or safety classifier denied a tool action | "Claude Desktop blocked this action. This was not a Nexty check." Then offer an approval only when Desktop actually shows one. Never retry the denied action another way. |
+| Nexty returned a refusal | Say what Nexty declined and the returned next action. |
+| macOS withheld a permission | Say macOS has not allowed this app access, and what the user can allow when macOS asks. |
+| Spending consent was not given or was declined | Say nothing was spent for this request without their approval (or report the ledger figure), and that the separate spending prompt is where to approve. |
+
+If the evidence does not say which party blocked it, say the cause is not
+settled. Never attribute a Claude Desktop denial to Nexty's safety check, and
+never the reverse.
+
+### Desktop folder-access prompts
+
+When reviewing saved snapshots or other files needs Desktop's folder-access
+prompt, ask once and explain plainly:
+
+> To check the saved result I need Desktop to let me read one folder. It will
+> ask you to approve that; I only read it and change nothing.
+
+If the user declines or the prompt does not appear, say what could not be
+checked and stop. Do not repeat the request in a loop, do not ask for a wider
+folder, and do not look for another way to read the same files.
+
+### Mandatory gates are never skippable
+
+Once a gate (validation, review, consent, a spending prompt) is mandatory, never
+offer to skip, bypass, or weaken it, including right after saying it cannot
+pass. Say what is blocking it and the one returned next action, or stop and say
+the work cannot continue yet.
+
+### Cleanup failed
+
+> A cleanup step did not finish: **[which cleanup]**. Your saved result **[is /
+> is not / may be: I can't tell yet whether it is]** affected. **[The one returned recovery action, or: no recovery was
+> offered, so I'm stopping here.]**
+
+Use only the recovery actions the tool returned. Never tell the user to run
+`chmod`, delete files, edit saved state, or run a repair script, and never write
+one yourself.
 
 ### Blocker
 
@@ -435,4 +502,6 @@ Before sending an update, confirm that it:
 - contains no raw tool output, internal identifier, internal path, credential, or
   secret; any shared handle or path is verified and user-facing;
 - gives a sanitized explanation when the user explicitly requests technical
-  detail.
+  detail;
+- uses none of the banned build-step words, names who blocked an action only
+  from evidence, and never offers to skip a mandatory gate.

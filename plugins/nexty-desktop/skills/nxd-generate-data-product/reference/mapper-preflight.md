@@ -29,12 +29,19 @@ question; only the human's native spending confirmation grants consent.
    Never ask the user to run commands, compute hashes, inspect package source,
    or edit JSON. A missing document does not prove the runtime is unavailable.
 2. Author the spec and a complete capped spending proposal through the normal
-   authoring surface, using the agreed business scope. Call
+   authoring surface, using the agreed business scope. Use the `opus` family
+   for an unspecified primary model; preserve an explicit model or family
+   choice, including an existing grant's model. Call
    `prepare_mapper` with `definition` (the absolute host definition directory)
    and `workflow` (the workflow ID). It is read-only: `mapper_spec_id` is the
    installed canonical ID when available; `findings` use `code` and `detail`
    for static consistency/pricing corrections. Invalid input may omit the ID.
-3. For `mapper/grant_id_missing`, write the returned `proposed_grant` to the
+3. For `mapper/model_missing`, save the complete returned `proposed_spec` to
+   `contracts/mapper_spec.json` through the normal authoring surface, then
+   call `prepare_mapper` again. The tool is read-only and the proposal has no
+   binding ID until this save and recheck. For `mapper/source_changed`,
+   reprepare before saving. Do not ask the user to edit the model field.
+   For `mapper/grant_id_missing`, write the returned `proposed_grant` to the
    existing proposal path (`contracts/mapper_grant.json`, or
    `contracts/mapper_spec_grant.json`; the spec must be
    `contracts/mapper_spec.json`) through the same authoring surface. The tool changes
@@ -46,10 +53,21 @@ question; only the human's native spending confirmation grants consent.
    its ID; a missing or invalid proposal is not synthesized.
 4. Resolve all findings before capture or consent. In particular,
    `workflow/mapper_model_unpriced` covers unknown or unpriced exact models.
-   Keep the user's explicit model choice when priced. Otherwise use the live
-   catalog to recommend one suitable priced model with a factual cost/scope
-   tradeoff in the complete prepared-plan echo-back; its plan approval confirms
-   the recommendation. Ask a separate model question only when material
+   Keep the user's explicit model choice when priced; an explicit concrete ID
+   stays pinned only when priced. If an explicit primary or corroboration model
+   is unknown or unpriced, offer options from the live catalog with both
+   `input_micro_usd_per_mtok` and `output_micro_usd_per_mtok` present. Ask the
+   user to choose before changing the model; never retry the unchanged unpriced
+   ID or replace it automatically. If no priced options exist or the user
+   declines them, stop with `workflow/mapper_model_unpriced`. Do not remove the
+   mapper or fall back to an unpriced family. An unpriced family remains a
+   finding, and corroboration still requires an exact installed ID.
+   For an unspecified model, keep the `opus` family in the saved spec so the
+   supervisor resolves its latest supported, priced concrete ID at native
+   approval. A chosen `haiku`, `sonnet` or `fable` family follows the same
+   resolution. Present the chosen model or family and a factual cost/scope
+   tradeoff in the complete prepared-plan echo-back; its plan approval
+   confirms that choice. Ask a separate model question only when material
    ambiguity blocks preparation. If preflight reveals a mismatch after plan
    approval, revise the complete spec and proposal and obtain the required
    fresh plan and spending approvals. Catalog rows carry `id`,
@@ -74,13 +92,20 @@ question; only the human's native spending confirmation grants consent.
    "The setup checks passed; scoring has not run."
    For a setup without a mapper, say: "The setup checks passed; nothing has
    been run yet." `mode` defaults to `"full"` when omitted.
-7. Continue normal capture, retained review, native spending approval,
+7. Before asking for spending approval, tell the user in plain words which
+   source fields' content is sent to the model. Only the mapper input's text
+   (`landed_text`) and the instruction reach the model, and the declared field
+   list is not enforced at runtime, so derive the list from the actual
+   `map_inputs` input construction in the closure, not from the plan. Include
+   long free-text fields such as job descriptions. See
+   [disclosing what is sent](field-mapper.md#disclosing-what-is-sent-to-the-model).
+8. Continue normal capture, retained review, native spending approval,
    validation and admission. None of these checks replaces a gate or changes
    budgets or credential handling. The provider key stays in the supervisor's
    secure store, never in a closure or child environment.
 
 Preparation corrections include `workflow/invalid_request`,
-`mapper/preparation_input_invalid`, `mapper/spec_invalid`,
+`mapper/preparation_input_invalid`, `mapper/spec_invalid`, `mapper/model_missing`,
 `mapper/grant_missing`, `mapper/grant_invalid`, `mapper/grant_expired`,
 `mapper/model_mismatch`, `mapper/corroboration_mismatch`, and
 `workflow/mapper_approval_claims_rejected` (approval or execution claims).

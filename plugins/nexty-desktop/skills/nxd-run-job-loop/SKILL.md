@@ -13,7 +13,7 @@ allowed-tools:
   - Task
 metadata:
   author: nextdata
-  version: 0.59.4
+  version: 0.59.8
 ---
 
 # nxd-run-job-loop skill
@@ -200,7 +200,7 @@ repeat inference within this boundary.
 
 ### Step 3 — Enroll, approve, then generate the runnable closure
 
-Before the approval turn, the main thread must establish the connected supervisor's v2 execution capability and enroll this exact prose/proposal pair: write and validate `dp-blueprint.proposal.json` beside the host-visible `dp-blueprint.md`, parse that complete object, call `get_workflow_capabilities`, require structured `execution_enabled: true`, then call `prepare_workflow` with `kind: "generated-data-product"`, the blueprint path, and the inline `typed_proposal` object. For an unspecified mapper model, use the live priced catalog to recommend one suitable option and a factual tradeoff in this one complete prepared-plan echo-back; ask a separate model question only if material ambiguity blocks preparation, and never infer provider access or observed quality from pricing. Omit `source_hash` from the caller-authored file and inline object; the supervisor inserts or replaces its canonical value. Proposal validation and binding happen before consent; the prepare request must carry the complete typed proposal object, not a path or placeholder. Keep the blueprint at `status: proposed` during prepare. Never set `status: approved` or invent approval hashes; approval remains only through the returned `session_decision` consent action. Use
+Before the approval turn, the main thread must establish the connected supervisor's v2 execution capability and enroll this exact prose/proposal pair: write and validate `dp-blueprint.proposal.json` beside the host-visible `dp-blueprint.md`, parse that complete object, call `get_workflow_capabilities`, require structured `execution_enabled: true`, then call `prepare_workflow` with `kind: "generated-data-product"`, the blueprint path, and the inline `typed_proposal` object. For an unspecified mapper model, author the `opus` family and explain the choice and factual cost tradeoff in the complete prepared-plan echo-back. Preserve an explicit model choice, including an existing grant model; never infer provider access or observed quality from pricing. During mapper preflight, automatically save a returned `proposed_spec` for `mapper/model_missing` and re-run `prepare_mapper` before capture; see [mapper preflight](../nxd-generate-data-product/reference/mapper-preflight.md#desktop-preparation). Ask a separate model question only if material ambiguity blocks preparation. Omit `source_hash` from the caller-authored file and inline object; the supervisor inserts or replaces its canonical value. Proposal validation and binding happen before consent; the prepare request must carry the complete typed proposal object, not a path or placeholder. Keep the blueprint at `status: proposed` during prepare. Never set `status: approved` or invent approval hashes; approval remains only through the returned `session_decision` consent action. Use
 only its returned revision, invalidation epoch, requirement identities and
 `next_actions`. Do not present an approval prompt or ask for approval until
 `prepare_workflow` succeeds. Then present the prepared echo-back and relay the user's exact approval through the returned `session_decision` action only when it authorizes the complete prepared plan; access-check or drafting consent leaves plan consent pending. Genuine complete-plan approval may permit generation while paid scoring is separately withheld; native spending/budget verification and all admission gates still apply. A capability blocker or
@@ -409,7 +409,7 @@ allowed when needed to use or retrieve the result. Preserve ordinary business
 terms, including `schema` when it is needed to describe the user's data;
 translate implementation framing instead.
 If the user asks for technical detail, give only the necessary sanitized explanation.
-Query-answer wording and failure classification remain in their current owners.
+Query-answer wording and failure classification remain in their current owners. When describing how the build works, build-step words (promise, annotation, recapture, capability, grant, pin, capture, generation) never reach the user, though the user's own business terms keep their names; use the plain replacements in the user-facing language reference. Name Claude Desktop, Nexty, macOS or the spending prompt as the source of a block only when the evidence shows it; never invent a cause.
 
 ## Invariants — never violate these
 
@@ -492,6 +492,7 @@ Query-answer wording and failure classification remain in their current owners.
   never `chmod`, edit, or hand-write it, and a `.../staging/run-<id>/data.duckdb`
   path inside a pinned `manifest.yaml` is its own resolved runtime path, not a defect. If a served closure
   is wrong, fix **your** source dir and re-`serve` — the supervisor re-pins. Approved rules/code stay pinned; each admitted live-source run refetches source data. When a mapper is part of the approved plan, that run invokes its bound mapper. Querying or reopening a publication alone is not a fresh run; claim freshness only from admitted-run evidence. Pinned state alone does not establish that a refresh requires a new version: use returned runtime capability/state evidence, preserving the behavior-changing revision and new-ID consent rules above.
+- **Never offer to skip, bypass or weaken a mandatory gate.** Once validation, review, consent or any other gate is mandatory, say what is needed to pass it or stop; "skip validation" is never an option to offer, even after calling the gate impossible.
 - **Bearer only as a tool parameter** — keep it out of narration, never persist or print it. **Never
   present a preview or truncated result as verified data**, and never stall silently.
 ## Reference docs (this skill)

@@ -295,6 +295,16 @@ before capture. Re-prepare and show the revised echo-back so the user's approval
 covers those constraints. A check that runs only in the transform does not
 satisfy the promised contract.
 
+**Enforce requested rules from the first plan approval.** When the prepared
+plan is first shown for approval, include each rule the user requested as an
+automatically enforced guarantee, so first approval and first capture already
+cover it. Do not ask the user whether to enforce a rule they asked for. Ask only
+when a rule cannot be enforced, and say what that means for them. Adding a
+guarantee later changes the saved plan and needs fresh consent; including it up
+front avoids that second round. This never weakens the rule that a change to the
+plan needs fresh consent. If re-approval is genuinely required later, follow the
+narration rules in [Current Desktop generation](../../nxd-generate-data-product/reference/desktop-generation.md#enforce-requested-rules-from-the-first-plan-approval).
+
 Each approved Decision is locked by id and hash. Extraction cannot overwrite a
 locked Decision. A conflicting edit becomes an explicit proposed change and
 revokes the approval; it is never silently merged.

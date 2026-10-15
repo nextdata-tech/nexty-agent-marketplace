@@ -23,6 +23,28 @@ evidence, a concrete error, changed scope or relevant version drift. The pinned
 DSL reference's compatibility caveat still applies: check only the affected
 signature when needed, never treat a different installed version as verified.
 
+## Enforce requested rules from the first plan approval
+
+The first-approval rule lives in the job loop's echo-back guidance
+([constraints attached to approval](../../nxd-run-job-loop/reference/dp-blueprint.md#interpretation-and-approval)),
+because this route applies only after plan consent. Do not add a requested rule
+as an enforced check here without fresh consent; a change to the plan always
+needs it.
+
+When re-approval is genuinely required, say plainly what changed. If the only
+change is turning a rule the user already requested into an automatically
+enforced check, you may say:
+
+> This is the same rule you asked for, now checked automatically. Because the
+> saved plan changed, I need you to confirm the updated plan again.
+
+Add "Desktop will also ask again before anything is spent" only when the plan
+includes a field mapper; a plan without one has no spending step.
+
+If anything else changed (what is sent to the model, the model, the limits or
+the instruction), do not use that wording. Name each change in plain words
+before asking.
+
 ## Author in dependency order
 
 | When applicable | Recipe and action |

@@ -163,7 +163,7 @@ result = map_inputs(
 MapperInput(
     input_id=str(document_id),              # the mapper's handle for this record
     identity={"document_id": document_id},  # the spec's declared identity fields
-    fields={"document_id": document_id},    # everything else the adapter exposes
+    fields={"document_id": document_id},    # your own metadata; never sent to the model
     landed_text=text,                       # the substring haystack — NOT model output
     document_class="invoice",
 )
@@ -690,8 +690,8 @@ Transport is the `anthropic` SDK. **The model is declared by the spec**, and its
 capabilities are NOT universal — this section originally read "Model:
 `claude-opus-5`", which silently made one model's dialect the contract.
 
-**Model capability gating.** Reasoning controls — adaptive `thinking` and
-`output_config.effort` — exist only on the 4.6 generation and later.
+**Model capability gating.** Adaptive `thinking` and
+`output_config.effort` depend on the model, not only its family.
 `transport.supports_reasoning_controls(model)` prefix-matches
 `_REASONING_CONTROL_MODELS` and gates **both** thinking branches plus `effort`.
 Sending any of them to an older model is a 400 that blocks the whole run: the API
@@ -708,16 +708,18 @@ confirmed empirically rather than argued:
   degrading quietly. The table stays as the no-network path because `preflight`
   and dry runs must work with neither SDK nor key.
 - **Two leaves, not one boolean.** `ModelCapabilities` carries
-  `adaptive_thinking` and `effort` separately. The live probe shows they
-  genuinely diverge:
+  `adaptive_thinking` and `effort` separately. The live 4.5 probe confirms
+  they can diverge; the offline table includes later supported models:
 
   | model | `thinking` | adaptive | `effort` |
   |---|---|---|---|
   | `claude-haiku-4-5` | supported | **False** | **False** |
+  | `claude-haiku-5-5` | supported | True | True |
+  | `claude-sonnet-5-5` | supported | True | True |
   | `claude-sonnet-5` | supported | True | True |
   | `claude-opus-5` | supported | True | True |
 
-  So haiku accepts a `thinking` parameter while refusing `output_config.effort`.
+  Haiku 4.5 accepts a `thinking` parameter while refusing `output_config.effort`.
   One boolean forced the harness to either send `effort` to a model that 400s on
   it, or omit thinking from one that accepts it.
 

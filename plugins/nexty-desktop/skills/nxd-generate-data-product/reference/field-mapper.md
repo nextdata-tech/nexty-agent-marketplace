@@ -10,6 +10,7 @@ price of having the logic travel with the closure.
 ## Contents
 
 - [When to use it (and when not to)](#when-to-use-it-and-when-not-to)
+- [What the Desktop flow supports today](#what-the-desktop-flow-supports-today)
 - [Importing it in a closure](#importing-it-in-a-closure)
 - [Authoring the spec and the grant](#authoring-the-spec-and-the-grant)
 - [Desktop supervisor approval boundary](#desktop-supervisor-approval-boundary)
@@ -17,6 +18,7 @@ price of having the logic travel with the closure.
 - [Reviews: `data/mapper_reviews/`](#reviews-datamapper_reviews)
 - [Two dlt runs, in this order](#two-dlt-runs-in-this-order)
 - [Spend: the self-check really pays](#spend-the-self-check-really-pays)
+- [Disclosing what is sent to the model](#disclosing-what-is-sent-to-the-model)
 - [What the consent gate cannot see](#what-the-consent-gate-cannot-see)
 - [Verifying the installed harness](#verifying-the-installed-harness)
 
@@ -51,15 +53,37 @@ was told.
 **Run the Desktop preparation in [mapper-preflight.md](mapper-preflight.md)
 before every mapper build.** Check `get_workflow_capabilities.mapper_preparation`,
 call `prepare_mapper(definition, workflow)`, save its returned `proposed_grant`
-through the normal authoring surface when the ID is missing, and recheck until
+through the normal authoring surface when the ID is missing, save its complete
+`proposed_spec` when `mapper/model_missing` identifies an omitted model, and
+recheck after each save until
 no findings remain. Resolve unknown/unpriced model choices from the returned
-catalog before capture or consent; preserve a priced explicit choice. Then use
+catalog before capture or consent; default an unspecified primary to the
+`opus` family and preserve a priced explicit choice. Then use
 `check_data_product` with `mode:"structural"` before spending approval.
 Say "The setup checks passed; scoring has not run." This is not live validation
 or admission. If the capability is absent, this setup step needs a Desktop
 update; never hand the user commands, hashes, source inspection or JSON edits.
 Keep technical status blocks internal and use the canonical
 [user-facing language](../../nxd-run-job-loop/reference/user-facing-language.md).
+
+## What the Desktop flow supports today
+
+State the limits accurately; never invent a tighter one such as "one AI
+instruction per saved view".
+
+- The current Desktop flow carries one mapper spec with one instruction per
+  workflow. That one instruction can make many model calls, for example one per
+  row.
+- A second, distinct verification task in the same workflow is not supported
+  yet. Say so plainly. A second model can independently answer the same
+  instruction (corroboration) when it is approved. A separate product would
+  need its own plan and its own spending approval.
+- The agent proposes the checks on the AI output itself (for example allowed
+  values, required fields, quote presence) in the plan it shows for approval.
+  Do not ask the user how to check the summaries.
+- A quote that appears in the source is **not** full verification. Describe it
+  as "the quoted passage exists in the source". It does not show the passage
+  supports the conclusion drawn from it.
 
 ## Importing it in a closure
 
@@ -330,18 +354,83 @@ the first publication it admits. After that, admission reports it as
 `workflow/approval_expired`. Recapturing a changed closure moves the subject
 and invalidates the approval on purpose.
 
+**Binding-aware runtime contract.** The binding and strict scratch conditions
+below describe a Desktop release that checks the output-model binding; they
+are runtime-contract reference, not a support signal. The current
+`get_workflow_capabilities` response has no signal for binding-aware scratch
+coverage. With this interface, always report the advisory as wiring-only and
+never as verified output coverage. Do not infer binding-aware support from the
+advisory code, the binding file or a version guess. Never ask the user for a
+version to select the reporting.
+
+**Bind the mapper's output model.** Generate
+`contracts/mapper_output_binding.json` with exactly these keys:
+
+```json
+{"schema":"nxd-mapper-output-binding-v1","output_port":"duckdb","output_model":"latest_open_postings"}
+```
+
+Use the real output port and model from the authored closure; the names above
+are an example. Bind exactly one existing port/model pair whose schema contains
+all mapper target fields. The model must be public and carry its built-in model
+promise. Include this file in capture and independent review.
+Keep the existing mapper spec format unchanged. Generate the binding as part
+of authoring; never ask the user to supply internal identifiers or this JSON.
+A field with the same name on a different model does not establish attribution.
+Missing, invalid or ambiguous binding cannot authorize an advisory under the
+binding-aware contract.
+
+The inspected earlier capture source retains an extra regular `contracts/` file
+under its normal safety and size limits; retaining the binding does not make
+that runtime binding-aware. Capture compatibility with other older installed
+binaries remains unverified. If an installed capture rejects the file, stop and
+report the unsupported setup; do not remove it to obtain an advisory.
+
+For a custom guarantee on a mapper target field, return singular identifiers
+in the verifier's failure context:
+
+```python
+return VerifyResult(VerifyResultEnum.FAILED, {
+    "contract": "view-summaries-checked",
+    "model": "latest_open_postings",
+    "column": "summary",
+})
+```
+
+Use the actual custom contract, model and mapper field. The context becomes
+the runtime result's `extra_info_json`; the kernel supplies the positive outer
+`failed_count` separately. Do not put that count inside the context, infer
+attribution from prose, or use a plural `columns` tag as a substitute.
+
 **Validation does not spend.** Trusted validation runs the scratch build
-against a stub broker backend with no network and no charge. Stub values are
-placeholders, so contract or expectation failures confined to columns the
-mapper spec declares as outputs become the advisory
-`validation/mapper_output_unverified`. Every other contract failure still
-fails. Scratch evidence proves wiring, not the quality of mapped values.
+against a stand-in broker: the mapper makes no provider call and charges
+nothing. In the matching binding-aware runtime, source fetching remains real;
+source-fetch behavior on earlier releases is unverified here. An advisory alone
+never proves a source refetch. For the supported local one-shot
+self-managed batch, Nexty may return `validation/mapper_output_unverified`
+only for a trusted failed-promise refusal after verifying complete same-run
+output checks, the scratch artifact and readback, and failures confined to the
+captured binding's mapper fields. Ordinary successful scratch does not require
+advisory coverage or this output-model binding. A refusal with missing or
+incomplete evidence, unrelated or mixed failures, invalid typed outputs, or
+missing verifier context remains blocking. Transform, sandbox, timeout,
+cancellation, host lifecycle and cleanup faults also block validation.
+Every other contract failure still fails. Keep every guarantee and the required
+free test; do not weaken them to obtain an advisory.
+
+Scratch evidence proves wiring, not the quality of mapped values.
+Explain an advisory using the user's requested field names: “The free test
+checked the wiring but could not verify the AI-filled values. The real run
+will check those values before saving the view.” Keep technical identities in
+review artifacts unless the user requests diagnostics. The real run still
+enforces every guarantee; every real-run failure still blocks publication,
+including a failure in any required AI-filled value.
 
 ## Evidence modes — what each one proves
 
 | Mode / path | Evidence kind | What it actually proves |
 |---|---|---|
-| `structured` over text already landed in the closure | `verified` | The quoted span is a substring of landed text; re-checkable offline from `text_hash` + offsets. |
+| `structured` over text already landed in the closure | `verified` | The quoted span is a substring of landed text (the quoted passage exists in the source; this is not full verification of the conclusion); re-checkable offline from `text_hash` + offsets. |
 | `evidence_mode: "citations"` | `api_cited` | The API extracted `cited_text` server-side from the document, with page locations — a second party, not the answering model. Verified-equivalent for gating, but not offline-re-runnable. |
 | Media sent direct, no citations | `evidence_unverified` | Nothing. It counts against `max_unverified_share` by design. |
 
@@ -434,7 +523,7 @@ inputs = [
     MapperInput(
         input_id=str(document_id),              # this record's handle
         identity={"document_id": document_id},  # the spec's identity_fields
-        fields={"document_id": document_id},    # other context the model may read
+        fields={"document_id": document_id},    # context for the closure and records; not sent to the model
         landed_text=text,                       # the substring haystack
         document_class="invoice",
     )
@@ -506,7 +595,7 @@ The four slots are not interchangeable:
 |---|---|---|
 | `input_id` | this record's handle | keys the ledger and the recorded responses |
 | `identity` | the spec's `identity_fields` | what the grant and `input_snapshot_id` bind to — empty means nothing binds |
-| `fields` | other context the model may read | un-bound: changing it does not revoke a review |
+| `fields` | context for the closure and records; never sent to the model | un-bound: changing it does not revoke a review |
 | `landed_text` | text already landed in the closure | the only surface `verify_quote` checks a quote against |
 
 Putting the document identity **only** in `fields` leaves `identity` empty and
@@ -530,6 +619,25 @@ set, self-checking a mapper closure makes **live model calls**. Phase G runs
 before Phase B precisely so that spend can only happen under a binding grant;
 the ceilings on the spend itself (`max_calls`, `max_tokens`, `max_usd`) are
 enforced inside the harness at call time, not by the gate.
+
+## Disclosing what is sent to the model
+
+In the Desktop flow (supervised mode, which refuses media and citations
+inputs), only the mapper input's text (`landed_text`) and the instruction reach
+the model; the declared field list is not enforced at runtime. Outside Desktop,
+every `media` attachment (document or image) is also sent and must be named in
+the disclosure. Before spending approval, read the closure's actual
+`MapperInput` construction (the code that builds `landed_text` for
+`map_inputs`) and list, in plain words, every source field whose content is put
+into the text sent to the model, for example "the job title, the job
+description and the location". Do not rely on the plan's declared fields, and
+do not omit long free-text fields such as descriptions. Fields that appear only
+in `fields` are not sent; do not list them as sent.
+
+If the fields actually assembled into `landed_text` differ from the plan or the
+grant's `input_fields`, fix the closure or update the plan and grant (fresh
+approval) before asking for spending. Never just mention the difference in chat;
+see "Keep the declared list honest" above.
 
 ## What the consent gate cannot see
 

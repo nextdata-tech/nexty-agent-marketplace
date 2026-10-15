@@ -10,6 +10,7 @@
 - [A blocker is an open question found late](#a-blocker-is-an-open-question-found-late)
 - [After a failed supervisor operation: inspect once, then classify](#after-a-failed-supervisor-operation-inspect-once-then-classify)
 - [Keychain credential and saved-state access outcomes](#keychain-credential-and-saved-state-access-outcomes)
+- [Cleanup and plan-lock failures](#cleanup-and-plan-lock-failures)
 - [User-facing narration](#user-facing-narration)
 - [The commands](#the-commands)
 
@@ -441,6 +442,21 @@ timeout meaning. `source_connection/state_mac_key_unavailable` is a separate
 protected-state outcome and may carry a `reason`; without one, say only that
 protected state could not be read. Follow the table and general retry rule
 above. Do not guess a cause.
+
+## Cleanup and plan-lock failures
+
+Follow only the recovery the tool returned. Never call a failure "transient" or
+"environmental" without supervisor evidence of that.
+
+| Failure | What to do |
+|---|---|
+| Cleanup step failed on a permission error | Say which cleanup failed and whether the saved result is affected. Use only the recovery actions the tool returned. Never `chmod`, delete, edit saved state, or write a repair script, and never ask the user to. |
+| `validation/pin_toolchain_unavailable` | The tooling needed to lock in the build files is not available on this install. Follow the returned recovery; do not call it transient without evidence. |
+| `validation/pin_compile_timeout` | Compiling the build files ran out of time. Follow the returned recovery; do not call it transient without evidence of a retryable result. |
+| `validation/pin_spec_compile_failed` | The build files did not compile. Follow the returned repair-then-retry recovery without saying who or what caused it. |
+| `validation/pin_storage_failed` | Saving the locked build files failed. Follow the returned recovery. Say the saved result is unchanged only when the returned detail says so; never edit or reset saved state by hand. |
+| `validation/pin_closure_invalid` | The build files failed an integrity check and the run stopped. Report the stop; do not repair or save them again unless the returned recovery says so. Never touch saved state. |
+| `validation/pin_failed` | Locking in the build files failed for a reason not otherwise typed. Follow the returned recovery and describe the cause as not settled. |
 
 ## User-facing narration
 
