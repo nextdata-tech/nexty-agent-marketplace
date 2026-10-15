@@ -1168,12 +1168,45 @@ experiment spent zero.
 | `workflow/state_mac_key_invalid` | The protected saved-workflow-state key failed integrity verification. | The saved workflow state could not be verified. | Stop and report. Never reset or recreate state or suggest that another permission grants integrity. |
 | `workflow/mapper_integrity` | The approval or spend ledger failed an integrity check, or a lookup the gate depends on failed. The supervisor fails closed. | Approval records could not be verified. | Stop and report the code. Do not edit or delete supervisor state. |
 
-Validation in mapper mode runs the scratch build against a stub: it makes no
-network call and charges nothing. Stub answers are placeholders, so contract
-or expectation failures confined to columns the mapper spec declares as
-outputs become the advisory `validation/mapper_output_unverified`. Scratch
-validation proves wiring, not the quality of mapped values; say so when you
-report. Every other contract failure still fails.
+Validation in mapper mode uses stand-in answers for AI mapping: the mapper
+makes no provider call and charges nothing. The strict conditions below
+describe a Desktop release that checks the output-model binding; they
+are runtime-contract reference, not a support signal. The current
+`get_workflow_capabilities` response has no signal for binding-aware scratch
+coverage. With this interface, always report the advisory as wiring-only and
+never as verified output coverage. Do not infer binding-aware support from the
+advisory code, the binding file or a version guess. Never ask the user for a
+version to select the reporting. In the matching binding-aware runtime, source
+fetching remains real; source-fetch behavior on earlier releases is unverified here.
+An advisory alone never proves a source refetch.
+Generate and capture the mapper's exact output model binding and singular
+verifier attribution as described in
+[field-mapper.md](../../nxd-generate-data-product/reference/field-mapper.md#desktop-supervisor-approval-boundary).
+Do this as part of authoring; do not ask the user to construct internal IDs.
+The inspected earlier capture source retains this extra regular `contracts/` file
+under normal limits, without interpreting the binding. Compatibility with other
+older installed captures remains unverified; if capture rejects it, stop and
+report the unsupported setup rather than remove it to obtain an advisory.
+
+The advisory `validation/mapper_output_unverified` is eligible only for a
+trusted failed-promise refusal in the supported local one-shot self-managed
+batch when Nexty verifies complete same-run output checks, scratch readback,
+and failures confined to the bound model's mapper fields. Ordinary successful
+scratch does not require advisory coverage or this output-model binding. A
+refusal stays blocking with missing, invalid or ambiguous binding, incomplete
+evidence, unrelated or mixed failures, invalid typed outputs or missing
+context. Transform, sandbox, timeout, cancellation, host lifecycle and cleanup
+faults also stop validation. Every other contract failure still fails.
+Do not weaken a guarantee or skip the required free test to continue.
+Legitimate artifact repairs require reset, recapture,
+independent review and fresh approval; keep the existing cumulative budget.
+
+Report the advisory using the user's requested field names: “The free test
+checked the wiring but could not verify the AI-filled values. The real run
+will check those values before saving the view.” The real run still enforces
+every guarantee; every real-run failure still blocks publication, including a
+failure in any required AI-filled value.
+Scratch validation proves wiring, not the quality of mapped values.
 
 | Validation code | Recovery | Next action |
 |---|---|---|
@@ -1184,7 +1217,7 @@ report. Every other contract failure still fails.
 | `validation/mapper_ceiling_exceeded_in_scratch` | `repair_then_retry` | The scratch run would exceed the per-approval or per-spec ceilings. Reduce what the transform maps, or ask whether the user wants to widen that per-run grant (edit, recapture, review, fresh approval). This does not raise an established cumulative folder cap; when that cap is exhausted, paid scoring in the folder stops. |
 | `validation/mapper_grant_refused` | `repair_then_retry` | The transform asked for a model outside the grant, or sent a request shape the broker refuses. Make the transform use the granted model and an allowed request; a different model needs the user's fresh approval. |
 | `validation/mapper_provider_unavailable` | `stop` | The validation stub is not available in this supervisor build, or the scratch run tried to reach a real provider. Report it. |
-| `validation/mapper_output_unverified` | advisory | Not a failure. Report that mapper outputs were not checked against their contracts in scratch. |
+| `validation/mapper_output_unverified` | advisory | Not a failure. With the current capability response, always report wiring-only; never claim verified output coverage. In the binding-aware runtime contract, stand-in checks failed only on the bound mapper fields; the values remain unverified until the real run checks them. |
 
 A failed run's diagnostic can carry `mapper: {code, ledger_key_short}`.
 `mapper_ceiling_reached` means the live run hit the approved ceiling and was
