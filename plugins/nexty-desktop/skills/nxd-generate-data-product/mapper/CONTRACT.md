@@ -111,7 +111,8 @@ Layer 2 (generated code, skills, job-loop closures) may import **only** these:
 |---|---|---|
 | `map_inputs(inputs, *, spec, grant, run_dir, call, ...) -> MapResult` | `field_mapper` | the N→M primitive |
 | `make_call(*, spec, grant, secrets=None, allow_env=False, provider=None, provider_model=None, provider_cwd=None) -> callable` | `field_mapper` | lazy, budgeted provider seam; explicit secret first, then allowlisted environment fallback **only when `allow_env=True` is passed**; creates the client only on first dispatch |
-| `MapperInput(input_id, identity, ...)` | `field_mapper` | one source record handed to the mapper |
+| `MapperInput(input_id, identity, ...)` / `MapperInput.from_text_fields(...)` | `field_mapper` | one source record handed to the mapper |
+| `render_landed_text(fields, text_fields)` | `field_mapper` | the canonical landed text for named source fields (§4, "Fields sent to the model") |
 | `MapperSpec.load(path)` / `.mapper_spec_id` | `spec` | landed spec → runtime object |
 | `MapperProposal` / `MapperReview` / `MapperEvidence` / `ReviewOutcome` | `records` | mapped values, human state, evidence, and review resolution |
 | `ValueStatus` | `records` | the enum in §3 |
@@ -163,9 +164,22 @@ result = map_inputs(
 MapperInput(
     input_id=str(document_id),              # the mapper's handle for this record
     identity={"document_id": document_id},  # the spec's declared identity fields
-    fields={"document_id": document_id},    # your own metadata; never sent to the model
+    fields={"document_id": document_id, "page_text": text},  # never sent as-is
     landed_text=text,                       # the substring haystack — NOT model output
+    text_fields=("page_text",),             # the fields landed_text was built from
     document_class="invoice",
+)
+```
+
+When the text sent combines several source columns, build it from them so the
+provenance cannot drift from the content:
+
+```python
+MapperInput.from_text_fields(
+    input_id=str(job_id),
+    identity={"job_id": job_id},
+    fields={"job_id": job_id, "title": title, "description": description},
+    text_fields=("title", "description"),   # both are sent; the grant must list both
 )
 ```
 
@@ -561,6 +575,42 @@ grant refusal as a substitute for filesystem permissions.** If a caller must not
 read a document at all, that has to be enforced before the harness is invoked.
 A grant governs disclosure to the model, nothing more.
 
+### Fields sent to the model
+
+A mapper call sends the system prompt, `spec.instruction`, and the input's
+`landed_text` (plus media, outside supervision). `fields` and `identity` are
+never sent. The grant's `input_fields` is therefore checked against the fields
+`landed_text` was built from, not against the record's keys:
+
+- `MapperInput.text_fields` names those fields, in order. When it is set,
+  `landed_text` must equal `render_landed_text(fields, text_fields)`: a single
+  field renders as its value unchanged; several render as `name:` + newline +
+  value blocks joined by a blank line. Each named field must exist in `fields`
+  and hold a string. A mismatch raises `GrantCheckError` with problem code
+  `landed_text_undeclared` (or `text_fields_invalid`) before any dispatch. A
+  closure that declares `("title",)` but sends a title and a description is
+  refused.
+- The set checked against `grant.input_fields` is the union of `text_fields`
+  across inputs. An uncovered field raises `input_fields_uncovered`.
+- Supervised (Desktop) runs require a non-empty `grant.input_fields`
+  (`input_fields_missing`) and `text_fields` on every input with landed text.
+  The supervisor's grant parser and `make_call` both refuse a supervised grant
+  without `input_fields`. `map_inputs` runs this check before the ledger
+  opens, and the `make_call` callable repeats it against its
+  supervisor-verified grant before each request. Document classes are checked
+  against `MapperInput.document_class`. Purpose and PII category are declared
+  by the author and reviewed, not enforced.
+- Outside supervision, an input without `text_fields` keeps the earlier
+  behaviour: the checked set is `keys(fields) ∪ keys(identity)`, and an empty
+  `grant.input_fields` means unrestricted. CLI, canary, and recorded
+  evaluation callers that do not set `text_fields` are unaffected.
+
+This check runs inside the transform process. It makes the sanctioned path
+(`map_inputs` plus `make_call`) refuse to send undeclared text; it does not
+sandbox a closure that bypasses `make_call`, and it cannot tell whether a
+field's value matches its name. Field names are the author's statement and are
+reviewed at approval.
+
 ---
 
 ## 5. Identifiers and hashing
@@ -750,6 +800,44 @@ gate. The `claude-haiku-4-5` E2E run in `examples/e2e/` exercises it.
   once into the client and **never** written to the ledger, a record, a log
   line, an error message, or a `repr`.
 
+**Answer-format size and the schema check.** The provider compiles
+`output_config.format` into a decoding grammar and refuses one over a size limit
+with `400 invalid_request_error: The compiled grammar is too large`. The limit is
+undocumented and depends on the whole request, not on the schema alone: with
+adaptive thinking and `effort` on `claude-sonnet-5`, a 9-field answer (8 scored
+fields plus a rationale) was accepted and 14- and 17-field answers were refused,
+while a schema-only request accepted one field more. No offline check can settle
+it, and a stand-in scorer never sends the schema at all. So:
+
+- `map_inputs` asks a callable that offers `check_schema` (the `make_call` one,
+  Anthropic provider only) to send **one format-check call per model before the
+  first row**. It is a real, billed request in the exact live shape (model,
+  system prompt, thinking, effort, answer format) with a fixed placeholder
+  instruction, no source content, and `max_tokens = SCHEMA_CHECK_MAX_TOKENS`.
+  It is charged to the same ledger and ceilings as the rows, and the approval
+  dialogs name the check. It is sent only when the call ceiling has room for it beyond
+  one call per row still to be sent, so an exactly-sized grant behaves as before
+  (the first row is the check). The corroborating model is checked only when a
+  media-direct row will reach it. Citations mode sends no answer format and is
+  not checked.
+- A grammar refusal raises `SchemaTooLarge` (a `SchemaRejectedByApi`; landed
+  `error_code` stays `schema_reject`, `reason_code` is `mapper/schema_too_large`)
+  before any source content is sent. Its message carries the provider's sentence
+  and a split suggestion built from `schema.OBSERVED_ACCEPTED_FIELDS_PER_CALL`,
+  which is an observed figure, not a published limit. Any other 400 on the check
+  is inconclusive, not blocking: the check's small `max_tokens` is the one way it
+  differs from a row, so the first row decides.
+- Any 400 that carries a provider `error.message` is reported with that sentence,
+  supervised or not, after redaction: everything from the first quote character
+  on is cut (that is where requests are echoed), credential-shaped tokens and
+  long hex runs are masked, control characters removed, 240-character cap. The
+  generic keyword/effort advice is used only when the provider sent no sentence.
+- `prepare_mapper` reports `answer_format_check.provider_check = not_checked`
+  (preparation never claims a pass) and a non-blocking
+  `mapper/answer_format_may_be_too_large` advisory above the observed size.
+  Whether `count_tokens` reproduces the refusal is unknown; the opt-in live test
+  in `tests/test_field_mapper_schema_check.py` records it.
+
 **Constraints the harness must own, because the API cannot express them:**
 
 JSON Schema here supports `type`, `enum`, `const`, `anyOf`, `$ref`, and string
@@ -868,6 +956,13 @@ behavioral comparison, which is the entire Layer-2 loop. `ledger.py` exposes
 like `replay_prompt`.
 
 ---
+
+**The format check is not a cell attempt.** The §8 format-check call belongs to
+no row, so it writes no line here. It is accounted where spend is: the run's
+`BudgetLedger` (calls, tokens, USD) and, in supervised mode, the broker's
+durable ledger. A run stopped by `SchemaTooLarge` therefore leaves no attempt
+lines; the raised error is its record.
+
 
 ## 10. Open questions
 

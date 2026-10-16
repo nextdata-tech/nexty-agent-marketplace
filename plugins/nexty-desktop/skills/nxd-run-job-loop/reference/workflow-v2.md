@@ -972,11 +972,17 @@ figure, `settled_and_reserved_usd_micros`. The `lifetime` block is omitted
 when that spend cannot be verified. Report lifetime spend as unavailable then,
 never as zero.
 
-The grant's `input_fields`, `document_classes` and `pii_category` are
-declared by the author and reviewed by the user. The supervisor does **not** enforce them. It
-enforces the provider (exactly `anthropic`), the models, the expiry, the
-request shape and the ceilings. Never tell the user that the declared field
-list limits what the transform sends.
+The supervisor enforces the provider (exactly `anthropic`), the models, the
+expiry, the request shape and the ceilings. A Desktop grant must also list a
+non-empty `input_fields` (otherwise `workflow/mapper_scope_invalid`), and the
+mapper runtime refuses any request built from fields outside it: each
+`MapperInput` names its `text_fields`, and its `landed_text` must be their
+exact rendering (`landed_text_undeclared` otherwise). The dialog shows this
+list as "Fields this workflow sends to the AI model (the scoring step refuses
+requests built from other fields)". That check runs inside the closure and
+compares field names, not contents, so tell the user the fields it sends,
+never that the list proves what a field holds. `pii_category` and `purpose`
+are declared by the author and reviewed by the user, not enforced.
 
 A grant is fixed once the user approves it. Any wider scope (a new model,
 higher ceilings, a later expiry, `recurring: true`) needs a proposal the agent authors and the user

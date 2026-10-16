@@ -214,8 +214,9 @@ def _mapper_inputs_from_rows(rows: Sequence[tuple]) -> list[MapperInput]:
         MapperInput(
             input_id=invoice_id,
             identity={"invoice_id": invoice_id},
-            fields={"invoice_id": invoice_id, "vendor": vendor},
+            fields={"invoice_id": invoice_id, "vendor": vendor, "page_text": page_text},
             landed_text=page_text,
+            text_fields=("page_text",),
             document_class="invoice",
         )
         for invoice_id, vendor, page_text in rows
@@ -327,7 +328,7 @@ def _build_grant(spec: MapperSpec) -> Grant:
                 "provider": "anthropic",
                 "model": spec.model,
                 "purpose": "End-to-end proof: read invoice terms from landed text.",
-                "input_fields": ["invoice_id", "vendor", "page_text"],
+                "input_fields": ["page_text"],  # each input's text_fields
                 "document_classes": ["invoice"],
                 "pii_category": "none",
                 "recurring": False,

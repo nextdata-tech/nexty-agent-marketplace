@@ -66,6 +66,16 @@ update; never hand the user commands, hashes, source inspection or JSON edits.
 Keep technical status blocks internal and use the canonical
 [user-facing language](../../nxd-run-job-loop/reference/user-facing-language.md).
 
+`prepare_mapper` also returns `answer_format_check`. Its `provider_check` is
+always `not_checked`: preparation never sends the answer format, so it cannot
+say the provider will accept it. When the answer is wider than the size seen
+accepted, it carries an `advisory` with code
+`mapper/answer_format_may_be_too_large` and a suggested split. The advisory does
+not block preparation, but act on it before requesting approval: split the
+target fields into the suggested scoring steps (see
+[answer size](#authoring-the-spec-and-the-grant)) and prepare again. Approving a
+setup the provider then refuses spends an approval for nothing.
+
 ## What the Desktop flow supports today
 
 State the limits accurately; never invent a tighter one such as "one AI
@@ -119,6 +129,25 @@ On Desktop, the agent owns authoring the spec and capped scope proposal;
 in [mapper-preflight.md](mapper-preflight.md#desktop-preparation). Preparation is
 read-only and advisory (`native_approval_required:true`, `run_admitted:false`);
 it never records consent.
+
+**Answer size per scoring step.** The provider turns each scoring step's answer
+format into a grammar and refuses one that is too large. Keep each step's answer
+to **about 9 fields or fewer**, for example 8 scored fields plus a rationale.
+That is an observed figure, not a published limit: with this kind of request 9
+fields were accepted and 14 and 17 were refused, and the provider documents no
+number. When a setup needs more target fields, split them into several scoring
+steps of about 9 fields or fewer each, or drop fields the agreed questions do
+not need, rather than asking for one wide answer. No free check can confirm the
+size; only the provider can, at the start of an approved run.
+
+**Size the call ceiling for the format check.** An approved run first sends one
+format-check call per model: the primary, and the corroborating model only when
+a media-direct row will reach it. The Desktop flow refuses media inputs, so
+there it is one check call. It uses placeholder text and no source data, is
+billed, and counts against the same call, token and USD ceilings as the rows.
+Set `max_calls` to the row calls plus one per checked model. With no spare call
+the check is skipped and the first row does the checking, so a refusal then
+comes after that row's source text was already sent.
 
 **Developer/CI reference only — not the Desktop conversation path.**
 For the standalone harness, compute the id the grant must carry:
@@ -229,7 +258,7 @@ getting a fresh review:
 
 | Code | Cause |
 |---|---|
-| `workflow/mapper_scope_invalid` | missing, malformed or loosely typed grant; an unknown key; both grant paths present; spec missing |
+| `workflow/mapper_scope_invalid` | missing, malformed or loosely typed grant; grant has no `input_fields` (Desktop requires a non-empty list); an unknown key; both grant paths present; spec missing |
 | `workflow/mapper_approval_claims_rejected` | the grant carries approval claims: `approved`, `approval`, `approved_by`, `approval_id`, `approval_hash`, `user_approved`, `decision`, `receipt` or `signature`. The evidence keys `approval_evidence`, `execution_evidence`, `mapper_evidence`, `run_evidence` and `validation_evidence` are unknown keys here and fail as `workflow/mapper_scope_invalid`; `prepare_mapper` reports all fourteen, nested ones included, as this claims finding |
 | `workflow/mapper_grant_exceeds_policy` | provider, model, ceilings or `recurring` beyond the installed policy |
 | `workflow/mapper_model_unpriced` | a model with no price entry, so spend cannot be bounded |
@@ -302,12 +331,24 @@ dialog confirms local presence. It is not cryptographic proof of the user's
 identity, and it is the only approval surface: no chat reply, MCP call, file
 or form counts as approval.
 
-**Declared data scope is not enforced.** The grant's `input_fields`,
-`document_classes` and `pii_category` are declared by the author and reviewed
-by the user. The dialog labels them "Declared by the author (reviewed, not
-enforced)". The supervisor does not restrict what the transform sends to the
-model, and the harness's own `Grant.check` runs inside the closure, so it is
-not a boundary either. Keep the declared list honest, because it is what the
+**Fields sent to the model are checked; the rest is declared.** In Desktop
+the grant must list a non-empty `input_fields`, or the run fails closed with
+`workflow/mapper_scope_invalid`. Every `MapperInput` with landed text must set
+`text_fields`, the source fields its `landed_text` was built from, and
+`landed_text` must equal their canonical rendering. The mapper runtime refuses
+a request whose `text_fields` are not all in `input_fields`, or whose text is
+not their rendering (`landed_text_undeclared`), before any model call; the
+`make_call` callable repeats the check against the supervisor-verified grant.
+The dialog lists `input_fields` as "Fields this workflow sends to the AI model
+(the scoring step refuses requests built from other fields)". `document_classes`
+is checked against `MapperInput.document_class`. `pii_category` and `purpose`
+stay declared only: the dialog shows them under "Other details this setup
+states (for your review; Nexty does not enforce these entries)".
+
+The check has limits. It runs inside the closure, so it does not stop a
+closure that bypasses `make_call`, and it cannot tell whether a field's value
+matches its name: a column named `title` that holds a full description passes.
+Keep the field names and the declared list honest, because they are what the
 user reviews.
 
 **What is enforced.** The supervisor holds the provider key in the macOS
@@ -523,8 +564,9 @@ inputs = [
     MapperInput(
         input_id=str(document_id),              # this record's handle
         identity={"document_id": document_id},  # the spec's identity_fields
-        fields={"document_id": document_id},    # context for the closure and records; not sent to the model
+        fields={"document_id": document_id, "page_text": text},  # not sent as-is
         landed_text=text,                       # the substring haystack
+        text_fields=("page_text",),             # what landed_text was built from
         document_class="invoice",
     )
     for document_id, text in rows
@@ -549,6 +591,33 @@ result = map_inputs(
     call=call,          # the injected model callable
 )
 ```
+
+When the text sent combines more than one source column, never join them by
+hand. Build the input from the columns so the declared fields and the text
+cannot drift; the grant's `input_fields` must list every one of them:
+
+```python
+MapperInput.from_text_fields(
+    input_id=str(job_id),
+    identity={"job_id": job_id},
+    fields={"job_id": job_id, "title": title, "description": description},
+    text_fields=("title", "description"),   # both are sent; the grant lists both
+)
+```
+
+A `landed_text` assembled by hand from two columns fails at `map_inputs` with
+`landed_text_undeclared`, even when it looks identical: the canonical rendering
+of several fields is `name:` + newline + value blocks joined by a blank line.
+Field values named in `text_fields` must be plain `str`.
+
+A source column that can be NULL has no text to send for that row. Name only
+the fields that hold a string, for example
+`text_fields=tuple(n for n in ("title", "description") if isinstance(row[n], str))`;
+the grant still lists every column the run may send. Do not coerce with
+`str(x or "")`: that sends a rendered `description:` block with nothing in it.
+A row with no text field left has nothing to score. Leave it out of `inputs`
+rather than sending an empty input; its mapped columns stay empty, so report
+how many rows that affected.
 
 `make_call` is the only supported provider seam for generated code. It creates
 the provider client and resolves credentials lazily, after `map_inputs` has
@@ -581,6 +650,13 @@ dependency, grant, model, schema, budget, or cancellation) blocks the run; a
 retry/gate policy. Error messages are sanitized and machine outcomes use the
 stable `error_code` values documented in `mapper/CONTRACT.md`.
 
+Provider refusals that stop a run carry a `reason_code`; recover from these
+without exposing the code or internals to the user:
+
+| Code | Cause | Recovery |
+|---|---|---|
+| `mapper/schema_too_large` | the provider refused the answer format as too large (`error_code` stays `schema_reject`); the run stopped before any row was scored | split the target fields into several scoring steps of about 9 fields or fewer each ([answer size](#authoring-the-spec-and-the-grant)), prepare again and ask for a fresh approval. Tell the user: "The AI provider said this setup asks for too many fields in one answer, so nothing was scored. I'll split it into smaller scoring steps and ask for your approval again." |
+
 `target_row_key` is a content-derived hash, not the source row ID. Keep the
 `MapResult` proposals/evidence together and resolve from that bundle; never
 reconstruct a join from a model response's guessed row key.
@@ -589,14 +665,15 @@ reconstruct a join from a model response's guessed row key.
 `MapperInput(document_id=...)`, and there is no `deps` argument to `map_inputs` —
 an older revision of `mapper/CONTRACT.md` described one, and it never existed.
 
-The four slots are not interchangeable:
+The five slots are not interchangeable:
 
 | Slot | Holds | Why it cannot be merged |
 |---|---|---|
 | `input_id` | this record's handle | keys the ledger and the recorded responses |
 | `identity` | the spec's `identity_fields` | what the grant and `input_snapshot_id` bind to — empty means nothing binds |
-| `fields` | context for the closure and records; never sent to the model | un-bound: changing it does not revoke a review |
+| `fields` | context for the closure and records; never sent to the model as-is | un-bound: changing it does not revoke a review |
 | `landed_text` | text already landed in the closure | the only surface `verify_quote` checks a quote against |
+| `text_fields` | the `fields` keys `landed_text` was rendered from, in order | what the grant's `input_fields` is checked against; required in Desktop whenever `landed_text` is set |
 
 Putting the document identity **only** in `fields` leaves `identity` empty and
 silently unbinds every review. Never introspect these signatures to decide how to
@@ -624,20 +701,22 @@ enforced inside the harness at call time, not by the gate.
 
 In the Desktop flow (supervised mode, which refuses media and citations
 inputs), only the mapper input's text (`landed_text`) and the instruction reach
-the model; the declared field list is not enforced at runtime. Outside Desktop,
-every `media` attachment (document or image) is also sent and must be named in
-the disclosure. Before spending approval, read the closure's actual
-`MapperInput` construction (the code that builds `landed_text` for
-`map_inputs`) and list, in plain words, every source field whose content is put
-into the text sent to the model, for example "the job title, the job
-description and the location". Do not rely on the plan's declared fields, and
-do not omit long free-text fields such as descriptions. Fields that appear only
-in `fields` are not sent; do not list them as sent.
+the model. The fields sent are each input's `text_fields`; their union across
+inputs is the disclosure list, and the grant's `input_fields` must cover it or
+the run is refused before any model call. Outside Desktop, every `media`
+attachment (document or image) is also sent and must be named in the
+disclosure. Before spending approval, check that every `MapperInput` sets
+`text_fields` (or is built with `MapperInput.from_text_fields`) and that the
+grant's `input_fields` lists each of them. Then describe those fields to the
+user in plain words, for example "the job title, the job description and the
+location". Do not omit long free-text fields such as descriptions. Fields that
+appear only in `fields` are not sent; do not list them as sent.
 
-If the fields actually assembled into `landed_text` differ from the plan or the
-grant's `input_fields`, fix the closure or update the plan and grant (fresh
-approval) before asking for spending. Never just mention the difference in chat;
-see "Keep the declared list honest" above.
+If the `text_fields` differ from the plan or the grant's `input_fields`, fix
+the closure or update the plan and grant (fresh approval) before asking for
+spending. Never just mention the difference in chat. The runtime checks names,
+not meanings, so a field whose name misdescribes its content is still yours to
+catch; see "Keep the field names and the declared list honest" above.
 
 ## What the consent gate cannot see
 

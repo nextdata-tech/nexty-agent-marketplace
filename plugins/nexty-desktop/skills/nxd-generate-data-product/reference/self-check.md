@@ -443,7 +443,9 @@ and only protected supervisor confirmation can admit a run. Specifically not:
 - **Static binding is not runtime coverage.** `input_fields` and
   `document_classes` overreach, and the `max_calls`/`max_tokens`/`max_usd`
   ceilings, are properties of a *run*. They are enforced by `Grant.check` and
-  `RunBudget` inside the harness at call time. Phase G passes no runtime
+  `RunBudget` inside the harness at call time; `input_fields` is checked
+  against each input's `text_fields` (required in Desktop; standalone inputs
+  without them fall back to their `fields`/`identity` keys). Phase G passes no runtime
   arguments and watches no individual call.
 - **One gated call is not every call.** A transform that calls `map_inputs`
   (satisfying the gate) and *also* constructs a second `transport.Client`
