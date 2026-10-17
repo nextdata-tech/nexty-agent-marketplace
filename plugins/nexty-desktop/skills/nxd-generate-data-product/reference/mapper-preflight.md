@@ -82,6 +82,10 @@ question; only the human's native spending confirmation grants consent.
    Its `native_approval_required:true`, `run_admitted:false`,
    `live_validation:unverified` and `policy_status:not_examined` are boundaries,
    not approval evidence. Stop if a finding cannot be resolved safely.
+   `answer_format_check.provider_check` is always `not_checked`; act on an
+   `answer_format_check.advisory` (`mapper/answer_format_may_be_too_large`)
+   before approval by splitting the target fields, per
+   [field-mapper.md](field-mapper.md#authoring-the-spec-and-the-grant).
 6. Call `check_data_product` with the same `definition`, `workflow`, and
    `mode:"structural"` before asking for spending approval. Require
    `structural_status:"pass"`; a skipped check is not a pass. This does not
@@ -94,10 +98,11 @@ question; only the human's native spending confirmation grants consent.
    been run yet." `mode` defaults to `"full"` when omitted.
 7. Before asking for spending approval, tell the user in plain words which
    source fields' content is sent to the model. Only the mapper input's text
-   (`landed_text`) and the instruction reach the model, and the declared field
-   list is not enforced at runtime, so derive the list from the actual
-   `map_inputs` input construction in the closure, not from the plan. Include
-   long free-text fields such as job descriptions. See
+   (`landed_text`) and the instruction reach the model. The fields sent are
+   each input's `text_fields`: check that every `MapperInput` sets them and
+   that the grant's non-empty `input_fields` lists each one, or the run is
+   refused before any model call. Include long free-text fields such as job
+   descriptions. See
    [disclosing what is sent](field-mapper.md#disclosing-what-is-sent-to-the-model).
 8. Continue normal capture, retained review, native spending approval,
    validation and admission. None of these checks replaces a gate or changes
@@ -150,9 +155,9 @@ one.
 | 5 | canonical spec id computed | `python -m nxd.experimental.field_mapper spec-id <spec>` | the id the grant must carry |
 | 6 | grant exists | the grant file is present in `contracts/` | standalone consent must be user-authored; Desktop proposals are agent-owned |
 | 7 | grant binds to that spec id | `python -m nxd.experimental.field_mapper grant-check <spec> <grant>` | spec drifted since consent — **ask again** |
-| 8 | input fields + document classes covered | `grant-check` reports both | the grant does not authorize this data |
+| 8 | input fields + document classes covered | `grant-check` reports both; Desktop also needs a non-empty `input_fields` | the grant does not authorize this data |
 | 9 | generated transform compiles | `compile()` / AST parse of the transform | syntax error — offline, deterministic |
-| 10 | `MapperInput` construction compatible | construct one from a real row | catches the `document_id=` class of defect |
+| 10 | `MapperInput` construction compatible | construct one from a real row with `text_fields` set, and confirm `render_landed_text(fields, text_fields)` reproduces its `landed_text` | catches the `document_id=` class of defect, and the hand-joined text that fails at `map_inputs` with `landed_text_undeclared` |
 | 11 | `map_inputs` invocation compatible | check the call site names `spec`, `grant`, `run_dir`, `call` | catches a call written against a stale contract |
 | 12 | ceilings available | `estimate(...)` vs the grant's `max_calls` / `max_tokens` / `max_usd` | an unbounded run is refused at the boundary |
 

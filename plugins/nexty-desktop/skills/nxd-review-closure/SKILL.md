@@ -7,7 +7,7 @@ allowed-tools:
   - Grep
 metadata:
   author: nextdata
-  version: 0.59.8
+  version: 0.59.10
 ---
 
 # Review a generated closure — adversarially
@@ -195,14 +195,18 @@ Your review comes before that dialog, so check that the proposal is honest.
   not the request deadline or dialog timeout) and `recurring` fit how the user asked for
   the product to be used. An unexplained wide ceiling or `recurring: true` is a
   `MEDIUM` claim.
-- **Declared fields are not enforced.** The grant's `input_fields`,
-  `document_classes` and `pii_category` are declared by the author and reviewed
-  by the user. The supervisor does **not** restrict what the transform sends,
-  and the harness's own check runs inside the closure, so it is no boundary. Compare them
-  with what the transform actually passes into `MapperInput`. A field, document
-  or PII column sent but not declared is a `HIGH` claim: the user would approve
-  a disclosure narrower than the real one. A declared field never sent is
-  `LOW`.
+- **Sent fields match their names.** The runtime refuses a request whose
+  `MapperInput.text_fields` are not all in the grant's `input_fields`, so
+  compare the two only to confirm every input sets `text_fields` (Desktop
+  requires it, and a non-empty `input_fields`) and that a `landed_text`
+  joined by hand from several columns is not standing in for
+  `MapperInput.from_text_fields`. The
+  remaining gap is meaning: the check compares names, never contents. A field
+  whose name misdescribes its value (a `title` that holds the full description,
+  a `notes` column that carries customer email) is a `HIGH` claim: the user
+  would approve a disclosure narrower than the real one. A declared field never
+  sent is `LOW`. `pii_category` stays declared only; a PII column sent under a
+  `pii_category` of `none` is a `HIGH` claim.
 - **No approval claims.** A grant carrying `approved`, `approved_by`,
   `approval_id`, `decision`, `receipt`, `signature` or similar is a `HIGH`
   claim. Approval comes only from the supervisor's dialog.
