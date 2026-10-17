@@ -491,6 +491,8 @@ self-check and lock verification are optional evidence only; they do not
 replace supervisor capture or strict admission. Do not mutate that authoring
 tree or run review/validation against a mutable path after capture.
 
+Before every capture, run the [preflight before capture](../../nxd-generate-data-product/reference/pre-capture-audit.md#preflight-before-capture).
+
 When this flow is being run by the dp-scenarios harness, persist the short
 construction attestations before `start_run`. Write the root JSON array to the
 exact path in `NXD_EVAL_ATTESTATIONS_PATH` (or, when the variable cannot be
@@ -809,7 +811,9 @@ conversation child returns; it is not a supervisor-launched review.
 After every `advance_workflow` response, discard earlier action parameters and
 follow only its new `next_actions`. Once the review is clear, and before you
 start validation, call `check_data_product` once more on the unchanged authoring
-closure (`mode:"structural"` for a mapper closure), so the last successful check
+closure (full preflight with no `mode` argument without the mapper;
+`mode:"structural"` for a mapper closure, since full mode is refused before
+admission with `mapper_approval_required`), so the last successful check
 follows the last review. Edit nothing between that check and the run. If it
 fails, the authoring closure no longer matches the capture: repair, reset and
 recapture rather than validate. Then start supervisor-owned validation with the
@@ -1163,7 +1167,7 @@ experiment spent zero.
 | `workflow/approval_expired` | Spending permission expired before admission, or a non-recurring approval was already spent by the publication it admitted; historical timeout records remain readable. | The approval no longer applies. | Ask whether to prompt again. If the grant's own `expires_at` is past, agree a new expiry, author it, recapture, review and request fresh native approval. |
 | `workflow/approval_cooldown` | A request for the same mapper subject came too soon after a decline or cancel. | A short wait applies after a decline. | Do not poll. Tell the user, and request again only when they ask after the cooldown. |
 | `workflow/approval_interrupted` | The supervisor restarted while a prompt was open. | The prompt was lost when the supervisor restarted. | Ask whether to prompt again; request again only on their yes. |
-| `workflow/approval_surface_unavailable` | The OS dialog could not be shown. | Approval cannot be collected on this machine right now. | Stop and report the code. Never substitute a chat "yes" for the dialog. |
+| `workflow/approval_surface_unavailable` | The OS dialog could not be shown. | Approval cannot be collected on this machine right now. | Stop and tell the user in plain words; keep the code internal. Never substitute a chat "yes" for the dialog. |
 | `workflow/approval_ceiling_reached` | The per-approval call, token or USD ceiling, or the mapper-spec lifetime USD ceiling is spent. | The current approval or spec limit is used up. | Stop this run and report. A wider per-approval or per-spec grant requires fresh approval only if the user asks; it cannot raise an established cumulative folder cap. If that folder cap is exhausted, paid scoring there remains finished. |
 | `workflow/mapper_budget_reached` | The cumulative folder-wide call, token or USD cap is exhausted; an in-flight attempt may still settle at its full reservation. | Paid scoring in this data folder is finished. | Stop paid scoring. Do not retry, move folders, or propose a higher cap. |
 | `workflow/mapper_budget_unknown` | The cumulative total cannot be verified, including when its integrity key or recorded history is unavailable. | I can’t verify the cumulative total for this data folder, so paid scoring is paused. | Continue unpaid work where possible. Do not claim zero, estimate past usage, or edit supervisor state. |
@@ -1172,7 +1176,7 @@ experiment spent zero.
 | `workflow/mapper_subject_changed` | The approved capture no longer matches what is being admitted. | The approved closure changed, so the approval no longer applies. | Stop and report. Do not retry; a legitimate change goes through reset, recapture, review and fresh approval. |
 | `workflow/state_mac_key_unavailable` | The supervisor could not read the protected saved-workflow-state key; an optional `reason` identifies the access result. | The protected workflow state could not be read. This is separate from source/provider credential access and spending approval. | When `retryable=true`, use the matching local action in [failure-handling.md](failure-handling.md#keychain-credential-and-saved-state-access-outcomes), then retry the same action with the same request and revision. Otherwise stop and report. Never reset or recreate state. |
 | `workflow/state_mac_key_invalid` | The protected saved-workflow-state key failed integrity verification. | The saved workflow state could not be verified. | Stop and report. Never reset or recreate state or suggest that another permission grants integrity. |
-| `workflow/mapper_integrity` | The approval or spend ledger failed an integrity check, or a lookup the gate depends on failed. The supervisor fails closed. | Approval records could not be verified. | Stop and report the code. Do not edit or delete supervisor state. |
+| `workflow/mapper_integrity` | The approval or spend ledger failed an integrity check, or a lookup the gate depends on failed. The supervisor fails closed. | Approval records could not be verified. | Stop and tell the user in plain words; keep the code internal. Do not edit or delete supervisor state. |
 
 Validation in mapper mode uses stand-in answers for AI mapping: the mapper
 makes no provider call and charges nothing. The strict conditions below
@@ -1258,16 +1262,18 @@ subprocess output from that diagnostic.
   pending or carried forward; trust the returned requirement state.
 
 - `recovery: repair_then_retry` means the retained closure has a defect you can
-  fix. Call `check_data_product` on the authoring closure to read the specific
-  structure, runtime, contract, and semantic findings. For a closure that uses
-  the mapper, full mode refuses with `mapper_approval_required` (it would
-  execute scoring without admission); use `mode:"structural"` instead and
-  repair from its findings. For example, a
-  `structure/spec_compile_failed` finding carries the compiler's own error,
-  such as a duplicate metric name. Repair the closure, then reset the
-  capture requirement with `replacement_blueprint_path` set to null. Recapture,
-  obtain a fresh review, and start validation again. Never resubmit an
-  unchanged closure after this outcome, and never audit by hand in place of
+  fix. Run the [preflight before capture](../../nxd-generate-data-product/reference/pre-capture-audit.md#preflight-before-capture)
+  now to read the specific finding behind the bounded code, and again before
+  recapture. For example, a `structure/spec_compile_failed` finding
+  carries the compiler's own error, such as a duplicate metric name. Repair the
+  closure, then reset the capture requirement with `replacement_blueprint_path`
+  set to null. Recapture, obtain a fresh review, and follow returned spending
+  and validation actions. A repair that changes only how the view is built,
+  while keeping the plan unchanged, never asks the user to re-approve the plan.
+  Explain the fix in plain words; for example, "I fixed how the view is built;
+  the plan is unchanged." For requested rules in the first plan, see
+  [dp-blueprint.md](dp-blueprint.md). Never resubmit an unchanged closure after
+  this outcome, and never substitute the agent-side policy audit for
   `check_data_product`.
 - When the failure diagnostic, or `inspect_run` for its `diagnostic_run_id`,
   carries `failed_contracts` or `exception_class`, repair those first.
@@ -1281,7 +1287,7 @@ subprocess output from that diagnostic.
   existing verifier and revalidate before asking the user.
 - `recovery: retry_unchanged` means a bounded runtime limit was hit. Retry
   once with a fresh request id.
-- `recovery: stop` is a blocker. Report it with its code.
+- `recovery: stop` is a blocker. Report the user-visible impact in plain words; keep the code internal.
 
 `check_data_product` is diagnosis only. It never substitutes for supervisor
 validation, admission, or publication.
@@ -1329,9 +1335,9 @@ the diagnostic recovery value and follow this table:
 |---|---|---|
 | `workflow/capture_materializer_stale` | The retained proposal is intact and bound to this blueprint, but was prepared by a different materializer version. | Reset the graph root with `reprepare_retained: true`; consent is pending unless the user opted into unchanged-plan carry-forward and every plan-bound field still matches. |
 | `workflow/capture_proposal_blueprint_mismatch` | The proposal is bound to different blueprint semantics. | Regenerate the proposal, reset with both replacement inputs, and obtain consent for the changed plan. |
-| `workflow/capture_proposal_integrity` | The retained proposal is missing, unreadable, malformed, or has a digest mismatch. | Stop and report the code. Recovery requires a full replacement blueprint plus regenerated proposal and renewed consent; retained re-preparation is refused. |
-| `workflow/capture_blueprint_integrity` | Retained blueprint bytes do not match their content address. | Stop and report the code. |
-| `workflow/capture_retained_integrity` | The retained capture is unreadable, conflicts with its digest, or changed while sealing. | Stop and report the code. |
+| `workflow/capture_proposal_integrity` | The retained proposal is missing, unreadable, malformed, or has a digest mismatch. | Stop and tell the user in plain words; keep the code internal. Recovery requires a full replacement blueprint plus regenerated proposal and renewed consent; retained re-preparation is refused. |
+| `workflow/capture_blueprint_integrity` | Retained blueprint bytes do not match their content address. | Stop and tell the user in plain words; keep the code internal. |
+| `workflow/capture_retained_integrity` | The retained capture is unreadable, conflicts with its digest, or changed while sealing. | Stop and tell the user in plain words; keep the code internal. |
 
 Other capture codes identify input limits, reserved artifacts, or a specific
 materialization failure and carry their own recovery disposition. Do not infer

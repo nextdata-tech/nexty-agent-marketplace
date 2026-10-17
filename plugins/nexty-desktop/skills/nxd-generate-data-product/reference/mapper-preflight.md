@@ -86,16 +86,16 @@ question; only the human's native spending confirmation grants consent.
    `answer_format_check.advisory` (`mapper/answer_format_may_be_too_large`)
    before approval by splitting the target fields, per
    [field-mapper.md](field-mapper.md#authoring-the-spec-and-the-grant).
-6. Call `check_data_product` with the same `definition`, `workflow`, and
-   `mode:"structural"` before asking for spending approval. Require
+6. Before every capture, run the structural check in [preflight before capture](pre-capture-audit.md#preflight-before-capture)
+   with the same `definition` and `workflow`, and fix its findings. Require
    `structural_status:"pass"`; a skipped check is not a pass. This does not
    execute authored Python or scoring, compile the full definition, probe
    imports, or validate transform/runtime/contract/semantic behavior.
    `check_scope:"non_executing_structure"`, `full_compile_status:"not_checked"`
-   and `build_eligible:false` remain true even on a pass. Say:
-   "The setup checks passed; scoring has not run."
-   For a setup without a mapper, say: "The setup checks passed; nothing has
-   been run yet." `mode` defaults to `"full"` when omitted.
+   and `build_eligible:false` remain true even on a pass. Say: "The setup checks
+   passed; scoring has not run." For a setup without a mapper, say: "The setup
+   checks passed; nothing has been run yet." `mode` defaults to `"full"` when
+   omitted.
 7. Before asking for spending approval, tell the user in plain words which
    source fields' content is sent to the model. Only the mapper input's text
    (`landed_text`) and the instruction reach the model. The fields sent are

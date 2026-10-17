@@ -11,10 +11,29 @@ subject-bound `session_decision`, the trusted materializer projects it to
 
 ## Contents
 
+- [Preflight before capture](#preflight-before-capture)
 - [Model, output, and physical-surface checks](#model-output-and-physical-surface-checks)
 - [Source projection checks](#source-projection-checks)
 - [Source-derived semantic checks](#source-derived-semantic-checks)
+- [Landed policy values](#landed-policy-values)
 - [Decision-ledger projection](#decision-ledger-projection)
+
+## Preflight before capture
+
+Before every capture, including after a repair, call the `check_data_product`
+MCP tool on the authoring closure; for a closure that does not use the mapper,
+run the full preflight with no `mode` argument. Fix every agent-owned finding
+before requesting capture, review, or spending approval. For mapper closures, a
+defect found by trusted validation costs another spending approval until
+approvals can carry forward; for closures without the mapper, it costs another
+capture, review and validation round. For a mapper closure, full mode is refused
+before admission with `mapper_approval_required`; use `mode:"structural"` before
+capture and fix its findings. Runtime, contract and semantic findings for a
+mapper closure are only reported by trusted validation after spending approval.
+Policy findings, including `policy.literal_duplicates_landed_value`, are
+reported only by trusted validation for every closure; MCP preflight does not
+report `policy.*` findings. Before every capture, also complete the [pre-capture
+policy-literal audit](#landed-policy-values).
 
 ## Model, output, and physical-surface checks
 
@@ -87,6 +106,33 @@ Output names coverage or a ratio metric:
 - Run the transform assertions against the complete supplied sources before
   capture. A retained review may find a semantic defect, but it does not make a
   missing source contract or a failed assertion safe to publish.
+
+## Landed policy values
+
+Before every capture, including repairs and closures without the mapper, audit
+landed policy values against `transform/main.py`. MCP `check_data_product` does
+not report `policy.*` findings; only trusted validation reports them for every
+closure. This agent-side audit supplements preflight and never replaces it.
+
+- Inspect every `.csv` file under `data/` whose immediate parent directory name
+  contains any of these fragments, ignoring case: `rubric`, `weight`,
+  `threshold`, `band`, `anchor`, `verdict`, `scale`, `policy`, `gate`, `criteri`.
+  Match the directory name, not the CSV filename; skip empty CSVs.
+- Skip the first column (the lookup key) and any other column whose name
+  contains `id`, `key`, `name`, `criterion`, `code`, `slug`, or `label`, ignoring
+  case. Naming a lookup key in code is expected.
+- Strip surrounding whitespace from each remaining cell. A value is distinctive
+  when it has at least four characters, or has at least two characters and is
+  all digits after removing at most one decimal point. Short common tokens and
+  single digits do not qualify by themselves.
+- No distinctive landed policy value may appear as a literal in
+  `transform/main.py`: compare against string literals with surrounding
+  whitespace stripped and integer or floating-point literals converted to text;
+  exclude booleans. Inspect literal values in code, not comments or substrings.
+  Read the value from its landed row instead of copying a weight, threshold,
+  band, rubric text or other policy parameter into code. Fix duplicates before
+  capture; trusted validation reports them as
+  `policy.literal_duplicates_landed_value`.
 
 ## Decision-ledger projection
 
