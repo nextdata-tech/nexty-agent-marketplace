@@ -6,6 +6,13 @@ recipes; it does not bypass native spending approval, cumulative budgets,
 capture, retained review, validation, admission or the returned run actions.
 Typed v3 is the current authoring schema; it is not a legacy control-plane route.
 
+## Contents
+
+- [Keep the settled input settled](#keep-the-settled-input-settled)
+- [Enforce requested rules from the first plan approval](#enforce-requested-rules-from-the-first-plan-approval)
+- [Author in dependency order](#author-in-dependency-order)
+- [Check once per correction round, then hand off](#check-once-per-correction-round-then-hand-off)
+
 ## Keep the settled input settled
 
 Reuse the exact unchanged prepared and consented blueprint/proposal and inferred
@@ -82,9 +89,10 @@ Run the [pre-capture audit](pre-capture-audit.md) for the actual approved plan.
 Keep source/derived assertions, privacy rules and the mapper's load, read, map,
 gate and land ordering. Retain requested saved queries and fresh admitted fetch/map
 behavior; reopening or querying published data is not a refresh.
-Call `prepare_mapper` where applicable and resolve findings without spending,
-then `check_data_product` (`mode:"structural"` for a mapper). Batch same-round
-mechanical corrections and repeat checks only for changes or unresolved findings.
+Call `prepare_mapper` where applicable and resolve findings without spending.
+Before every capture, run the [preflight before capture](pre-capture-audit.md#preflight-before-capture).
+Batch same-round mechanical
+corrections and repeat checks only for changes or unresolved findings.
 
 Return executable inputs through the current workflow capture action. Capture
 owns snapshots, lock, build record and trusted checker; do not author those

@@ -58,8 +58,8 @@ through the normal authoring surface when the ID is missing, save its complete
 recheck after each save until
 no findings remain. Resolve unknown/unpriced model choices from the returned
 catalog before capture or consent; default an unspecified primary to the
-`opus` family and preserve a priced explicit choice. Then use
-`check_data_product` with `mode:"structural"` before spending approval.
+`opus` family and preserve a priced explicit choice.
+Before every capture, run the structural check in [preflight before capture](pre-capture-audit.md#preflight-before-capture) and fix its findings.
 Say "The setup checks passed; scoring has not run." This is not live validation
 or admission. If the capability is absent, this setup step needs a Desktop
 update; never hand the user commands, hashes, source inspection or JSON edits.
