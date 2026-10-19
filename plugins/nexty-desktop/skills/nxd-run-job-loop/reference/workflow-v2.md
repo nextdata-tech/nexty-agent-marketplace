@@ -15,6 +15,7 @@ do not fall back to a direct CLI or local substitute.
 - [Run and report the review](#run-and-report-the-review)
 - [Follow returned actions through admission](#follow-returned-actions-through-admission)
 - [Mapper approval](#mapper-approval)
+  - [Keep an accepted spending approval across a repair](#keep-an-accepted-spending-approval-across-a-repair)
   - [Provider credential access](#provider-credential-access)
   - [Cumulative folder budget](#cumulative-folder-budget)
 - [When validation fails](#when-validation-fails)
@@ -683,6 +684,29 @@ different `report.verdict` vocabulary (`clear`, `findings`, `rejected`, or
 round with findings is still recorded as `complete` only when its rich claims,
 adjudications, and any required user decision are complete.
 
+The ledger vocabularies are closed; the validator rejects any other value
+(`behavior_gap`, `blocking`, `needs_decision` and the like fail):
+
+| Field | Accepted values |
+| --- | --- |
+| round `status` | `complete`, `timed_out`, `needs_user` |
+| finding `classification` | `behavior_affecting`, `structural_note` |
+| finding `state` | `not_applied`, `needs_user`, `applied` |
+| adjudication `disposition` | `accepted`, `rejected`, `out_of_scope` |
+
+`needs_user` is a round status and a finding state, never an adjudication
+disposition. A real behavior finding that is verified but not yet fixed and
+awaits the user is recorded as `classification: "behavior_affecting"`, an
+adjudication with `disposition: "accepted"`, finding `state: "needs_user"`,
+`applied_files: []`, `user_decision: null`, in a round with `status:
+"needs_user"`. Once the user rules, update that same round (do not append a
+new one): set `user_decision` with the real `approved_at_unix_ms`, the
+authorizing `citation` and `approved_finding_ids`; move each finding to
+`applied` (with `applied_files`) or, if deferred, move it to `not_applied` and list
+it in `deferred_finding_ids`; then set the round `status` to `complete`. A
+round left at `needs_user` with `user_decision: null` after the user ruled is
+stale.
+
 Ledger timestamps (`started_at_unix_ms`, `ended_at_unix_ms`, and, when set,
 `user_decision.approved_at_unix_ms`) are actual epoch milliseconds read from
 the current clock at the corresponding event (for example a portable
@@ -761,17 +785,17 @@ and structural findings stay unapplied and are not deferred.
 A user reply that decides only some of the round's IDs is a partial decision.
 Once a round carries a `user_decision`, every accepted behavior-affecting
 finding in it must be applied or listed in `deferred_finding_ids`; the ledger
-validator rejects the round otherwise. So record a partial approval either by
-deferring the still-open IDs in that round, or by leaving `user_decision: null`
-on the `needs_user` round and recording the decision in the next round. An
-applied structural note needs no user decision.
+validator rejects the round otherwise. So when a reply decides only some IDs,
+ask the user to approve or defer each remaining ID before writing
+`user_decision`, and list in `deferred_finding_ids` only IDs the user
+explicitly deferred; never leave `user_decision: null` on a `needs_user` round
+the user has ruled on, because a later round does not clear it. An applied structural note needs no user decision.
 
 There is exactly one retained-input review per capture generation, not one per
-workflow lifetime. When an accepted finding changes behavior, record the user
-decision in the external ledger, reset the returned capture requirement, edit
-and optionally check the mutable closure when tools exist, recapture it, and run
-a fresh review for the
-new generation. Do not report the old generation as clear.
+workflow lifetime. When an accepted finding changes behavior, edit the
+approved findings in the mutable closure, record the user decision in that same
+round of the external ledger, reset the returned capture requirement, check the
+closure, recapture it, and run a fresh review for the new generation. Do not report the old generation as clear.
 
 Relay the report with the requirement's returned generation, subject digest,
 dependency digest, session reference, and the current revision. The supervisor
@@ -912,7 +936,11 @@ decision is theirs. It shows the provider, the model and any corroboration
 model, the call, token and USD ceilings, the lifetime USD ceiling and
 lifetime spend for this mapper spec, and the fields the grant declares. It
 does not show the grant's expiry or whether it is recurring, so state both
-yourself. Then call `start_requirement` with the returned requirement id and
+yourself. When the `advance_workflow` tool description mentions
+`carry_forward_unchanged_approval`, also say that, until it is used for a
+publication or expires, the approval still covers fixes to how the view is
+built, as long as the data sent, the model, the limits and the expiry stay the
+same. Then call `start_requirement` with the returned requirement id and
 the current revision. The supervisor opens a native OS dialog. That dialog is
 the only approval surface. The response carries
 `approval` with `state:"awaiting_user"` and timing details, and no URL, token,
@@ -993,6 +1021,68 @@ higher ceilings, a later expiry, `recurring: true`) needs a proposal the agent a
 confirms, a recapture, a fresh review and a fresh OS approval. Never
 widen a grant yourself to get past a refusal. Never retry `start_requirement`
 in a loop: each call can put a dialog in front of the user.
+
+### Keep an accepted spending approval across a repair
+
+A repair that changes only how the view is built (a bug fix, a policy or
+check finding, a transform correction) keeps the user's spending approval
+when everything the dialog showed stays the same. The native dialog says so
+up front: the permission also covers fixes to how the view is built, as long
+as the data sent, the model, the limits and the expiry stay the same.
+
+Supervisors older than nxd 0.41.294 cannot carry an approval and reject the
+unknown field. Use this section only when the `advance_workflow` tool
+description mentions `carry_forward_unchanged_approval`; otherwise omit the
+field and follow the normal dialog flow above.
+
+After such a repair, follow the normal reset, local correction, recapture and
+one fresh review. When the returned mapper approval `start_requirement`
+action appears, request carry-forward only if all of these hold:
+
+- The earlier approval is accepted, unexpired and not yet used for a
+  publication. On Desktop every approval is one-run, so after a publication a
+  fix always needs a new prompt.
+- The plan was not re-approved: the repair kept the approved blueprint.
+- `contracts/mapper_spec.json` and `contracts/mapper_grant.json` are
+  byte-identical to the approved capture's.
+- The fresh review is clear, including its check that every `text_fields`
+  value traces to its named landed column and nothing else is sent to the
+  model. That is how the review confirms mapper inputs are unchanged.
+
+```json
+{
+  "request_id": "approval-<workflow>-<unique>",
+  "workflow": "<workflow>",
+  "expected_revision": 12,
+  "action": {
+    "type": "start_requirement",
+    "parameters": {
+      "requirement_id": "<from-next-actions>",
+      "carry_forward_unchanged_approval": true
+    }
+  }
+}
+```
+
+Omit the field when any condition fails, or when the repair changed what is
+sent, the model, a ceiling, the expiry or `recurring`: the dialog must open
+again. The supervisor decides. When it carries the approval it emits
+`workflow/mapper_approval_carried_forward` and no dialog opens; say "Your
+earlier spending approval still covers this fix" and continue the returned
+actions with the latest revision. Spending continues against the same
+limits. When it emits `workflow/mapper_approval_not_carried/<reason>`, the
+normal dialog flow above applies: tell the user a new spending prompt is
+coming, in plain words and without the reason code, and handle it as a first
+approval. Never retry carry-forward after a refusal. If the request is
+rejected because `carry_forward_unchanged_approval` is an unknown field (an
+older supervisor),
+send `start_requirement` once more without the field, with a fresh
+`request_id` and the latest revision, and follow the normal dialog flow. Any
+other rejection, such as a stale revision, follows its own recovery. Never
+call carry-forward a bypass: validation and admission still run in full on
+the repaired view.
+Approvals made before the dialog carried this sentence, expired approvals and
+a one-run approval already used for a publication are never carried.
 
 ### Provider credential access
 
@@ -1293,6 +1383,13 @@ subprocess output from that diagnostic.
 validation, admission, or publication.
 
 ## Reset after behavior changes
+
+Every repair cycle runs the same order, with no step dropped on a later cycle:
+**edit -> record the round -> reset -> check -> capture -> review -> check again -> validate**. The
+check after the review is clear is the one that makes the last successful
+`check_data_product` follow the last review; the check before capture does not
+count for it, and a final repair cycle is not exempt. Call it on the unchanged
+authoring closure, then start validation.
 
 Close the pending review round before resetting. Wait for an explicit approval
 of the specific accepted finding IDs in a later user turn. Change only those

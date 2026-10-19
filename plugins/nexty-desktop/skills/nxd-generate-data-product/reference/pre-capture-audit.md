@@ -24,9 +24,11 @@ Before every capture, including after a repair, call the `check_data_product`
 MCP tool on the authoring closure; for a closure that does not use the mapper,
 run the full preflight with no `mode` argument. Fix every agent-owned finding
 before requesting capture, review, or spending approval. For mapper closures, a
-defect found by trusted validation costs another spending approval until
-approvals can carry forward; for closures without the mapper, it costs another
-capture, review and validation round. For a mapper closure, full mode is refused
+defect found by trusted validation costs another capture, review and
+validation round, and another spending approval unless the repair keeps the
+mapper spec and grant unchanged and the supervisor carries the approval
+forward; for closures without the mapper, it costs another capture, review and
+validation round. For a mapper closure, full mode is refused
 before admission with `mapper_approval_required`; use `mode:"structural"` before
 capture and fix its findings. Runtime, contract and semantic findings for a
 mapper closure are only reported by trusted validation after spending approval.

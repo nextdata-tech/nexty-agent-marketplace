@@ -79,15 +79,19 @@ setup the provider then refuses spends an approval for nothing.
 ## What the Desktop flow supports today
 
 State the limits accurately; never invent a tighter one such as "one AI
-instruction per saved view".
+instruction per saved view" (a workflow can save more than one view; the
+limit is per build).
 
 - The current Desktop flow carries one mapper spec with one instruction per
   workflow. That one instruction can make many model calls, for example one per
   row.
 - A second, distinct verification task in the same workflow is not supported
-  yet. Say so plainly. A second model can independently answer the same
-  instruction (corroboration) when it is approved. A separate product would
-  need its own plan and its own spending approval.
+  yet. Say so plainly, for example: "This version runs one AI step per build.
+  It applies that step to every row, but checking its output with a second AI
+  step is not available yet." Do not offer corroboration as a substitute on
+  Desktop: it reruns the same instruction on a second model and only for media
+  rows, which supervised Desktop runs refuse, so it never runs there. A
+  separate product would need its own plan and its own spending approval.
 - The agent proposes the checks on the AI output itself (for example allowed
   values, required fields, quote presence) in the plan it shows for approval.
   Do not ask the user how to check the summaries.
@@ -393,7 +397,10 @@ cumulative folder cap cannot be raised, reset or disabled in this version. With
 `recurring: false`, an approval is spent by
 the first publication it admits. After that, admission reports it as
 `workflow/approval_expired`. Recapturing a changed closure moves the subject
-and invalidates the approval on purpose.
+and invalidates the approval on purpose, unless a repair keeps the spec and
+grant byte-identical and the supervisor carries the accepted approval forward;
+see "Keep an accepted spending approval across a repair" in the
+`nxd-run-job-loop` skill's `reference/workflow-v2.md`.
 
 **Binding-aware runtime contract.** The binding and strict scratch conditions
 below describe a Desktop release that checks the output-model binding; they
