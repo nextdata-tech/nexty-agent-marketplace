@@ -12,9 +12,9 @@
 
 ## Current Desktop route versus developer recipe
 
-For an activated workflow-v2 Desktop build, use the current MCP
-`check_data_product` on the authoring closure (`mode:"structural"` for a mapper),
-then the returned capture action. Supervisor capture owns the trusted checker,
+For an activated workflow-v2 Desktop build, follow the current MCP route.
+Before every capture, run the [preflight before capture](pre-capture-audit.md#preflight-before-capture).
+Then follow the returned capture action. Supervisor capture owns the trusted checker,
 approved snapshots, lock and build record. Do not copy a checker or create those
 reserved files before capture, modify retained captures, or run a paid mapper
 through an optional local self-check outside admission. Structural setup is not

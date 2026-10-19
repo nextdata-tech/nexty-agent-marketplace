@@ -7,7 +7,7 @@ allowed-tools:
   - Grep
 metadata:
   author: nextdata
-  version: 0.59.10
+  version: 0.59.13
 ---
 
 # Review a generated closure — adversarially
@@ -201,7 +201,7 @@ Your review comes before that dialog, so check that the proposal is honest.
   requires it, and a non-empty `input_fields`) and that a `landed_text`
   joined by hand from several columns is not standing in for
   `MapperInput.from_text_fields`. The
-  remaining gap is meaning: the check compares names, never contents. A field
+  remaining gap is meaning: the check compares names, never contents. For every mapper call, trace each `text_fields` value back to the named landed column and verify that nothing else is sent to the model under an allowed field name. Report a `HIGH` claim with source-to-call evidence if provenance is false or other text is sent under an allowed field name. A field
   whose name misdescribes its value (a `title` that holds the full description,
   a `notes` column that carries customer email) is a `HIGH` claim: the user
   would approve a disclosure narrower than the real one. A declared field never

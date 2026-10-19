@@ -3630,9 +3630,50 @@ if "nxd_decisions" in set(PHYSICAL_MODELS):
 POLICY_HINT = ("rubric", "weight", "threshold", "band", "anchor", "verdict",
                "scale", "policy", "gate", "criteri")
 tsrc = Path("transform/main.py").read_text(encoding="utf-8", errors="replace")
+ttree = ast.parse(tsrc)
+# The NAME of an environment variable configures the process; it is never a
+# ruling. Exempt only that key, and only as a bare string: os.environ["K"],
+# os.environ.get("K", ...), os.environ.setdefault("K", ...), os.getenv("K"),
+# os.putenv("K", ...), os.unsetenv("K"), "K" in os.environ (bare names
+# imported from os too). Values and defaults stay checked:
+# float(os.getenv("MIN_SCORE", "0.75")) is exactly the hardcoded copy this
+# check exists to catch. Boolean spellings such as a RUNTIME__DLTHUB_TELEMETRY
+# = "false" toggle are covered by GENERIC_TOKENS below, not by this exemption.
+def _is_os_attr(node, names):
+    return (isinstance(node, ast.Attribute) and node.attr in names and
+            isinstance(node.value, ast.Name) and node.value.id == "os")
+def _is_environ(node):
+    return _is_os_attr(node, ("environ",)) or (
+        isinstance(node, ast.Name) and node.id == "environ")
+def _env_key(node):
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+        return node
+    return None
+config_consts = set()
+for node in ast.walk(ttree):
+    key = None
+    if isinstance(node, ast.Subscript) and _is_environ(node.value):
+        key = _env_key(node.slice)
+    elif isinstance(node, ast.Call):
+        func = node.func
+        if (isinstance(func, ast.Attribute) and _is_environ(func.value)) or (
+                _is_os_attr(func, ("getenv", "putenv", "unsetenv"))) or (
+                isinstance(func, ast.Name) and
+                func.id in ("getenv", "putenv", "unsetenv")):
+            if node.args:
+                key = _env_key(node.args[0])
+            else:
+                key = next((_env_key(k.value) for k in node.keywords
+                            if k.arg == "key"), None)
+    elif (isinstance(node, ast.Compare) and len(node.ops) == 1 and
+          isinstance(node.ops[0], (ast.In, ast.NotIn)) and
+          _is_environ(node.comparators[0])):
+        key = _env_key(node.left)
+    if key is not None:
+        config_consts.add(id(key))
 tlits = set()
-for node in ast.walk(ast.parse(tsrc)):
-    if isinstance(node, ast.Constant):
+for node in ast.walk(ttree):
+    if isinstance(node, ast.Constant) and id(node) not in config_consts:
         if isinstance(node.value, str):
             tlits.add(node.value.strip())
         elif isinstance(node.value, (int, float)) and not isinstance(node.value, bool):
@@ -3643,6 +3684,9 @@ for node in ast.walk(ast.parse(tsrc)):
 # verdict the lookup returns. Skip the first column and any *_id/key/name/
 # criterion column; check the rest.
 KEYISH = ("id", "key", "name", "criterion", "code", "slug", "label")
+# Boolean and null spellings are generic tokens, not policy parameters: "false"
+# in a gate row and "false" anywhere in the transform collide by coincidence.
+GENERIC_TOKENS = {"true", "false", "yes", "no", "none", "null", "nan"}
 for pcsv in sorted(Path("data").rglob("*.csv")):
     if not any(h in pcsv.parent.name.lower() for h in POLICY_HINT):
         continue
@@ -3660,8 +3704,9 @@ for pcsv in sorted(Path("data").rglob("*.csv")):
             # Distinctive = long enough to be a real policy value, or a
             # decimal/multi-digit number. Single digits and 1-3 char codes
             # collide with array indices and unrelated strings.
-            distinctive = len(v) >= 4 or (
-                v.replace(".", "", 1).isdigit() and len(v) >= 2)
+            distinctive = (len(v) >= 4 or (
+                v.replace(".", "", 1).isdigit() and len(v) >= 2)) and (
+                v.lower() not in GENERIC_TOKENS)
             if distinctive and v in tlits:
                 derr("policy.literal_duplicates_landed_value",
                     f"{pcsv}: value {v!r} (column '{col}') is landed AND "
