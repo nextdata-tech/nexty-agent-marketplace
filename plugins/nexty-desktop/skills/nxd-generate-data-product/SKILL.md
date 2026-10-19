@@ -14,7 +14,7 @@ allowed-tools:
   - Task
 metadata:
   author: nextdata
-  version: 0.59.10
+  version: 0.59.13
 ---
 
 # nxd-generate-data-product skill
@@ -452,12 +452,11 @@ capture contract; `build-record.json` remains generated, never hand-authored.
 
 ### Step 6b — Defer adversarial review to the job loop after capture
 Under workflow-v2, call the `check_data_product` MCP tool on the authoring
-closure before returning it and fix every failing finding; it needs no shell.
-For a mapper closure pass `mode:"structural"`: full mode refuses it with
-`mapper_approval_required`.
+closure before returning it and fix every failing finding, following the
+[preflight before capture](reference/pre-capture-audit.md#preflight-before-capture).
 The developer self-check recipes are optional evidence outside this activated Desktop route.
 They must not create Desktop reserved records/checker copies, edit retained captures,
-or execute a paid mapper outside admission. Use the current MCP structural check;
+or execute a paid mapper outside admission. Use the current MCP check in the applicable mode;
 optional evidence does not authorize capture, replace the trusted supervisor checker, or relax
 strict admission. Bash may be unavailable under OAuth, so never stall or
 substitute hand-authored hashes, locks, records, or checker copies when those

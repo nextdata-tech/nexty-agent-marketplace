@@ -455,6 +455,7 @@ Follow only the recovery the tool returned. Never call a failure "transient" or
 | `validation/pin_compile_timeout` | Compiling the build files ran out of time. Follow the returned recovery; do not call it transient without evidence of a retryable result. |
 | `validation/pin_spec_compile_failed` | The build files did not compile. Follow the returned repair-then-retry recovery without saying who or what caused it. |
 | `validation/pin_storage_failed` | Saving the locked build files failed. Follow the returned recovery. Say the saved result is unchanged only when the returned detail says so; never edit or reset saved state by hand. |
+| `validation/pin_seal_failed` | Stop: the sealed copy could not be verified. Say "The saved build files could not be verified, so the run stopped." Keep internal details out of chat; do not retry or enter a repair loop. |
 | `validation/pin_closure_invalid` | The build files failed an integrity check and the run stopped. Report the stop; do not repair or save them again unless the returned recovery says so. Never touch saved state. |
 | `validation/pin_failed` | Locking in the build files failed for a reason not otherwise typed. Follow the returned recovery and describe the cause as not settled. |
 
