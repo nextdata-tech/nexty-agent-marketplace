@@ -13,7 +13,7 @@ allowed-tools:
   - Task
 metadata:
   author: nextdata
-  version: 0.59.14
+  version: 0.59.15
 ---
 
 # nxd-run-job-loop skill
@@ -296,7 +296,7 @@ A green self-check means the closure is structurally sound and the transform ran
 
 Steps 3–3b already completed capability gating, preparation, consent, capture,
 and the single retained-input review. Continue the same v2 workflow from its
-latest response: follow the returned `start_requirement`
+latest response: do not start validation unless the last successful `check_data_product` came after the last review report for this capture (else check now, closure unchanged; every workflow and revision, a late new workflow included), then follow the returned `start_requirement`
 action for supervisor validation, then the returned `start_run` action for
 admission and publication. Use the exact envelopes in
 [reference/workflow-v2.md](reference/workflow-v2.md); never reuse stale action
@@ -364,7 +364,7 @@ natural-language translation is yours to do. For each question:
 If an answer is wrong, missing, or unsatisfying, decide where the fix belongs.
 Once the published product answers the approved request, finish the handoff; do
 not start another workflow, draft a new version, or expand the questions, models,
-or outputs on your own. If the user later asks for a change, confirm that
+or outputs on your own: after publication, open a new workflow only for a business change the user named or approved, and only with the separate-product authorization under Model / DP-level below. "Continue" or "use your judgment" with nothing pending is not one: report the current published release as current, say nothing is pending, and ask what they want changed; wording, disclosure or presentation tweaks never justify a new workflow and run unless the user asks for that change. If the user later asks for a change, confirm that
 requested scope before resetting or starting another workflow, then follow it rather than declining it.
 Every level is **bounded**, and the bounds are **counted** from
 `build-record.json` `attempts[]`, never estimated — remap ≤~2/question,
