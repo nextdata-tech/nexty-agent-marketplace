@@ -833,12 +833,13 @@ conversation child returns; it is not a supervisor-launched review.
 ## Follow returned actions through admission
 
 After every `advance_workflow` response, discard earlier action parameters and
-follow only its new `next_actions`. Once the review is clear, and before you
-start validation, call `check_data_product` once more on the unchanged authoring
-closure (full preflight with no `mode` argument without the mapper;
-`mode:"structural"` for a mapper closure, since full mode is refused before
-admission with `mapper_approval_required`), so the last successful check
-follows the last review. Edit nothing between that check and the run. If it
+follow only its new `next_actions`. **Before every validation
+`start_requirement`, in any workflow or revision, including a new workflow
+opened late in the conversation, call `check_data_product` once more on the
+unchanged authoring closure once the review is clear, so the last successful
+check follows the last review report for this capture** (full preflight with no
+`mode` argument without the mapper; `mode:"structural"` for a mapper closure,
+since full mode is refused before admission with `mapper_approval_required`). Edit nothing between that check and the run. If it
 fails, the authoring closure no longer matches the capture: repair, reset and
 recapture rather than validate. Then start supervisor-owned validation with the
 returned `start_requirement` action and current revision. A queued or running
