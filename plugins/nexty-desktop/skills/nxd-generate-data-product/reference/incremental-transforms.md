@@ -46,11 +46,12 @@ writing a line:
      aggregate row is now wrong, and appending a second row for the same
      declared grain duplicates the primary key;
    - a **dedupe or reclassification** whose verdict for an old row can change;
-   - anything whose **derivation logic** you may edit in a later refine cycle —
-     rows landed under the old logic stay in the table forever, silently mixed
-     with rows landed under the new logic.
-4. **A refine cycle will not change the derivation.** Desktop re-runs are refine
-   cycles on the same workflow, so this is a live risk, not a hypothetical.
+   - anything whose **derivation logic** you expect to edit often — desktop
+     does not mix old and new logic (a logic change starts from an empty
+     database, see [Desktop specifics](#desktop-specifics)), but every edit then
+     costs a full re-run, which erases the reason to go incremental.
+4. **The derivation is settled.** A refresh only stays incremental while the
+   closure's logic is unchanged; each logic change is a full re-run.
 
 If any promised model fails the gate, the correct answer is one of:
 
@@ -219,9 +220,14 @@ assume a raise rolls back the rows.**
   returns, and a later raise cannot undo them.
 
 So a transform that lands rows and *then* raises leaves the rows durably written
-while the cursor stays where it was. That is torn state, and on the next run the
-stale cursor re-yields those same rows into an `"append"` table — duplicate rows,
-green run, no error.
+while the cursor stays where it was. That is torn state inside the run. On
+desktop the supervisor contains it: each admitted run works on its own copy of
+the database and the kernel store, and only a successful, verified run is
+published, with its rows and its cursor sealed into the same release. A failed
+run publishes neither, so the next refresh inherits the last published release,
+whose rows and cursor match. The torn state never reaches a later run. It is
+still a failed run: the user pays for a re-run, and on a mapper transform the
+re-run scores again.
 
 Two consequences you must design for:
 
@@ -236,9 +242,10 @@ Two consequences you must design for:
    went wrong. See
    [Verifying the write](#verifying-the-write-count-rows-not-table-names).
 
-Recovering from a torn run means dropping the duplicate rows from the DuckDB
-table by hand, or rebuilding the closure from scratch with a full replace. Say so
-to the author rather than letting them discover it from a row count.
+What the supervisor cannot contain is a run that writes torn state and then
+*succeeds* — a swallowed exception, an early `return` after a partial write. That
+run publishes the torn pair, and the next refresh extends it. That is why the
+ordering rule below is absolute.
 
 ## Write first, advance the cursor second
 
@@ -398,30 +405,46 @@ cannot see.
   bag replayed. (Per-model state seeding is a different mechanism from per-model
   execution *dispatch*, which desktop does not do — see the `.when(...)` entry in
   [Do NOT](#do-not). One bag per model, one invocation for all of them.) Write the
-  bag and read it back; there is nothing to enable and nothing to check first. A
-  platform acceptance test covers this end-to-end across two builds of one
-  workflow — run 1 commits a cursor, run 2 must observe
-  it. **The product docs' `transform-state.md` scopes `transform_state` to
+  bag and read it back; there is nothing to enable and nothing to check first.
+  Platform acceptance tests cover this end-to-end across refreshes of one
+  published workflow — run 1 commits a cursor, the refresh must observe it and
+  land only the delta. **The product docs' `transform-state.md` scopes `transform_state` to
   `k8s-compute` and calls it a no-op elsewhere; that caveat does not apply to lean
   desktop.** The desktop's local `python-compute` driver routes through the same batch
   module and persists the bag, so do not conclude from that page that the
   parameter does nothing here — an agent that did exactly that hand-rolled the
   watermark this document bans.
-- **Persistence is on by default.** The supervisor always hands the kernel a
-  per-workflow database path; there is no flag to set and nothing to enable.
-- **One `<workflow_key>.sqlite3` per workflow.** State is scoped to the workflow,
-  so it survives refine cycles that reuse the same workflow id — a rebuild of the
-  same workflow reads back the previous run's committed state. A *different*
-  workflow id starts from an empty bag.
+- **Persistence is on by default.** Each admitted run gets its own kernel store;
+  there is no flag to set and nothing to enable.
+- **State travels with the published release.** After a stateful run the
+  supervisor seals the bags into the release next to the landed DuckDB, so one
+  publication carries the rows and the cursor that produced them. A run that
+  fails publishes neither ([Durability](#durability-rows-and-cursor-do-not-share-fate)).
+  A *different* workflow id starts from an empty bag.
+- **A refresh is a recapture of the same workflow, not a new workflow id.** The
+  flow is capture (new source rows under the closure's `data/`, or an unchanged
+  closure for a live source that refetches), review, approval, validation,
+  `start_run`. The refresh inherits the published release's database, dlt state
+  and bags only when the closure's logic is unchanged: the same pinned definition
+  apart from `data/` (the *state lineage*).
+- **A change to the logic starts from an empty bag and an empty database.** Any
+  edit to the transform, spec, models, contracts or mapper grant is a new
+  lineage, and the run behaves as a first run: a full re-land, and a full
+  re-score for a mapper transform. Rows landed under the old logic are never
+  extended by the new logic, so there is no mixed-logic table. The cost is a full
+  re-run every time the logic changes; say so to the author before they edit an
+  incremental closure.
+- **Validation replays a stateful transform once.** After the scratch run,
+  validation runs the transform again from everything the scratch run left,
+  with no new source rows, and every landed table must keep its row count.
+  Otherwise it fails with `validation/refresh_not_idempotent`. That catches a
+  flat cursor write the kernel drops, an `"append"` without a working cursor
+  (re-lands rows), and `"replace"` with only the delta (empties the table). The
+  fix is in the transform, never a retry.
 - **There is no cron on the desktop runtime.** Runs happen because the user asks for one. Do
   not write guidance or comments in terms of "each scheduled run" or "nightly" —
-  the correct framing is "the next run", whenever that is. A refine cycle is a
-  run like any other, and it will read the cursor.
-- **A refine cycle does not reset the table.** Editing the transform and
-  re-running appends to whatever previous runs already landed, under the old
-  logic, with the cursor still in place. If a refine changes what a row should
-  contain, the already-landed rows do not change with it — that is why the
-  eligibility gate rules out derivations you expect to edit.
+  the correct framing is "the next run", whenever that is. A refresh is a run
+  like any other, and it will read the cursor.
 - The kernel-side store differs from the platform (SQLite locally rather than
   Postgres), but the API and the semantics are identical. Nothing in the
   transform changes between them.
@@ -542,8 +565,9 @@ not eligible for incrementality: keep it on full replace and say so.
   keeps both. Same for the `.transform-complete` touch: adding verification never
   removes it.
 - **Do NOT assume a raise rolls back the rows.** The local DuckDB driver has no
-  transaction; rows are permanent the moment `pipeline.run(...)` returns. Check
-  before writing.
+  transaction; within the run, rows are permanent the moment `pipeline.run(...)`
+  returns. The supervisor discards a failed run, but a run that swallows the
+  error publishes what it wrote. Check before writing.
 - **Do NOT `import duckdb` and call `duckdb.connect(...)` inside the transform.**
   The port parameter shadows the module. Alias it: `import duckdb as duckdb_lib`.
 - **Do NOT guard the read-back with `except duckdb.CatalogException` alone.** A

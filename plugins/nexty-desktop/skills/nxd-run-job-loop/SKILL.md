@@ -13,7 +13,7 @@ allowed-tools:
   - Task
 metadata:
   author: nextdata
-  version: 0.59.15
+  version: 0.60.0
 ---
 
 # nxd-run-job-loop skill
@@ -381,9 +381,10 @@ exit: `healed`, `healed_with_concessions`, `caps_exhausted`, `blocked`,
   **Edit `dp-blueprint.md` first**, re-validate, and re-approve it when the change
   touches a ruling (a criteria change is a new `rubric_version`); then go back to
   Step 2/3 and use `reset_workflow` while the v2 construction is still pending.
-  The enrolled scope is new-build only. After publication, behavior-changing revisions are unsupported: preserve
-  the release and never reset, recapture, validate, retry, remove, or replace its workflow ID.
-  `validation/existing_workflow_unsupported` is terminal (see [reference/failure-handling.md](reference/failure-handling.md)).
+  After publication, a refresh with unchanged logic (new rows under `data/`, or a live source refetched) is a
+  recapture of the same workflow: capture, review, approval, validation, `start_run` ([reference/workflow-v2.md § Refresh in place](reference/workflow-v2.md#refresh-in-place)).
+  The same applies once a failed admitted run is terminal. Never reset or remove a published workflow to refresh it.
+  Behavior-changing revisions of a published product stay out of scope: preserve the release and its workflow ID.
   Report the limitation and ask explicit authorization for a separate versioned product/new ID; only then start fresh workflow-v2 admission, whose plan starts with that source probe.
   A request to revise a published product is not that authorization: first say the release can't be revised in place, that it would
   be a separate versioned product under a new workflow ID, and that consumers must switch; then ask and wait for the user's yes.
@@ -471,9 +472,8 @@ Query-answer wording and failure classification remain in their current owners. 
 - **Reattach, don't rebuild, when live; keep one workflow ID per data product.** In a fresh session,
   `list_data_products` → `resume_data_product` → static artifact restores the published workflow with a
   fresh bearer; discovery isn't a fallback. Unavailable artifacts don't authorize reconstruction outside
-  workflow-v2; enrollment admits fresh builds only. This does not reopen a published workflow for
-  revision; follow the terminal `validation/existing_workflow_unsupported` rule above, including its
-  ask-first rule for a separate versioned product ([reference/context-and-resume.md](reference/context-and-resume.md)).
+  workflow-v2. A same-logic refresh is a recapture of the same workflow; a behavior-changing revision
+  follows the published-product rule above, including its ask-first rule for a separate versioned product ([reference/context-and-resume.md](reference/context-and-resume.md)).
 - **Keep workflow-v2 authoring on the main thread.** Pass the returned `capture` action an absolute
   generated-definition path explicitly exposed by the file-writing surface; never infer one from an
   attachment ID or isolated Linux path. Semantic inference, generation, host-path verification, credential

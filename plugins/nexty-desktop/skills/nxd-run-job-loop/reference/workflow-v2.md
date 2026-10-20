@@ -9,6 +9,7 @@ do not fall back to a direct CLI or local substitute.
 - [Gate on the connected capability](#gate-on-the-connected-capability)
 - [Prepare the prose blueprint](#prepare-the-prose-blueprint)
   - [Revised or successor plan](#revised-or-successor-plan)
+  - [Refresh in place](#refresh-in-place)
   - [Classify admission failures before recovery](#classify-admission-failures-before-recovery)
   - [Recovering a rejected proposal](#recovering-a-rejected-proposal)
 - [Relay consent and capture](#relay-consent-and-capture)
@@ -280,6 +281,54 @@ not claims you can make without looking.
    [dp-blueprint.md § Conventions every plan states](dp-blueprint.md#conventions-every-plan-states),
    which applies to every plan. Review blocks on unwritten conventions, and each
    block costs a reset and a fresh approval.
+
+### Refresh in place
+
+A published workflow admits a refresh: another admitted run of the same
+workflow ID, not a new workflow. The flow is the ordinary one, on the same
+workflow: **capture -> review -> approval -> validation -> `start_run`**.
+Capture the same authoring closure, with new source rows under its `data/` for
+a file source, or unchanged for a live source that refetches. Follow the
+actions `inspect_workflow` returns; do not call `reset_workflow` or
+`remove_workflow` to start a refresh. Consent, review, spending approval and
+their carry-forward rules are unchanged. A workflow whose admitted run failed
+refreshes the same way once that run is terminal.
+
+What the refresh starts from depends on the transform:
+
+- **Stateless transform:** rebuilds from an empty database on every run.
+- **Stateful transform (`transform_state`):** inherits the published release's
+  database, dlt state and per-model bags, but only while the closure's logic is
+  unchanged (the same pinned definition apart from `data/`). Validation seeds
+  its scratch run from that same base, then replays the transform once with no
+  new rows; every landed table must keep its row count.
+- **Any change to the transform, spec, models, contracts or mapper grant:**
+  a new state lineage, so the run starts from an empty bag and an empty
+  database: a full re-land and, for a mapper, a full re-score. Say so, with
+  the cost, before the spending approval.
+
+The state lineage decides what a run inherits; it does not decide whether a
+new product is needed. A change to the transform, spec, models or contracts of
+a published product is a behavior-changing revision: follow the
+published-product rule in the skill (a separate versioned product, only with
+explicit authorization). Each refresh of a mapper product needs a fresh
+spending approval, because a non-recurring approval is spent by the
+publication it admits. While the grant's `expires_at` is still in the future,
+request that approval for the unchanged grant: the lineage holds and the bags
+carry over. Do not rewrite the grant just to refresh. When the refresh does
+need a grant change (the grant has expired, or the scratch run exceeds its
+ceilings), a grant-only change (the same model, with only a later expiry or
+new ceilings) is not a behavior-changing revision: it stays on the same
+workflow and starts empty.
+
+Refresh-specific outcomes:
+
+| Code | Meaning | Recovery |
+|---|---|---|
+| `workflow/unsupported_rebuild` | An earlier run of this workflow has not finished. | Call `inspect_run` once; wait for that run to reach a terminal status, then follow the returned actions. |
+| `validation/refresh_not_idempotent` | The replay changed a table's row count: the cursor is not working. | Never retry unchanged. **Not yet published:** fix the transform ([incremental-transforms.md](../../nxd-generate-data-product/reference/incremental-transforms.md)), then reset, recapture and review. **Published workflow:** the fix is a behavior-changing revision; preserve the release, report the broken cursor, and follow the published-product rule. |
+| `validation/refresh_base_unavailable` | The published base could not be leased for validation. | Retry validation. |
+| `workflow/stale_execution` at `start_run` | A newer release published after validation, so the bound base is stale. | Validate again against the current release. |
 
 ### Classify admission failures before recovery
 

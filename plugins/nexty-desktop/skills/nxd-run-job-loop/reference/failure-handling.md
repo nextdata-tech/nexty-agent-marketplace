@@ -197,16 +197,26 @@ producing the identical error:
 - An import error for a missing dependency — the runtime is under-provisioned
   until someone provisions it.
 - A grant or spec-hash mismatch — the binding is wrong, not flaky.
-- `validation/existing_workflow_unsupported` — this workflow ID already owns a
-  published product, and the current operation scope cannot revise it. Treat this
-  as terminal and non-retryable: preserve the published product and release; do
-  not reset, recapture, validate, retry, remove, or replace that workflow. Report
-  the limitation and ask whether the user explicitly authorizes a separate,
-  versioned data product under a new workflow ID. Only after authorization, begin
-  fresh workflow-v2 admission. Consumers must switch to the new product; this
-  never updates the prior release. A request to revise is not that authorization:
-  say so first, ask, and wait for the yes; never prepare the new ID in the same
-  turn as the ask, and never fold it into the plan approval.
+- `validation/refresh_not_idempotent` — validation replayed a stateful transform
+  with no new source rows and a landed table changed its row count. The cursor
+  is not working (a flat bag write, an `"append"` that re-lands rows, a
+  `"replace"` that keeps only the delta). The replay fails the same way until
+  the code changes. Before publication, fix the transform per
+  [incremental-transforms.md](../../nxd-generate-data-product/reference/incremental-transforms.md),
+  then reset, recapture and review. On a published workflow the fix is a
+  behavior-changing revision: preserve the release, report the broken cursor,
+  and follow the rule below.
+- A published workflow is not itself a failure. A same-logic refresh goes to
+  the same workflow, and so does a retry once a failed admitted run is terminal
+  ([workflow-v2.md § Refresh in place](workflow-v2.md#refresh-in-place)).
+  `validation/existing_workflow_unsupported` is no longer emitted; if an older
+  runtime returns it, the runtime predates in-place refresh, so report that
+  rather than resetting or removing the workflow. A behavior-changing revision
+  of a published product still needs explicit authorization for a separate,
+  versioned data product under a new workflow ID; consumers must switch to it,
+  and it never updates the prior release. A request to revise is not that
+  authorization: say so first, ask, and wait for the yes; never prepare the new
+  ID in the same turn as the ask, and never fold it into the plan approval.
 - A `transform_error` with empty `stderr_tail`, `stdout_tail` and no `failed_contracts`
   after the source changed (a renamed column, a new stage value) is source drift
   behind a raw transform raise. Compare the source against the blueprint's Inputs,
