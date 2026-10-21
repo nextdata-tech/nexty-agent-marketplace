@@ -344,10 +344,16 @@ observed-vs-expected values:
 
 **Shape `VerifyResult.context` so it survives.** The agent sees a failed custom
 contract's context in `failed_contracts[].context`, but only after a fail-closed
-filter. Put prose only under the keys `detail`, `message` or `reason`. The keys
-`contract`, `model`, `column`, `sample(s)`, `example(s)`, `row(s)`, `value(s)`,
-`data` and `record(s)` are skipped, so do not rely on them to carry a finding. Any
-other key must be identifier-shaped (ASCII letters, digits and `_ . : -`, at most
+filter. Every `FAILED` (and `WARNING`) context MUST carry `contract`, set to
+exactly the name passed to `custom("...")`, and `model`, set to the model it
+checks, both identifier-shaped. Without them the supervisor drops the whole
+failure: the agent then sees only an unexplained
+`validation/scratch_transform_failed` with no `failed_contracts`. These two keys
+identify the failure; they do not carry the finding. `column` is optional, and
+`sample(s)`, `example(s)`, `row(s)`, `value(s)`, `data` and `record(s)` are
+skipped, so the finding goes in other identifier-valued keys plus `detail`. Put
+prose only under the keys `detail`, `message` or `reason`. Any
+finding key must be identifier-shaped (ASCII letters, digits and `_ . : -`, at most
 128 bytes), and its value must be a number, a boolean, an identifier string (same
 characters, no spaces, no `=`) or a flat list of those with at most 20 items.
 Nested dicts, dicts inside lists, and strings with spaces or `=` (such as

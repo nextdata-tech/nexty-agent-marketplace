@@ -180,7 +180,16 @@ carries the verifier's own identifiers (field names, unexpected values, counts).
 If `context` is present but lacks a key the verifier returns, that value's shape
 was dropped by the agent-facing filter (nested dicts and strings with spaces or
 `=` do not survive), so reshape it rather than guessing: rewrite the verifier to
-report identifier-valued keys, with prose under `detail`. A context that is
+report identifier-valued keys, with prose under `detail`. Validation
+that reports only `validation/scratch_transform_failed` with no `failed_contracts`
+has two causes; tell them apart with `inspect_run` for the `diagnostic_run_id`. If
+its phases reach `promise_verification_started` / `promise_verdict_received`, the
+transform completed and a verifier returned `FAILED` whose context lacks
+`contract` (the exact `custom("...")` name) or `model`: add both. If the failure
+comes before `promise_verification_started`, the transform raised and no
+verifier ran, so do not touch one: read the raised exception from that same
+`inspect_run` result and classify it by stage (above); when it is source drift
+after a source change, follow the drift bullet below. A context that is
 absent altogether means nothing survived: nxd omits it when every key the
 verifier returns was dropped, so first check each returned key and value against
 the rules in [custom-contracts.md](../../nxd-generate-data-product/reference/custom-contracts.md).
