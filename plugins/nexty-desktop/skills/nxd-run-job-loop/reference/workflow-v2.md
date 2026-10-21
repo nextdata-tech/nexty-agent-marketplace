@@ -292,7 +292,10 @@ a file source, or unchanged for a live source that refetches. Follow the
 actions `inspect_workflow` returns; do not call `reset_workflow` or
 `remove_workflow` to start a refresh. Consent, review, spending approval and
 their carry-forward rules are unchanged. A workflow whose admitted run failed
-refreshes the same way once that run is terminal.
+refreshes the same way once that run is terminal. A failed run that sent no
+request to the provider does not use up its one-run spending approval, so the
+retry may keep it
+([Keep an accepted spending approval across a repair](#keep-an-accepted-spending-approval-across-a-repair)).
 
 What the refresh starts from depends on the transform:
 
@@ -988,8 +991,8 @@ lifetime spend for this mapper spec, and the fields the grant declares. It
 does not show the grant's expiry or whether it is recurring, so state both
 yourself. When the `advance_workflow` tool description mentions
 `carry_forward_unchanged_approval`, also say that, until it is used for a
-publication or expires, the approval still covers fixes to how the view is
-built, as long as the data sent, the model, the limits and the expiry stay the
+publication or by a run that reaches the provider, or expires, the approval
+still covers fixes to how the view is built, as long as the data sent, the model, the limits and the expiry stay the
 same. Then call `start_requirement` with the returned requirement id and
 the current revision. The supervisor opens a native OS dialog. That dialog is
 the only approval surface. The response carries
@@ -1091,7 +1094,14 @@ action appears, request carry-forward only if all of these hold:
 
 - The earlier approval is accepted, unexpired and not yet used for a
   publication. On Desktop every approval is one-run, so after a publication a
-  fix always needs a new prompt.
+  fix always needs a new prompt. A failed run does not count as a use when it
+  sent no request to the provider, so after a failed run, request
+  carry-forward for the retry when the other conditions hold. The supervisor
+  checks the spending record and decides. It refuses, and the dialog opens
+  again, when any request reached the provider (even one that cost nothing),
+  when the run hit the approved ceiling (`mapper_ceiling_reached`), or when
+  spend is still unsettled. Never promise the user the approval will carry
+  before the supervisor answers.
 - The plan was not re-approved: the repair kept the approved blueprint.
 - `contracts/mapper_spec.json` and `contracts/mapper_grant.json` are
   byte-identical to the approved capture's.
@@ -1131,8 +1141,11 @@ send `start_requirement` once more without the field, with a fresh
 other rejection, such as a stale revision, follows its own recovery. Never
 call carry-forward a bypass: validation and admission still run in full on
 the repaired view.
-Approvals made before the dialog carried this sentence, expired approvals and
-a one-run approval already used for a publication are never carried.
+Approvals made before the dialog carried this sentence, expired approvals, a
+one-run approval already used for a publication, and one whose failed run
+reached the provider are never carried. Supervisors before nxd 0.41.300
+treat any admitted run as a use: they refuse after a failed run, and the
+normal dialog flow applies.
 
 ### Provider credential access
 
