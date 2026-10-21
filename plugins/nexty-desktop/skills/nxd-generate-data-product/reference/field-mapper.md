@@ -68,13 +68,27 @@ Keep technical status blocks internal and use the canonical
 
 `prepare_mapper` also returns `answer_format_check`. Its `provider_check` is
 always `not_checked`: preparation never sends the answer format, so it cannot
-say the provider will accept it. When the answer is wider than the size seen
-accepted, it carries an `advisory` with code
-`mapper/answer_format_may_be_too_large` and a suggested split. The advisory does
-not block preparation, but act on it before requesting approval: split the
-target fields into the suggested scoring steps (see
-[answer size](#authoring-the-spec-and-the-grant)) and prepare again. Approving a
-setup the provider then refuses spends an approval for nothing.
+say the provider will accept it. What else it carries depends on the installed
+Desktop:
+
+- **It reports `calls_per_row`.** The mapper splits a wide answer itself into
+  groups of at most `max_fields_per_call` fields (default 9), one request per
+  group per row. Do not split target fields into scoring steps by hand. A
+  `note` with code `mapper/answer_format_split` gives the group sizes
+  (`answer_groups`). Size `max_calls` from `calls_per_row`
+  ([call ceiling](#authoring-the-spec-and-the-grant)), and before approval tell
+  the user in plain words that the run sends that many requests per row, which
+  multiplies its cost. An `advisory` (`mapper/answer_format_may_be_too_large`)
+  here means one group is still over 9 fields because the spec set
+  `max_fields_per_call` above 9: lower it or remove it, and prepare again.
+- **It does not report `calls_per_row`.** An older Desktop: one request
+  carries every field. When the answer is wider than the size seen accepted,
+  the `advisory` carries a suggested split. It does not block preparation, but
+  act on it before requesting approval: split the target fields into the
+  suggested scoring steps (see [answer size](#authoring-the-spec-and-the-grant))
+  and prepare again.
+
+Approving a setup the provider then refuses spends an approval for nothing.
 
 ## What the Desktop flow supports today
 
@@ -134,24 +148,38 @@ in [mapper-preflight.md](mapper-preflight.md#desktop-preparation). Preparation i
 read-only and advisory (`native_approval_required:true`, `run_admitted:false`);
 it never records consent.
 
-**Answer size per scoring step.** The provider turns each scoring step's answer
-format into a grammar and refuses one that is too large. Keep each step's answer
-to **about 9 fields or fewer**, for example 8 scored fields plus a rationale.
-That is an observed figure, not a published limit: with this kind of request 9
-fields were accepted and 14 and 17 were refused, and the provider documents no
-number. When a setup needs more target fields, split them into several scoring
-steps of about 9 fields or fewer each, or drop fields the agreed questions do
-not need, rather than asking for one wide answer. No free check can confirm the
-size; only the provider can, at the start of an approved run.
+**Answer size per scoring step.** The provider turns each answer format into a
+grammar and refuses one that is too large. About 9 fields per answer is the
+observed limit (for example 8 scored fields plus a rationale): with this kind
+of request 9 fields were accepted and 14 and 17 were refused, and the provider
+documents no number. No free check can confirm the size; only the provider
+can, at the start of an approved run.
 
-**Size the call ceiling for the format check.** An approved run first sends one
-format-check call per model: the primary, and the corroborating model only when
-a media-direct row will reach it. The Desktop flow refuses media inputs, so
-there it is one check call. It uses placeholder text and no source data, is
-billed, and counts against the same call, token and USD ceilings as the rows.
-Set `max_calls` to the row calls plus one per checked model. With no spare call
-the check is skipped and the first row does the checking, so a refusal then
-comes after that row's source text was already sent.
+- **When `prepare_mapper` reports `calls_per_row`,** the mapper groups the
+  fields for you, in declared order, into the fewest balanced groups of at
+  most `max_fields_per_call` (default 9): 17 fields become 9 + 8. Leave
+  `max_fields_per_call` unset unless the provider refused a group; then set it
+  lower, for example 6. Each group's answer sees only its own fields, so
+  declare a whole-row rationale last, next to the scores it explains. Drop
+  fields the agreed questions do not need: every extra group is another
+  request per row.
+- **Otherwise,** keep each scoring step's answer to about 9 fields or fewer.
+  When a setup needs more target fields, split them into several scoring steps
+  of about 9 fields or fewer each, or drop fields the agreed questions do not
+  need, rather than asking for one wide answer.
+
+**Size the call ceiling in requests, not rows.** `max_calls` counts provider
+requests. Each row sends `calls_per_row` requests (1 when `prepare_mapper` does
+not report it), and each validation retry is one more request for its group.
+An approved run also first sends one format-check request per answer group per
+model: the primary, and the corroborating model only when a media-direct row
+will reach it. The Desktop flow refuses media inputs, so there it is one check
+per group. The checks use placeholder text and no source data, are billed, and
+count against the same call, token and USD ceilings as the rows. Set
+`max_calls` to rows × `calls_per_row`, plus one check per group, plus room for
+retries. When the ceiling has no spare room for every group's check, none is
+sent and the first row does the checking, so a refusal then comes after that
+row's source text was already sent.
 
 **Developer/CI reference only — not the Desktop conversation path.**
 For the standalone harness, compute the id the grant must carry:
@@ -662,7 +690,7 @@ without exposing the code or internals to the user:
 
 | Code | Cause | Recovery |
 |---|---|---|
-| `mapper/schema_too_large` | the provider refused the answer format as too large (`error_code` stays `schema_reject`); the run stopped before any row was scored | split the target fields into several scoring steps of about 9 fields or fewer each ([answer size](#authoring-the-spec-and-the-grant)), prepare again and ask for a fresh approval. Tell the user: "The AI provider said this setup asks for too many fields in one answer, so nothing was scored. I'll split it into smaller scoring steps and ask for your approval again." |
+| `mapper/schema_too_large` | the provider refused the answer format as too large (`error_code` stays `schema_reject`); the run stopped before any row was scored. On Desktop the run diagnostic's `mapper.code` is `mapper_schema_too_large` | when `prepare_mapper` reports `calls_per_row`, set a lower `max_fields_per_call` (for example 6) or drop fields; otherwise split the target fields into several scoring steps of about 9 fields or fewer each ([answer size](#authoring-the-spec-and-the-grant)). Then prepare again, recapture, review and ask for a fresh approval. Tell the user: "The AI provider said this setup asks for too many fields in one answer, so nothing was scored. I'll ask for fewer fields at a time and ask for your approval again." |
 
 `target_row_key` is a content-derived hash, not the source row ID. Keep the
 `MapResult` proposals/evidence together and resolve from that bundle; never
