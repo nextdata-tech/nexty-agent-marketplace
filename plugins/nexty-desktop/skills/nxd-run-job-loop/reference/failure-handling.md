@@ -208,7 +208,10 @@ producing the identical error:
   and follow the rule below.
 - A published workflow is not itself a failure. A same-logic refresh goes to
   the same workflow, and so does a retry once a failed admitted run is terminal
-  ([workflow-v2.md § Refresh in place](workflow-v2.md#refresh-in-place)).
+  ([workflow-v2.md § Refresh in place](workflow-v2.md#refresh-in-place)). If
+  that run sent no request to the provider, its spending approval can carry to
+  the retry
+  ([workflow-v2.md § Keep an accepted spending approval across a repair](workflow-v2.md#keep-an-accepted-spending-approval-across-a-repair)).
   `validation/existing_workflow_unsupported` is no longer emitted; if an older
   runtime returns it, the runtime predates in-place refresh, so report that
   rather than resetting or removing the workflow. A behavior-changing revision
