@@ -1390,7 +1390,13 @@ model not granted, or an approval past its expiry). `mapper_request_refused`
 means it refused a disallowed request shape, such as server tools, images or
 streaming. The mapper raised `GrantError` for both. `mapper_integrity` means
 the spend ledger or the run's mapper setup could not be verified. For all
-four, stop and report. Do not rerun to "try again". If `start_run` reports
+four, stop and report. Do not rerun to "try again". `mapper_schema_too_large`
+means the AI provider refused an answer group as too large before any row was
+scored. Do not rerun it unchanged: follow the `mapper/schema_too_large`
+recovery in
+[field-mapper.md](../../nxd-generate-data-product/reference/field-mapper.md)
+(fewer fields per request), then recapture, review and ask for a fresh
+approval. If `start_run` reports
 `mapper_provider_credential_missing`, follow the provider setup directions in
 the canonical table in
 [failure-handling.md](failure-handling.md#keychain-credential-and-saved-state-access-outcomes).

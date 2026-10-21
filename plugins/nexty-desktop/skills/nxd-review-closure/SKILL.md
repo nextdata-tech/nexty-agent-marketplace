@@ -7,7 +7,7 @@ allowed-tools:
   - Grep
 metadata:
   author: nextdata
-  version: 0.62.1
+  version: 0.63.0
 ---
 
 # Review a generated closure — adversarially
@@ -190,7 +190,9 @@ Your review comes before that dialog, so check that the proposal is honest.
 - **Plausible for the request.** The provider is `anthropic`. The model and
   any `corroboration_model` match what the transform and spec call. The
   `max_calls`, `max_tokens` and `max_usd` ceilings fit the row count and
-  inputs the request implies, neither far too small to finish nor far larger
+  inputs the request implies (`max_calls` counts requests: a spec with more
+  target fields than its `max_fields_per_call`, default 9, sends one request
+  per group of fields per row), neither far too small to finish nor far larger
   than the work needs. The proposal's `expires_at` (spending permission expiry,
   not the request deadline or dialog timeout) and `recurring` fit how the user asked for
   the product to be used. An unexplained wide ceiling or `recurring: true` is a

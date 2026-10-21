@@ -82,9 +82,11 @@ question; only the human's native spending confirmation grants consent.
    Its `native_approval_required:true`, `run_admitted:false`,
    `live_validation:unverified` and `policy_status:not_examined` are boundaries,
    not approval evidence. Stop if a finding cannot be resolved safely.
-   `answer_format_check.provider_check` is always `not_checked`; act on an
+   `answer_format_check.provider_check` is always `not_checked`. When it
+   reports `calls_per_row`, size `max_calls` in requests from it and tell the
+   user how many requests each row sends; act on an
    `answer_format_check.advisory` (`mapper/answer_format_may_be_too_large`)
-   before approval by splitting the target fields, per
+   before approval, per
    [field-mapper.md](field-mapper.md#authoring-the-spec-and-the-grant).
 6. Before every capture, run the structural check in [preflight before capture](pre-capture-audit.md#preflight-before-capture)
    with the same `definition` and `workflow`, and fix its findings. Require

@@ -835,8 +835,20 @@ it, and a stand-in scorer never sends the schema at all. So:
 - `prepare_mapper` reports `answer_format_check.provider_check = not_checked`
   (preparation never claims a pass) and a non-blocking
   `mapper/answer_format_may_be_too_large` advisory above the observed size.
-  Whether `count_tokens` reproduces the refusal is unknown; the opt-in live test
-  in `tests/test_field_mapper_schema_check.py` records it.
+  `count_tokens` does not reproduce the refusal (a live probe on 2026-10-21
+  accepted 9, 15 and 18 fields), so there is no free preflight.
+- **Automatic answer groups (nxd#8602).** A harness that supports it splits
+  `target_fields`, in declared order, into the fewest balanced groups of at
+  most `max_fields_per_call` fields (optional spec value, default
+  `OBSERVED_ACCEPTED_FIELDS_PER_CALL`). Each group is one request per row with
+  its own sub-schema; the group answers merge into one row, and a row whose
+  group fails withholds every value (failed cells keep their status, the rest
+  become `validation_failed`). The partition is bound into `mapper_spec_id`
+  when there is more than one group or the value is set. The schema check runs
+  once per group, and only when the ceiling covers every group's check beyond
+  the baseline requests. `prepare_mapper` then reports `answer_groups` and
+  `calls_per_row`, and a supervised refusal surfaces as the run diagnostic
+  `mapper_schema_too_large`.
 
 **Constraints the harness must own, because the API cannot express them:**
 
