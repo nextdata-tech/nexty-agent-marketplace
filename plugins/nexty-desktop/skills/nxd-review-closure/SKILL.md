@@ -7,7 +7,7 @@ allowed-tools:
   - Grep
 metadata:
   author: nextdata
-  version: 0.63.0
+  version: 0.64.1
 ---
 
 # Review a generated closure — adversarially
@@ -188,7 +188,9 @@ the scope the user will be asked to approve in the supervisor's OS dialog.
 Your review comes before that dialog, so check that the proposal is honest.
 
 - **Plausible for the request.** The provider is `anthropic`. The model and
-  any `corroboration_model` match what the transform and spec call. The
+  any `corroboration_model` match what the transform and spec call (with
+  several AI steps there is no top-level model: each `stages` entry's model
+  matches its step's spec). The
   `max_calls`, `max_tokens` and `max_usd` ceilings fit the row count and
   inputs the request implies (`max_calls` counts requests: a spec with more
   target fields than its `max_fields_per_call`, default 9, sends one request
@@ -200,10 +202,11 @@ Your review comes before that dialog, so check that the proposal is honest.
 - **Sent fields match their names.** The runtime refuses a request whose
   `MapperInput.text_fields` are not all in the grant's `input_fields`, so
   compare the two only to confirm every input sets `text_fields` (Desktop
-  requires it, and a non-empty `input_fields`) and that a `landed_text`
+  requires it, and a non-empty `input_fields`; with several AI steps, on
+  each `stages` entry and not at the top level) and that a `landed_text`
   joined by hand from several columns is not standing in for
   `MapperInput.from_text_fields`. The
-  remaining gap is meaning: the check compares names, never contents. For every mapper call, trace each `text_fields` value back to the named landed column and verify that nothing else is sent to the model under an allowed field name. Report a `HIGH` claim with source-to-call evidence if provenance is false or other text is sent under an allowed field name. A field
+  remaining gap is meaning: the check compares names, never contents. For every mapper call, trace each `text_fields` value back to the named landed column (or, in a closure with several AI steps, to the earlier step's output it declares) and verify that nothing else is sent to the model under an allowed field name. Report a `HIGH` claim with source-to-call evidence if provenance is false or other text is sent under an allowed field name. A field
   whose name misdescribes its value (a `title` that holds the full description,
   a `notes` column that carries customer email) is a `HIGH` claim: the user
   would approve a disclosure narrower than the real one. A declared field never
@@ -212,6 +215,21 @@ Your review comes before that dialog, so check that the proposal is honest.
 - **No approval claims.** A grant carrying `approved`, `approved_by`,
   `approval_id`, `decision`, `receipt`, `signature` or similar is a `HIGH`
   claim. Approval comes only from the supervisor's dialog.
+- **Several AI steps** (`contracts/mapper_stages.json`). Check each step on
+  its own: its `make_call(..., stage=...)` names the step whose spec it loads,
+  and its inputs trace to the landed columns or earlier-step outputs it
+  declares. For a checking step, trace the earlier output it judges back to
+  that same row's result from the earlier step, not a recomputed, truncated
+  or other row's value. A checker that does not receive the output it judges
+  is a `HIGH` claim. A checker whose quotes are checked only by the mapper's
+  own quote check, and never again with `verify_quote` against the source
+  column alone, is a `HIGH` claim: that text also holds the earlier step's
+  output, so a quote copied from it passes. So is a recheck that tests the
+  returned tuple (`if not verify_quote(...)`) instead of comparing its status
+  with `"verified"`: the tuple is always truthy, so every quote passes. A rejected verdict that neither
+  blocks publication through a promise nor matches the plan's stated
+  handling is a `HIGH` claim. Wording that calls an AI check proof or
+  verification is `MEDIUM`.
 
 Do not judge whether the user would approve, and do not propose a scope. Name
 the mismatch with `file:line` evidence on both sides.
@@ -248,6 +266,15 @@ than inventing a failure or requesting a helper path.
 
 If you notice a structural problem, mention it in one line under
 `structural_note` and move on. Do not spend the round on it.
+
+## Scope blocking claims to published results
+
+`HIGH` and `MEDIUM` are for defects that change published results, contract
+outcomes or a decision the user has to make. Robustness polish of error messages
+(wording, sanitising, truncation of a failure name) is `LOW` and advisory. Do not
+escalate the previous round's fix for a finding into a new blocking finding unless
+the fix introduces a real defect you can evidence; hardening the fix further is
+not one.
 
 ## Structural notes versus claims
 

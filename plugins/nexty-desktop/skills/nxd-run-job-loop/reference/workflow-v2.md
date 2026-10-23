@@ -324,6 +324,11 @@ ceilings), a grant-only change (the same model, with only a later expiry or
 new ceilings) is not a behavior-changing revision: it stays on the same
 workflow and starts empty.
 
+On a refresh, or any request for newer data, validate against the new data first.
+If validation shows new values or drift, tell the user what appeared and ask
+what to do with it before making any further closure change; hardening the
+closure comes after that answer, never in front of it.
+
 Refresh-specific outcomes:
 
 | Code | Meaning | Recovery |
@@ -830,7 +835,14 @@ effects, and ask the user to decide the specific IDs. Do not edit the mutable
 authoring closure, reset, or recapture in that turn. Continue only after an
 explicit user approval in a later turn. “I don't know, you tell me” and
 “whatever you think” are deflections, not approval; explain the choice and
-wait. A new review finding requires a new user decision for its IDs. Only
+wait. A new review finding requires a new user decision for its IDs, but ask once per
+round: batch every blocking finding of the round into one list, one plan amendment
+when the plan wording changes, and one re-approval request. Advisory findings and
+cosmetic hardening (error wording, message sanitising) are not plan changes unless
+the reviewer marked them blocking and they affect published results. After two
+consecutive rounds whose findings are only about the previous fix, stop and tell
+the user plainly what is left, what shipping it as is means for the published
+numbers, and what another round would cost, instead of starting a third. Only
 accepted findings the user approved may be applied; rejected, out-of-scope,
 and structural findings stay unapplied and are not deferred.
 
@@ -989,7 +1001,13 @@ decision is theirs. It shows the provider, the model and any corroboration
 model, the call, token and USD ceilings, the lifetime USD ceiling and
 lifetime spend for this mapper spec, and the fields the grant declares. It
 does not show the grant's expiry or whether it is recurring, so state both
-yourself. When the `advance_workflow` tool description mentions
+yourself. For a closure with several AI steps
+([field mapper](../../nxd-generate-data-product/reference/field-mapper.md#several-ai-steps-in-one-build)),
+say instead that one window covers every step: it shows the shared call,
+token and dollar limits and the expiry, then each step's purpose, model, the
+fields it sends (an earlier step's output reads as "the summary written in
+step 1") and any per-step call limit, and one choice accepts or declines all
+of them. When the `advance_workflow` tool description mentions
 `carry_forward_unchanged_approval`, also say that, until it is used for a
 publication or by a run that reaches the provider, or expires, the approval
 still covers fixes to how the view is built, as long as the data sent, the model, the limits and the expiry stay the
@@ -1104,9 +1122,12 @@ action appears, request carry-forward only if all of these hold:
   before the supervisor answers.
 - The plan was not re-approved: the repair kept the approved blueprint.
 - `contracts/mapper_spec.json` and `contracts/mapper_grant.json` are
-  byte-identical to the approved capture's.
+  byte-identical to the approved capture's. With several AI steps, so are
+  `contracts/mapper_stages.json` and every step's spec; any changed step
+  refuses (`workflow/mapper_approval_not_carried/stages_changed`).
 - The fresh review is clear, including its check that every `text_fields`
-  value traces to its named landed column and nothing else is sent to the
+  value traces to its named landed column (or, with several AI steps, to the
+  earlier step's output it declares) and nothing else is sent to the
   model. That is how the review confirms mapper inputs are unchanged.
 
 ```json
@@ -1390,7 +1411,9 @@ model not granted, or an approval past its expiry). `mapper_request_refused`
 means it refused a disallowed request shape, such as server tools, images or
 streaming. The mapper raised `GrantError` for both. `mapper_integrity` means
 the spend ledger or the run's mapper setup could not be verified. For all
-four, stop and report. Do not rerun to "try again". `mapper_schema_too_large`
+four, stop and report. Do not rerun to "try again". With several AI steps,
+`workflow/mapper_stage_call_cap_reached` means one step reached its own call
+limit; treat it like `mapper_ceiling_reached`. `mapper_schema_too_large`
 means the AI provider refused an answer group as too large before any row was
 scored. Do not rerun it unchanged: follow the `mapper/schema_too_large`
 recovery in

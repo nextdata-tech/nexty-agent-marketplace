@@ -363,6 +363,15 @@ separate identifier-valued keys:
 `unexpected_stage_values: ["verbal_commit"]`, `unexpected_stage_count: 1`,
 `unmapped_source_keys: ["deal_value"]`, and put any explanation in `detail`.
 
+**A stronger enforcement keeps the failure readable.** A rule that only accepts
+values from an allowed set is checked by a verifier whose `FAILED` or `WARNING`
+context names the offending values and their counts. When a review says that
+rule is not enforced where the plan says it is, strengthen the check or add a
+matching stop in the transform, but never swap the readable check for a silent
+stop: a bare `raise` reaches the user as an opaque `RuntimeError` with nothing to
+decide on. A stop in the transform raises with the same offending values and
+counts in its message, and the verifier stays.
+
 The current enum values are `PASS`, `WARNING`, and `FAILED`; use `FAILED` for a
 broken user guarantee. A bare `pass`, `...`, or unconditional PASS is a
 decorative verifier and fails preflight.

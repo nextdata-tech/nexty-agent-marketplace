@@ -110,7 +110,7 @@ Layer 2 (generated code, skills, job-loop closures) may import **only** these:
 | Symbol | Module | Purpose |
 |---|---|---|
 | `map_inputs(inputs, *, spec, grant, run_dir, call, ...) -> MapResult` | `field_mapper` | the N→M primitive |
-| `make_call(*, spec, grant, secrets=None, allow_env=False, provider=None, provider_model=None, provider_cwd=None) -> callable` | `field_mapper` | lazy, budgeted provider seam; explicit secret first, then allowlisted environment fallback **only when `allow_env=True` is passed**; creates the client only on first dispatch |
+| `make_call(*, spec, grant, secrets=None, allow_env=False, provider=None, provider_model=None, provider_cwd=None, stage=None) -> callable` | `field_mapper` | lazy, budgeted provider seam; explicit secret first, then allowlisted environment fallback **only when `allow_env=True` is passed**; creates the client only on first dispatch. `stage` selects one step and is required with a staged grant; leave it out for a single-spec grant |
 | `MapperInput(input_id, identity, ...)` / `MapperInput.from_text_fields(...)` | `field_mapper` | one source record handed to the mapper |
 | `render_landed_text(fields, text_fields)` | `field_mapper` | the canonical landed text for named source fields (§4, "Fields sent to the model") |
 | `MapperSpec.load(path)` / `.mapper_spec_id` | `spec` | landed spec → runtime object |
@@ -122,6 +122,7 @@ Layer 2 (generated code, skills, job-loop closures) may import **only** these:
 | `Grant.load(path)` / `Grant.check(spec, *, input_fields=(), document_classes=(), now=None)` | `grant` | §9 |
 | `FieldMapperError` and subclasses | `errors` | so callers can catch by class, not string |
 | `target_row_key_for_input(*, identity, fields, identity_fields, source_locators=(), ordinal=None)` | `mapper` | derive a row key the way `map_inputs` does — the only way to attribute a proposal back to its source row |
+| `verify_quote(quote, landed_text) -> (verify_status, char_start, char_end)` | `field_mapper` | the §2.4 substring check, for a caller rechecking a quote against one source column; `verify_status` is the string `verified`, `evidence_unverified` or `verify_failed`, and only `verified` is a pass. The result is a tuple and always truthy: compare the status, never test the tuple |
 
 Everything else is private. `transport.Client` is deliberately **not** public —
 Layer 2 must use `make_call` so provider construction, credential resolution,

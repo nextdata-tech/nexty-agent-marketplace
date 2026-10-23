@@ -17,6 +17,7 @@ price of having the logic travel with the closure.
 - [Evidence modes — what each one proves](#evidence-modes--what-each-one-proves)
 - [Reviews: `data/mapper_reviews/`](#reviews-datamapper_reviews)
 - [Two dlt runs, in this order](#two-dlt-runs-in-this-order)
+- [Several AI steps in one build](#several-ai-steps-in-one-build)
 - [Spend: the self-check really pays](#spend-the-self-check-really-pays)
 - [Disclosing what is sent to the model](#disclosing-what-is-sent-to-the-model)
 - [What the consent gate cannot see](#what-the-consent-gate-cannot-see)
@@ -96,22 +97,47 @@ State the limits accurately; never invent a tighter one such as "one AI
 instruction per saved view" (a workflow can save more than one view; the
 limit is per build).
 
-- The current Desktop flow carries one mapper spec with one instruction per
-  workflow. That one instruction can make many model calls, for example one per
-  row.
-- A second, distinct verification task in the same workflow is not supported
-  yet. Say so plainly, for example: "This version runs one AI step per build.
-  It applies that step to every row, but checking its output with a second AI
-  step is not available yet." Do not offer corroboration as a substitute on
-  Desktop: it reruns the same instruction on a second model and only for media
-  rows, which supervised Desktop runs refuse, so it never runs there. A
-  separate product would need its own plan and its own spending approval.
+- A build carries either one mapper spec with one instruction, or up to three
+  ordered AI steps on a Desktop that supports them
+  ([several AI steps](#several-ai-steps-in-one-build)). Each instruction can
+  make many model calls, for example one per row.
+- **Whether this Desktop runs several AI steps** is settled by `prepare_mapper`,
+  never by a version guess. Check it once, before the staged layout replaces
+  `contracts/mapper_spec.json`: with step 1's spec still saved there, add
+  `contracts/mapper_stages.json` and call `prepare_mapper`
+  ([step ids](#several-ai-steps-in-one-build) gives the order). A response
+  with a `stages` list, or with the finding `workflow/mapper_stages_invalid`,
+  comes from a Desktop that reads the declaration. A response that reports one
+  `mapper_spec_id` and no `stages` comes from one that ignores it and would
+  run only `contracts/mapper_spec.json`. Once that check showed steps are read,
+  later findings on the finished layout are ordinary spec or grant errors:
+  repair them using the
+  [approval-boundary table](#desktop-supervisor-approval-boundary), and never
+  by adding a top-level `model` or `input_fields`. Only when the check never
+  ran does a finding about a missing spec or the grant's shape
+  (`mapper/spec_invalid`, `mapper/grant_invalid`,
+  `workflow/mapper_scope_invalid`) with no `stages` mean the declaration is
+  ignored; run the check then. Where steps are ignored, one
+  mapper spec with one instruction per workflow is the limit, and a second,
+  distinct verification task in the same workflow is not supported yet. Go
+  back to one step and say so plainly, for example: "This version runs one AI
+  step per build. It applies that step to every row, but checking its output
+  with a second AI step is not available yet."
+- Do not offer corroboration as a substitute on Desktop: it reruns the same
+  instruction on a second model and only for media rows, which supervised
+  Desktop runs refuse, so it never runs there. A separate product would need
+  its own plan and its own spending approval.
 - The agent proposes the checks on the AI output itself (for example allowed
   values, required fields, quote presence) in the plan it shows for approval.
   Do not ask the user how to check the summaries.
 - A quote that appears in the source is **not** full verification. Describe it
   as "the quoted passage exists in the source". It does not show the passage
   supports the conclusion drawn from it.
+- An AI step that checks another AI step's output is a second opinion, not
+  proof. Describe it as "a second AI step checked each summary against its
+  source and flagged what it could not find there", never as "verified",
+  "proven" or "guaranteed accurate". It can miss errors and can flag correct
+  text.
 
 ## Importing it in a closure
 
@@ -266,7 +292,8 @@ Mapper builds also run only on macOS. Mapper-mode compute needs the macOS
 sandbox, and the supervisor refuses it on any other platform.
 
 **Where the supervisor looks.** It reads the spec at
-`contracts/mapper_spec.json` and the grant at exactly one of
+`contracts/mapper_spec.json` (with several AI steps, `contracts/mapper_stages.json`
+and the specs it names instead) and the grant at exactly one of
 `contracts/mapper_grant.json` or `contracts/mapper_spec_grant.json`. When both
 grant files exist it refuses the closure. Phase G reports that as
 `grant.ambiguous_path`, and a grant stored anywhere else as
@@ -278,7 +305,8 @@ prompt. It rejects unknown keys and requires:
 - `provider` exactly `anthropic`. `claude_cli`, `recorded` and `stub` are
   refused under supervision.
 - a non-empty `model`, and a non-empty `corroboration_model` when one is
-  given;
+  given (with several AI steps, a `model` on each `stages` entry instead,
+  none at the top level, and no `corroboration_model`);
 - `max_calls` and `max_tokens` as positive integers, and `max_usd` as a
   positive decimal with at most six decimal places;
 - `expires_at` as an RFC3339 time in the future;
@@ -290,7 +318,7 @@ getting a fresh review:
 
 | Code | Cause |
 |---|---|
-| `workflow/mapper_scope_invalid` | missing, malformed or loosely typed grant; grant has no `input_fields` (Desktop requires a non-empty list); an unknown key; both grant paths present; spec missing |
+| `workflow/mapper_scope_invalid` | missing, malformed or loosely typed grant; grant has no `input_fields` (Desktop requires a non-empty list; a grant with several AI steps carries them per step instead); an unknown key; both grant paths present; spec missing |
 | `workflow/mapper_approval_claims_rejected` | the grant carries approval claims: `approved`, `approval`, `approved_by`, `approval_id`, `approval_hash`, `user_approved`, `decision`, `receipt` or `signature`. The evidence keys `approval_evidence`, `execution_evidence`, `mapper_evidence`, `run_evidence` and `validation_evidence` are unknown keys here and fail as `workflow/mapper_scope_invalid`; `prepare_mapper` reports all fourteen, nested ones included, as this claims finding |
 | `workflow/mapper_grant_exceeds_policy` | provider, model, ceilings or `recurring` beyond the installed policy |
 | `workflow/mapper_model_unpriced` | a model with no price entry, so spend cannot be bounded |
@@ -364,7 +392,8 @@ identity, and it is the only approval surface: no chat reply, MCP call, file
 or form counts as approval.
 
 **Fields sent to the model are checked; the rest is declared.** In Desktop
-the grant must list a non-empty `input_fields`, or the run fails closed with
+the grant must list a non-empty `input_fields` (with several AI steps, each
+`stages` entry does, and the top level must not), or the run fails closed with
 `workflow/mapper_scope_invalid`. Every `MapperInput` with landed text must set
 `text_fields`, the source fields its `landed_text` was built from, and
 `landed_text` must equal their canonical rendering. The mapper runtime refuses
@@ -722,6 +751,197 @@ recorded caller on replay; `transform_main.py` exercises the same caller through
 the platform entrypoint. Treat them as reference implementations: do not import
 the provider SDK or private transport modules into a generated transform. The
 proofs need an nxd monorepo checkout.
+
+## Several AI steps in one build
+
+Use this when one instruction is not enough, typically "summarize each
+posting, then independently check the summary against its source". Steps
+form a straight line of one to three, run in order, under one spending
+approval and one shared limit. Check support first
+([what the Desktop flow supports](#what-the-desktop-flow-supports-today)).
+Do not use steps to split a wide answer: the mapper already does that inside
+one step (`calls_per_row`).
+
+**The declaration.** Write `contracts/mapper_stages.json`, and one spec per
+step under `contracts/`:
+
+```json
+{
+  "schema": "nxd-mapper-stages-v1",
+  "stages": [
+    {"id": "summarize", "spec": "contracts/summarize_spec.json", "inputs": ["description"]},
+    {"id": "verify", "spec": "contracts/verify_spec.json", "inputs": ["description", "summarize.summary"]}
+  ]
+}
+```
+
+- Ids are lowercase slugs (`summarize`, `check-summary`), unique.
+- `inputs` name landed source columns, or an earlier step's output as
+  `<step id>.<field>`. A step cannot read its own output or a later step's.
+- Every step's target fields become columns of the same output, so no two
+  steps may declare the same field name.
+- A staged spec cannot set `corroboration_model`.
+- `contracts/mapper_output_binding.json` names one output model whose schema
+  holds every step's target fields.
+- Keep `contracts/mapper_spec.json` out of a staged closure.
+
+Anything else is refused as `workflow/mapper_stages_invalid`, with one generic
+detail. Recheck the rules above and each step's spec and grant entry.
+
+**Each step's id.** A staged `prepare_mapper` checks a spending proposal; it
+does not propose one or print step ids. Get them before the declaration
+exists: save one step's spec as `contracts/mapper_spec.json`, call
+`prepare_mapper`, and record its `mapper_spec_id` and `requested_model`. Do
+this once per step, and do not save the single-step `proposed_grant` it
+returns: a leftover single-step grant next to the staged one is refused. Then, with step 1's spec back at
+`contracts/mapper_spec.json`, write `contracts/mapper_stages.json` and run the
+[support check](#what-the-desktop-flow-supports-today). Only when it shows
+steps are read, move each spec to its step path and remove
+`contracts/mapper_spec.json`. The id
+depends only on the spec's content, so it does not change when the file moves.
+Any edit to a step's spec changes its id: get it again.
+
+**The grant.** One file at `contracts/mapper_grant.json`, with a `stages` list
+in declaration order and the shared limits on top. A staged grant has no
+top-level `model` or `input_fields`:
+
+```json
+{
+  "provider": "anthropic",
+  "max_calls": 420,
+  "max_tokens": 900000,
+  "max_usd": 12,
+  "expires_at": "2026-11-30T00:00:00Z",
+  "recurring": false,
+  "stages": [
+    {"stage_id": "summarize", "mapper_spec_id": "<from prepare_mapper>", "model": "<requested_model>",
+     "purpose": "Summarize each posting", "input_fields": ["description"], "max_calls": 210},
+    {"stage_id": "verify", "mapper_spec_id": "<from prepare_mapper>", "model": "<requested_model>",
+     "purpose": "Check each summary against its posting", "input_fields": ["description", "summarize.summary"], "max_calls": 210}
+  ]
+}
+```
+
+The placeholders above are for reading only; write real values. Each step's
+`input_fields` must equal its `inputs` in the declaration, in the same order.
+An optional step `max_calls` cannot exceed the shared `max_calls`. Size each
+step as in [the call ceiling](#authoring-the-spec-and-the-grant), from that
+step's own `calls_per_row`, and make the shared limits cover all steps
+together. The shared limits still sit within the policy limits for one
+approval. Then call `prepare_mapper` again until it returns
+`ready_for_native_approval` with one `stages` entry per step, each with its
+own `answer_format_check` (structural mode reports them under
+`mapper_stages`).
+
+**Running the steps.** Declaring steps does not run them. The transform runs
+each one with `map_inputs`, in order, loading the grant once and passing that
+same object to every step:
+
+```python
+from nxd.experimental.field_mapper import (
+    Grant, MapperInput, MapperSpec, make_call, map_inputs, resolve,
+)
+from nxd.experimental.field_mapper.mapper import target_row_key_for_input
+
+grant = Grant.load("contracts/mapper_grant.json")
+summarize = MapperSpec.load("contracts/summarize_spec.json")
+verify = MapperSpec.load("contracts/verify_spec.json")
+
+step1_inputs = [
+    MapperInput.from_text_fields(
+        input_id=str(row["job_id"]), identity={"job_id": row["job_id"]},
+        fields={"job_id": row["job_id"], "description": row["description"]},
+        text_fields=("description",),
+    )
+    for row in rows
+]
+first = map_inputs(
+    step1_inputs,
+    spec=summarize, grant=grant, run_dir=str(mapper_run_dir / "summarize"),
+    call=make_call(spec=summarize, grant=grant, stage="summarize", allow_env=True),
+)
+# Step 1's results are keyed by target_row_key, a content hash, never by job_id.
+key_to_input = {
+    target_row_key_for_input(
+        identity=item.identity, fields=item.fields,
+        identity_fields=summarize.grain.identity_fields,
+        source_locators=summarize.grain.source_locators,
+    ): item
+    for item in step1_inputs
+}
+# The same Resolution step 1 lands (its reviews, field_types and min evidence).
+step1 = resolve(first.proposals, reviews, first.evidence, fields=summarize.field_names)
+summaries = {row["target_row_key"]: row["summary"] for row in step1.wide_rows}
+summarized = [
+    (item.identity["job_id"], item.fields["description"], summaries.get(key))
+    for key, item in key_to_input.items()
+    if isinstance(summaries.get(key), str)   # a non-ok cell is None: nothing to check
+]
+second = map_inputs(
+    [MapperInput.from_text_fields(
+        input_id=str(job_id), identity={"job_id": job_id},
+        fields={"job_id": job_id, "description": description,
+                "summarize.summary": summary},
+        text_fields=("description", "summarize.summary"),
+    ) for job_id, description, summary in summarized],
+    spec=verify, grant=grant, run_dir=str(mapper_run_dir / "verify"),
+    call=make_call(spec=verify, grant=grant, stage="verify", allow_env=True),
+)
+```
+
+A `make_call` without `stage=` on a staged grant, or with the wrong step's
+spec, is refused before any call. The step-2 input must carry the step-1
+output under the `<step id>.<field>` name the declaration lists, taken from
+step 1's result for that same row. Gate on each step's result before running
+the next; land everything in the second dlt run as usual. A row step 1 left
+empty has no summary to check: leave it out of step 2 and report how many.
+
+**Summarize, then verify.** The verifier's spec asks for:
+
+- `verdict`: an enum such as `supported`, `partly_supported`, `unsupported`;
+- `unsupported_claims`: the summary's statements the source does not support,
+  empty when there are none;
+- evidence quotes from the **source** for what it judged.
+
+The mapper checks each quote against all the text that step sent, and in
+step 2 that text includes the step-1 summary. So a quote copied from the
+summary still counts as found. In the transform, check every verifier quote
+again with `verify_quote(quote, description)` against the source column
+alone, and treat a quote that is not there as unsupported:
+
+```python
+from nxd.experimental.field_mapper import verify_quote
+
+status, _, _ = verify_quote(quote, description)   # a tuple: always truthy
+if status != "verified":                          # also "verify_failed", "evidence_unverified"
+    ...  # this quote does not support the verdict: treat the row as unsupported
+```
+
+Take each verifier quote from step 2's evidence (`second.evidence`, matched
+to its row by `target_row_key` as above). Never test the returned tuple
+itself: `if not verify_quote(...)` is never true, so it accepts every quote.
+Row attribution between steps follows
+[`mapper/CONTRACT.md`](../mapper/CONTRACT.md) § Nothing returned carries the
+input identity back, including its `duplicate_policy` caveat. Put a promise on
+the output's `verdict` column, for example "every published summary has the
+verdict `supported`", so a summary the check rejects blocks publication rather
+than landing beside a warning. Agree with the user before the plan whether a
+`partly_supported` row blocks, is excluded, or is published with its flag, and
+word the promise exactly as it checks. Describe the result as a second opinion
+([what the flow supports](#what-the-desktop-flow-supports-today)), never as
+proof.
+
+**Approval and limits.** One native dialog covers every step. It shows the
+shared call, token and USD limits and the expiry, then each step's purpose,
+exact model, fields sent (an earlier output reads as "the summary written in
+step 1") and its optional call limit. One decision accepts or declines all of
+them. A step at its own call limit is refused as
+`workflow/mapper_stage_call_cap_reached`, like the shared ceiling: stop and
+report, do not rerun. `inspect_workflow` shows usage per step. Changing any
+step's spec, model, inputs or limits asks again
+(`workflow/mapper_approval_not_carried/stages_changed`). Per-step model and
+input checks run in the mapper inside the transform; the supervisor enforces
+the shared limits, the approved models and each step's call limit.
 
 ## Spend: the self-check really pays
 
