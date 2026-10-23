@@ -13,7 +13,7 @@ allowed-tools:
   - Task
 metadata:
   author: nextdata
-  version: 0.64.1
+  version: 0.65.1
 ---
 
 # nxd-run-job-loop skill
@@ -383,7 +383,7 @@ exit: `healed`, `healed_with_concessions`, `caps_exhausted`, `blocked`,
   Step 2/3 and use `reset_workflow` while the v2 construction is still pending.
   After publication, a refresh with unchanged logic (new rows under `data/`, or a live source refetched) is a
   recapture of the same workflow: capture, review, approval, validation, `start_run` ([reference/workflow-v2.md § Refresh in place](reference/workflow-v2.md#refresh-in-place)).
-  The same applies once a failed admitted run is terminal. Never reset or remove a published workflow to refresh it. Validate against the new data before any further closure change, and put new values or drift in front of the user first.
+  The same applies once a failed admitted run is terminal. Never reset or remove a published workflow to refresh it. Validate against the live source first, running only the review `next_actions` require (no wider re-audit); propose no new or versioned product until validation shows real drift or returns a code whose recovery is the published-product rule, and put new values or drift in front of the user first.
   Behavior-changing revisions of a published product stay out of scope: preserve the release and its workflow ID.
   Report the limitation and ask explicit authorization for a separate versioned product/new ID; only then start fresh workflow-v2 admission, whose plan starts with that source probe.
   A request to revise a published product is not that authorization: first say the release can't be revised in place, that it would

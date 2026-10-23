@@ -7,7 +7,7 @@
 - Filter rendering
 - Snowflake dialect specifics
 - Base-table default and optional native-view provisioning
-- Adding a new backend dialect
+- Supported dialects
 
 ---
 
@@ -289,27 +289,21 @@ Do not use deprecated `plain_view_ddl()` as a transform provisioning recipe.
 
 ---
 
-## Adding a new backend dialect
+## Supported dialects
 
-Implement the `Dialect` Protocol:
+Rust is the only semantic SQL compiler. Only the built-in `SnowflakeDialect`
+and `DuckDbDialect` are accepted by `compile_selection(..., dialect=...)` and
+`build_semantic_tools(registry, dialect=...)`. A custom `Dialect` class, or a
+subclass that overrides a built-in dialect's rendering, is refused with an
+error (SQ-902); do not write one. To target another warehouse, use the nearest
+built-in dialect and check the generated SQL on that engine. If it does not run
+there unchanged, the warehouse is unsupported: tell the user rather than editing
+or post-processing the compiled SQL.
 
-```python
-class Dialect(Protocol):
-    def agg_expr(self, metric: Metric) -> str: ...
-    def native_view_ddl(self, registry: CompiledRegistry, fqn: str) -> str | None: ...
-    def native_view_query(self, registry, selection, fqn) -> str | None: ...
-    def supports_native_semantic_view(
-        self, cursor: Any, fqn: str = "", *, registry: CompiledRegistry
-    ) -> bool: ...
-```
+There is no compiler setting: do not pass `compiler=` to `.semantic_tools()`
+and do not set `NXD_SEMANTIC_COMPILER` or `SEMANTIC_COMPILER`.
 
-Pass your dialect instance to `compile_selection(..., dialect=my_dialect)` and
-`build_semantic_tools(registry, dialect=my_dialect)`.
-
-Backends that do not support native semantic views should return `None` from
-`native_view_ddl` and `native_view_query`, and `False` from
-`supports_native_semantic_view`. These methods describe native-view support for
-the generated MCP route. Native-view selection and fallback are owned by that
-runtime; direct `compile_selection` calls default to base tables and do not
-automatically select a native or plain view. The deprecated plain-view path
-requires an explicit `use_view=True` argument.
+Direct `compile_selection` calls default to base tables and do not
+automatically select a native or plain view. Native-view selection and fallback
+are owned by the generated MCP runtime. The deprecated plain-view path requires
+an explicit `use_view=True` argument.
