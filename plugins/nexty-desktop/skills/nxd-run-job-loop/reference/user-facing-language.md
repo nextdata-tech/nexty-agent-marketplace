@@ -369,9 +369,10 @@ source data. When a mapper is part of the approved plan, that run invokes its
 bound mapper under its approval. Querying or
 reopening an existing publication alone is not a fresh run. Report fresh fetching
 or scoring only when admitted-run evidence supports it.
-Pinned rules alone do not show that refreshing needs a new version. Use returned
-runtime capability/state evidence before claiming that requirement; preserve the
-documented behavior-changing revision/new-ID and explicit consent requirements.
+Refreshing does not need a new version, and changing the logic normally does
+not either: a behavior-changing revision updates the same product in place
+under a freshly approved plan. Base what you say on the returned runtime state;
+if it refuses the in-place change, say so and offer a separate product.
 If the returned state supports a fresh admitted run under unchanged approved
 rules, describe that refresh without inventing a versioning prerequisite.
 
