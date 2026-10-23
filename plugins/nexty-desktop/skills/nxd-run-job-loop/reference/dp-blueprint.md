@@ -8,6 +8,7 @@
 - [Conventions every plan states](#conventions-every-plan-states)
 - [Where an Input expectation can actually run](#where-an-input-expectation-can-actually-run)
 - [Procedures are landed, not described](#procedures-are-landed-not-described)
+- [AI steps](#ai-steps)
 - [Terms](#terms)
 - [A Term relative to the clock must name its anchor](#a-term-relative-to-the-clock-must-name-its-anchor)
 - [Interpretation and approval](#interpretation-and-approval)
@@ -193,6 +194,28 @@ built product and travels with this document to anyone who receives it.
 
 Prose anchors remain useful and are not replaced — they explain *why* a band is
 where it is, which rows cannot. They simply do not decide anything.
+
+### AI steps
+
+When the product calls an AI model, `Transform` carries a paragraph that
+starts with the bold label **AI steps**. It is not a new top-level heading: the
+ten headings above are fixed. List each step in run order, in plain words:
+
+- what it does ("writes a two-sentence summary of each posting");
+- what it reads, by the user's own field names, including an earlier step's
+  output ("the posting's description and the summary written in step 1");
+- what it produces, and the model it uses;
+- for a checking step, what happens to a row it rejects (publication blocked,
+  row excluded, or row published with its flag). Record that choice as a
+  Decision, and word the matching `Outputs` promise exactly as it checks.
+
+Then state the shared spending limit once for all steps (calls, a dollar cap
+and an expiry) and any per-step call limit. Say that one approval window will
+cover every step. Describe a checking step as a second opinion that can miss
+errors, never as proof. A single-instruction product lists one step. When
+`prepare_mapper` shows this Desktop runs only one AI step, plan only one and
+tell the user that checking its output with a second AI step is not available
+in this version ([field mapper](../../nxd-generate-data-product/reference/field-mapper.md#what-the-desktop-flow-supports-today)).
 
 ## Terms
 

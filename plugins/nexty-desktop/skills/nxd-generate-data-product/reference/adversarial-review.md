@@ -188,7 +188,14 @@ accepted adjudication are not authorization. Ask for the specific IDs and do
 not edit the authoring closure, reset, or recapture in the finding turn. “I
 don't know, you tell me” and “whatever you think” are deflections, not approval;
 explain the choice and wait. A later review finding needs its own explicit user
-decision. When findings force a reset, write each of the user's rulings on
+decision, and one round's blocking findings go to the user together: fold them
+into one list, one plan amendment where the plan wording changes, and one request
+for approval, never one turn per finding. Do not turn advisory or cosmetic
+hardening (error wording, message sanitising) into a plan change unless the
+reviewer marked it blocking and it affects published results. After two
+consecutive rounds whose findings are only about your own previous fix, stop and
+tell the user plainly what is left and what happens if it ships as is versus if
+another round runs; do not start a third. When findings force a reset, write each of the user's rulings on
 them, including "keep as approved", into the blueprint's Decisions in words
 that settle the point, so the fresh review grades against the ruling rather
 than re-raising it. Rejected and out-of-scope claims are still relayed but change nothing.

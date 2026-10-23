@@ -14,7 +14,7 @@ allowed-tools:
   - Task
 metadata:
   author: nextdata
-  version: 0.63.0
+  version: 0.64.1
 ---
 
 # nxd-generate-data-product skill
@@ -363,7 +363,7 @@ nothing. **Mandatory tiers:**
   (`- refund_pairs_total`), in `Decimal`, **per source currency BEFORE any FX
   conversion**.
 
-Raise `RuntimeError` carrying actual-vs-expected. An itemized exclusion means a
+Raise `RuntimeError` whose message carries actual-vs-expected and, for a rejected value, the offending values with their counts; a bare or generic raise reaches the user as an opaque failure. An itemized exclusion means a
 **removal**, not an enrichment, and carries extra invariants; classification
 totality alone can pass while every monetary answer is overstated — both, with
 worked code, in [reference/derived-models.md](reference/derived-models.md).

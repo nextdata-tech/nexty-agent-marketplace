@@ -13,7 +13,7 @@ allowed-tools:
   - Task
 metadata:
   author: nextdata
-  version: 0.63.0
+  version: 0.64.1
 ---
 
 # nxd-run-job-loop skill
@@ -250,7 +250,7 @@ Follow the returned `report_requirement` action only after the reviewer returns;
 `needs_user`: ask about its IDs and proposed effects. Do not edit, reset, or
 recapture in that turn; wait for explicit approval in a later turn. “I don't
 know, you tell me” and “whatever you think” are deflections on a review finding,
-including one about a mapped rename (a renamed-key drift decision outside review follows [failure-handling.md](reference/failure-handling.md)). Record and validate the decision before reset; see [reference/workflow-v2.md](reference/workflow-v2.md).
+including one about a mapped rename (a renamed-key drift decision outside review follows [failure-handling.md](reference/failure-handling.md)). Record and validate the decision before reset; see [reference/workflow-v2.md](reference/workflow-v2.md). Ask once per round: all of a round's blocking findings go in one list with one plan amendment and one re-approval request; cosmetic hardening is not a plan change; after two rounds whose findings concern only your own fix, stop and tell the user what is left and the consequence of shipping versus not.
 
 After a review completes, ordinary Bash remediation remains available for
 non-retained paths until reset; the runner guard rejects owner operations and
@@ -383,7 +383,7 @@ exit: `healed`, `healed_with_concessions`, `caps_exhausted`, `blocked`,
   Step 2/3 and use `reset_workflow` while the v2 construction is still pending.
   After publication, a refresh with unchanged logic (new rows under `data/`, or a live source refetched) is a
   recapture of the same workflow: capture, review, approval, validation, `start_run` ([reference/workflow-v2.md § Refresh in place](reference/workflow-v2.md#refresh-in-place)).
-  The same applies once a failed admitted run is terminal. Never reset or remove a published workflow to refresh it.
+  The same applies once a failed admitted run is terminal. Never reset or remove a published workflow to refresh it. Validate against the new data before any further closure change, and put new values or drift in front of the user first.
   Behavior-changing revisions of a published product stay out of scope: preserve the release and its workflow ID.
   Report the limitation and ask explicit authorization for a separate versioned product/new ID; only then start fresh workflow-v2 admission, whose plan starts with that source probe.
   A request to revise a published product is not that authorization: first say the release can't be revised in place, that it would
