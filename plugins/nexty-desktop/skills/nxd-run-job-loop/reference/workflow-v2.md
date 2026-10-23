@@ -324,10 +324,16 @@ ceilings), a grant-only change (the same model, with only a later expiry or
 new ceilings) is not a behavior-changing revision: it stays on the same
 workflow and starts empty.
 
-On a refresh, or any request for newer data, validate against the new data first.
-If validation shows new values or drift, tell the user what appeared and ask
-what to do with it before making any further closure change; hardening the
-closure comes after that answer, never in front of it.
+On a refresh, or any request for newer data, validate against the live source
+first. Keep the supervisor order: run only the review the returned
+`next_actions` require, and do not widen it into a re-audit of logic the
+published release already passed. Do not propose a new or versioned product or
+a workflow revision, including from that review's hardening notes, until
+validation shows real drift or returns a code whose recovery is the
+published-product rule. If validation shows new
+values or drift, tell the user what appeared and ask what to do with it before
+making any further closure change; hardening the closure comes after that
+answer, never in front of it.
 
 Refresh-specific outcomes:
 
@@ -797,7 +803,9 @@ the round was helper-validated.
 }
 ```
 
-A round whose only claims are `LOW` is clear once you resolve them. Record each
+**A `LOW` or advisory claim never goes into `findings` and never makes the
+verdict `findings`; it stays in `review-record.json`.** A round whose only
+claims are `LOW` is clear once you resolve them. Record each
 one in the ledger as `classification: "structural_note"`, `state:
 "not_applied"`, `applied_files: []`, and a non-empty `proposed_effect` that
 says no closure change follows (for example `"No closure change; advisory
@@ -812,8 +820,11 @@ A stricter alternative to an approved Decision is an optional change you may
 offer, not an open question: do not say the result is not ready to circulate,
 do not ask the user to decide it, and do not end the turn waiting on it.
 
-Map unresolved `HIGH` and `MEDIUM` claims to `severity: "blocking"`; map
-unresolved `LOW` claims to `severity: "advisory"`. Project each unresolved
+Only unresolved `HIGH` and `MEDIUM` claims become `findings` entries, each with
+`severity: "blocking"`. If the supervisor refuses a report that carries only
+`LOW` or advisory entries (typically with empty `next_actions`), do not ask the
+user and do not hold publication: resend the same round as `verdict: "clear"`
+with `findings: []`. Project each unresolved
 reviewer claim to exactly `{ "id", "severity", "description" }`, with
 `description` copied from the reviewer's `claim`. Do not include `evidence`,
 `why_it_matters`, adjudication, or any other key in the supervisor finding;
@@ -826,7 +837,9 @@ rejection code and may preserve bounded partial projected findings. A clear
 report is permitted only after the rich ledger is complete and every accepted
 behavior-affecting claim has been resolved and, when it changed the closure,
 re-reviewed. Rejected, indeterminate, and findings reports remain unsatisfied;
-never turn them into `clear` or treat a missing report as approval.
+never turn a report with blocking findings into `clear` or treat a missing
+report as approval. A `LOW`-only report was built wrong: resend it as `clear`
+(rule above).
 
 When the supervisor returns `workflow/review_findings` containing any
 `behavior_affecting` finding, the review is not authorization: set the round to
@@ -861,7 +874,8 @@ approved findings in the mutable closure, record the user decision in that same
 round of the external ledger, reset the returned capture requirement, check the
 closure, recapture it, and run a fresh review for the new generation. Do not report the old generation as clear.
 
-Relay the report with the requirement's returned generation, subject digest,
+Build `findings` only from blocking claims (the `LOW`-only rule above); a
+`LOW`-only round is reported `clear`. Relay the report with the requirement's returned generation, subject digest,
 dependency digest, session reference, and the current revision. The supervisor
 derives evidence identity from its current binding; caller-provided claims are
 not execution authority. Reporting is the main thread's relay step after the

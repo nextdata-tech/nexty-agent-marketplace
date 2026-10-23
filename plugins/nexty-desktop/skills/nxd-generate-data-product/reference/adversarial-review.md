@@ -229,7 +229,9 @@ Use the ledger status values `complete`, `needs_user`, or `timed_out`; do not
 copy the supervisor's separate `report.verdict` values (`clear`, `findings`,
 `rejected`, or `indeterminate`) into this field. A `findings` report can still
 belong to a `complete` ledger round when the rich claims and adjudications are
-complete; the two vocabularies answer different questions.
+complete; the two vocabularies answer different questions. A round whose only
+claims are `LOW` or advisory is reported `clear` with an empty `findings` list
+(canonical rule: workflow-v2.md, Run and report the review).
 Also record `deferred_finding_ids`: it is empty unless the cited user decision
 explicitly continues while leaving accepted `behavior_affecting` findings
 unapplied, in which case it names those finding IDs exactly.
