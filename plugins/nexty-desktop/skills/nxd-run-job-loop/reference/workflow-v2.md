@@ -10,6 +10,7 @@ do not fall back to a direct CLI or local substitute.
 - [Prepare the prose blueprint](#prepare-the-prose-blueprint)
   - [Revised or successor plan](#revised-or-successor-plan)
   - [Refresh in place](#refresh-in-place)
+  - [Revise a published product in place](#revise-a-published-product-in-place)
   - [Classify admission failures before recovery](#classify-admission-failures-before-recovery)
   - [Recovering a rejected proposal](#recovering-a-rejected-proposal)
 - [Relay consent and capture](#relay-consent-and-capture)
@@ -226,8 +227,9 @@ fresh fetch or mapper execution only from evidence of that admitted run; never
 substitute a chat-connector fetch or agent-scored file for in-product execution.
 Pinned state alone does not establish that a refresh requires a new version.
 Use returned runtime capability/state evidence before claiming that requirement;
-preserve the documented behavior-changing revision/new-ID and explicit consent
-requirements. A source-access blocker is not a request to change source scope:
+a behavior-changing revision goes in place under a freshly approved plan
+([Revise a published product in place](#revise-a-published-product-in-place)).
+A source-access blocker is not a request to change source scope:
 never offer or solicit a chat/file substitute, even as a separate publication.
 Only an independent user request to change source scope permits that different plan.
 
@@ -312,9 +314,10 @@ What the refresh starts from depends on the transform:
 
 The state lineage decides what a run inherits; it does not decide whether a
 new product is needed. A change to the transform, spec, models or contracts of
-a published product is a behavior-changing revision: follow the
-published-product rule in the skill (a separate versioned product, only with
-explicit authorization). Each refresh of a mapper product needs a fresh
+a published product is a behavior-changing revision, and it also goes in
+place on the same workflow
+([Revise a published product in place](#revise-a-published-product-in-place)).
+Each refresh of a mapper product needs a fresh
 spending approval, because a non-recurring approval is spent by the
 publication it admits. While the grant's `expires_at` is still in the future,
 request that approval for the unchanged grant: the lineage holds and the bags
@@ -327,20 +330,59 @@ workflow and starts empty.
 On a refresh, or any request for newer data, validate against the live source
 first. Keep the supervisor order: run only the review the returned
 `next_actions` require, and do not widen it into a re-audit of logic the
-published release already passed. Do not propose a new or versioned product or
-a workflow revision, including from that review's hardening notes, until
-validation shows real drift or returns a code whose recovery is the
-published-product rule. If validation shows new
-values or drift, tell the user what appeared and ask what to do with it before
-making any further closure change; hardening the closure comes after that
-answer, never in front of it.
+published release already passed. Do not propose a revision of the product's logic, including from that
+review's hardening notes, until validation shows real drift or returns a code
+whose recovery is a logic change. If validation shows new
+values or drift, or a refresh run fails because the source changed, tell the
+user in plain terms what changed (the values and counts) and ask what to do
+with it. Make no closure change, including adding diagnostics or hardening,
+until the user decides; hardening comes after that answer, never in front of it.
+
+### Revise a published product in place
+
+A change to what a published product computes (a new rule, a corrected
+measure, a fixed cursor, a different mapper instruction) goes to the same
+workflow ID. Consumers keep the product they already use; there is no new
+workflow, no successor product and no switch for them to make.
+
+1. **Before the plan approval, say what changes for consumers,** in plain
+   words: the product keeps its name; its next publication replaces the
+   current results with ones computed by the new logic; the earlier results
+   stop being served and are not kept as a separate product; and the run
+   rebuilds from an empty database, which for a scoring step means scoring
+   every row again, with its cost. Never mix old-logic and new-logic rows.
+2. **Revise the plan** when its text no longer describes the new logic: edit
+   `dp-blueprint.md`, record each change as a Decision, and run the normal
+   replacement on the same workflow (`reset_workflow` with the graph-root
+   requirement, a replacement blueprint and its matching inline
+   `replacement_proposal`; [Reset after behavior changes](#reset-after-behavior-changes)).
+   The user approves the revised plan through the returned consent action;
+   that approval is the authorization for the in-place change. A code fix
+   that the approved plan already describes exactly needs no plan change:
+   recapture it as a repair.
+3. **Then the ordinary flow:** capture, review, approval, validation and
+   `start_run`, as in [Refresh in place](#refresh-in-place). A changed
+   closure starts a new state lineage, so the run starts empty. A mapper
+   product needs a fresh spending approval; say the full re-score cost
+   first.
+4. **If the supervisor refuses** the reset, capture or admission on the
+   published workflow, keep the code internal and say in plain words that
+   this version can't apply the change to the published product in place.
+   Offer the separate product below instead, asked first. Do not switch to a
+   new workflow ID on your own.
+
+Build a separate versioned product under a new workflow ID only when the user
+asks to keep the current release unchanged beside the new one (for example,
+consumers who must not see the change yet). That is a new product: ask for
+explicit authorization, wait for the yes, and never prepare the new ID in the
+same turn as the ask or fold it into the plan approval.
 
 Refresh-specific outcomes:
 
 | Code | Meaning | Recovery |
 |---|---|---|
 | `workflow/unsupported_rebuild` | An earlier run of this workflow has not finished. | Call `inspect_run` once; wait for that run to reach a terminal status, then follow the returned actions. |
-| `validation/refresh_not_idempotent` | The replay changed a table's row count: the cursor is not working. | Never retry unchanged. **Not yet published:** fix the transform ([incremental-transforms.md](../../nxd-generate-data-product/reference/incremental-transforms.md)), then reset, recapture and review. **Published workflow:** the fix is a behavior-changing revision; preserve the release, report the broken cursor, and follow the published-product rule. |
+| `validation/refresh_not_idempotent` | The replay changed a table's row count: the cursor is not working. | Never retry unchanged. **Not yet published:** fix the transform ([incremental-transforms.md](../../nxd-generate-data-product/reference/incremental-transforms.md)), then reset, recapture and review. **Published workflow:** the fix is a behavior-changing revision; report the broken cursor, then fix it in place ([Revise a published product in place](#revise-a-published-product-in-place)). The current release keeps serving until the fixed one publishes. |
 | `validation/refresh_base_unavailable` | The published base could not be leased for validation. | Retry validation. |
 | `workflow/stale_execution` at `start_run` | A newer release published after validation, so the bound base is stale. | Validate again against the current release. |
 
@@ -747,8 +789,10 @@ different `report.verdict` vocabulary (`clear`, `findings`, `rejected`, or
 round with findings is still recorded as `complete` only when its rich claims,
 adjudications, and any required user decision are complete.
 
-The ledger vocabularies are closed; the validator rejects any other value
-(`behavior_gap`, `blocking`, `needs_decision` and the like fail):
+The ledger vocabularies are closed; the validator rejects any other value.
+No other classification or disposition token is valid: never write an invented
+one such as `semantic_defect`, `deferred_to_operator`, `behavior_gap`,
+`blocking` or `needs_decision`:
 
 | Field | Accepted values |
 | --- | --- |
@@ -758,11 +802,10 @@ The ledger vocabularies are closed; the validator rejects any other value
 | adjudication `disposition` | `accepted`, `rejected`, `out_of_scope` |
 
 `needs_user` is a round status and a finding state, never an adjudication
-disposition. A real behavior finding that is verified but not yet fixed and
-awaits the user is recorded as `classification: "behavior_affecting"`, an
-adjudication with `disposition: "accepted"`, finding `state: "needs_user"`,
-`applied_files: []`, `user_decision: null`, in a round with `status:
-"needs_user"`. Once the user rules, update that same round (do not append a
+disposition. Recipe for an unresolved `MEDIUM` or `HIGH` claim (verified, not
+yet fixed, awaiting the user): `classification: "behavior_affecting"` +
+`disposition: "accepted"` + finding `state: "needs_user"` + round `status:
+"needs_user"`, with `applied_files: []` and `user_decision: null`. A round holding an unresolved `MEDIUM`/`HIGH` claim is `needs_user`, never `complete`, until the user decides; clear, LOW-only and rejected-only rounds are `complete` with `user_decision: null`. Once the user rules, update that same round (do not append a
 new one): set `user_decision` with the real `approved_at_unix_ms`, the
 authorizing `citation` and `approved_finding_ids`; move each finding to
 `applied` (with `applied_files`) or, if deferred, move it to `not_applied` and list
@@ -1494,7 +1537,8 @@ Every repair cycle runs the same order, with no step dropped on a later cycle:
 **edit -> record the round -> reset -> check -> capture -> review -> check again -> validate**. The
 check after the review is clear is the one that makes the last successful
 `check_data_product` follow the last review; the check before capture does not
-count for it, and a final repair cycle is not exempt. Call it on the unchanged
+count for it, and a final repair cycle is not exempt. Any recapture, including
+one forced by a validation-time edit, restarts review -> check -> validate -> `start_run`; the check after the most recent review is always the last step before validation, and nothing is edited between it and `start_run`. Call it on the unchanged
 authoring closure, then start validation.
 
 Close the pending review round before resetting. Wait for an explicit approval

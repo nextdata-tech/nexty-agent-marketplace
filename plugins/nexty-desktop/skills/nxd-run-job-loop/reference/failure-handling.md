@@ -213,8 +213,8 @@ producing the identical error:
   the code changes. Before publication, fix the transform per
   [incremental-transforms.md](../../nxd-generate-data-product/reference/incremental-transforms.md),
   then reset, recapture and review. On a published workflow the fix is a
-  behavior-changing revision: preserve the release, report the broken cursor,
-  and follow the rule below.
+  behavior-changing revision: report the broken cursor and fix it in place,
+  as the rule below says.
 - A published workflow is not itself a failure. A same-logic refresh goes to
   the same workflow, and so does a retry once a failed admitted run is terminal
   ([workflow-v2.md § Refresh in place](workflow-v2.md#refresh-in-place)). If
@@ -224,11 +224,12 @@ producing the identical error:
   `validation/existing_workflow_unsupported` is no longer emitted; if an older
   runtime returns it, the runtime predates in-place refresh, so report that
   rather than resetting or removing the workflow. A behavior-changing revision
-  of a published product still needs explicit authorization for a separate,
-  versioned data product under a new workflow ID; consumers must switch to it,
-  and it never updates the prior release. A request to revise is not that
-  authorization: say so first, ask, and wait for the yes; never prepare the new
-  ID in the same turn as the ask, and never fold it into the plan approval.
+  of a published product also goes in place on the same workflow ID, under a
+  freshly approved plan; tell the user first that the next publication
+  replaces the current results and rebuilds from empty
+  ([workflow-v2.md § Revise a published product in place](workflow-v2.md#revise-a-published-product-in-place)).
+  A separate versioned product under a new workflow ID is only for a user who
+  asks to keep the current release unchanged; ask and wait for the yes first.
 - A `transform_error` with empty `stderr_tail`, `stdout_tail` and no `failed_contracts`
   after the source changed (a renamed column, a new stage value) is source drift
   behind a raw transform raise. Compare the source against the blueprint's Inputs,
