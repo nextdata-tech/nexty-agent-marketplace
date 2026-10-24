@@ -12,7 +12,7 @@ allowed-tools:
   - AskUserQuestion
 metadata:
   author: nextdata
-  version: 0.68.0
+  version: 0.68.1
 ---
 
 # nxd-build-semantic-data-product skill
