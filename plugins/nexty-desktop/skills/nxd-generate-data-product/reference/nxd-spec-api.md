@@ -113,9 +113,12 @@ which return an `AttributeSpec` (a full column) already carrying the role blob.
 
   Unconnected models do not collide, which is what makes the timing surprising:
   the same two columns compile fine until the join that relates them is added,
-  so the error arrives with a change that touched neither column. Tag every
-  dimension with its model — `dimension(name="issue_created_at", ...)` — rather
-  than renaming only the collisions already reported. Piecemeal renaming is not
+  so the error arrives with a change that touched neither column. A name the
+  request or approved plan promises is never renamed. Tag every other dimension
+  of a join-connected registry with its model —
+  `dimension(name="issue_created_at", ...)` — rather than renaming only the
+  collisions already reported; when two promised names collide, return to the
+  plan instead of renaming either. Piecemeal renaming is not
   closed under itself: a tag invented for one collision can land on a real
   column of another model and produce a fresh one (`status` renamed to
   `judgment_status` colliding with an existing `judgment_status`).

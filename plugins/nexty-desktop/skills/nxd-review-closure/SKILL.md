@@ -7,7 +7,7 @@ allowed-tools:
   - Grep
 metadata:
   author: nextdata
-  version: 0.68.1
+  version: 0.69.0
 ---
 
 # Review a generated closure — adversarially
@@ -275,6 +275,17 @@ outcomes or a decision the user has to make. Robustness polish of error messages
 escalate the previous round's fix for a finding into a new blocking finding unless
 the fix introduces a real defect you can evidence; hardening the fix further is
 not one.
+
+Grade every claim, not only a verification gap, by what it changes in the
+published results today. A failure that needs a source shape the capture, its
+`data/` and its `build-record.json` do not show (a renamed or dropped field, an
+unreadable value, a missing cursor key, a status word nobody has seen) is
+hypothetical drift: `LOW` and advisory, unless the approved plan promises to
+detect that shape. A limit the approved plan already discloses (a Decision, an
+assumption or an exclusion it states) stays `LOW` on every capture generation.
+A live source, a refresh, or the chance the source may have drifted is not new
+evidence: real drift is what validation against the live source reports, after
+this review.
 
 ## Structural notes versus claims
 

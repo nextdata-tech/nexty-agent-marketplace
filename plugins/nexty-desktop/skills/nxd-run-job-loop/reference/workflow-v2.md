@@ -827,8 +827,20 @@ every other state requires `applied_files: []`; list only files actually
 changed. A `not_applied` finding lists no files. `deferred_finding_ids` may
 contain only accepted `behavior_affecting` findings the user explicitly
 deferred; never defer a rejected, `out_of_scope`, or `structural_note` finding.
-When findings force a reset, write each user ruling on them into the
+When findings force a plan amendment, write each user ruling on them into the
 blueprint's Decisions before re-preparing, so the fresh review grades against it.
+A fix that fits the approved plan needs no Decision (capture-only reset, below,
+and [Reset after behavior changes](#reset-after-behavior-changes)). A ruling that
+keeps a blocking limit as approved becomes a Decision only when the round
+already amends the plan, and it shares that round's one re-approval; skip it
+when the approved plan already discloses the limit, since the reviewer then
+grades it `LOW`. Otherwise, including next to a capture-only fix and after the
+two-round stop, a kept limit is only deferred by name in `deferred_finding_ids`
+and disclosed in the handoff: no Decision, no reset and no new consent. A fresh
+review may raise it again under a new ID; relay it as the limit the user already
+deferred and ask them to defer the new ID by name in the same request as the
+round's other decisions. Never add a new ID to `deferred_finding_ids` on the
+strength of the earlier ruling.
 Never recommend deferring an accepted `HIGH` finding; recommend its fix (see
 [Relay and authorization](../../nxd-generate-data-product/reference/adversarial-review.md#relay-and-authorization)).
 When shell access is available, load the shipped
@@ -858,10 +870,10 @@ or not, and a rejected round cannot pair with its review. Then
 report `verdict: "clear"` with an empty `findings` list. The advisory claims
 stay in `review-record.json` for the user, and they need no user decision. Never
 hold publication for an advisory claim, and never downgrade a `HIGH` or `MEDIUM`
-claim to reach this path. After publication, report advisory claims as notes.
-A stricter alternative to an approved Decision is an optional change you may
-offer, not an open question: do not say the result is not ready to circulate,
-do not ask the user to decide it, and do not end the turn waiting on it.
+claim to reach this path. After publication, report advisory claims as notes. They are never a next step: do not offer advisory hardening as an optional change or ask whether to apply it, even when the user asks what you recommend (recommend leaving the published release as is). A change to a published product starts only from a user request for it or from real drift. When only advisory notes were reported, an approval of "the corrections just reported" authorizes nothing: say no correction was reported, keep the published release, and reset, recapture or review nothing.
+A stricter alternative to an approved Decision is such an advisory note, not an
+open question: do not say the result is not ready to circulate, do not ask the
+user to decide it, and do not end the turn waiting on it.
 
 Only unresolved `HIGH` and `MEDIUM` claims become `findings` entries, each with
 `severity: "blocking"`. If the supervisor refuses a report that carries only
@@ -898,7 +910,23 @@ cosmetic hardening (error wording, message sanitising) are not plan changes unle
 the reviewer marked them blocking and they affect published results. After two
 consecutive rounds whose findings are only about the previous fix, stop and tell
 the user plainly what is left, what shipping it as is means for the published
-numbers, and what another round would cost, instead of starting a third. Only
+numbers, and what another round would cost, instead of starting a third.
+
+Keep each round to one cheap decision. Recommend a fix only for a finding that
+changes a published number or contract outcome now; for hardening against a
+source shape nobody has seen, recommend shipping with the limit disclosed and
+offer the fix as optional. Prefer the fix that fits the approved plan's wording
+(an existing promise or check that now fails on the bad value, say, rather than
+a new model, a new column or a redefined measure; the fixed `source_diagnostics`
+model is never extended for this): then the user's decision on the finding IDs
+is the whole authorization. Reset only the returned capture requirement with
+`replacement_blueprint_path: null`, correct, recapture and review, with no plan
+amendment and no second approval request; the ruling lives in the ledger round,
+and the fresh review sees the fix in the closure. Amend the plan only when no
+such fix exists, and say so. Once the two-round stop has fired, it holds until
+publication: offer a further round only for a finding that changes published
+results now, and carry everything else as disclosed caveats in the handoff once
+the user defers those IDs by name (`deferred_finding_ids`). Only
 accepted findings the user approved may be applied; rejected, out-of-scope,
 and structural findings stay unapplied and are not deferred.
 

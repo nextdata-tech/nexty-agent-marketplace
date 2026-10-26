@@ -195,10 +195,18 @@ hardening (error wording, message sanitising) into a plan change unless the
 reviewer marked it blocking and it affects published results. After two
 consecutive rounds whose findings are only about your own previous fix, stop and
 tell the user plainly what is left and what happens if it ships as is versus if
-another round runs; do not start a third. When findings force a reset, write each of the user's rulings on
-them, including "keep as approved", into the blueprint's Decisions in words
+another round runs; do not start a third, and keep that stop until publication
+except for a finding that changes published results now. Recommend shipping with
+the limit disclosed for hardening against a source shape nobody has seen, and
+prefer a fix that fits the approved plan's wording, so the decision on the
+finding IDs authorizes it without a plan amendment: a capture-only reset whose
+ruling lives in the ledger round. When findings force a plan amendment, write each
+of the user's rulings on them, including "keep as approved", into the blueprint's Decisions in words
 that settle the point, so the fresh review grades against the ruling rather
-than re-raising it. Rejected and out-of-scope claims are still relayed but change nothing.
+than re-raising it. A "keep as approved" ruling on a limit the approved plan
+already discloses needs no Decision: the reviewer grades that limit `LOW`.
+Without a plan amendment in the round, a kept limit is deferred by name and
+disclosed in the handoff, never a Decision that would cost its own re-approval. Rejected and out-of-scope claims are still relayed but change nothing.
 Never recommend deferring or accepting an accepted `HIGH` finding: recommend
 the fix. If no fix fits the approved rulings, say so, name the ruling the fix
 needs and ask for it, without recommending deferral. A `MEDIUM` trade-off may

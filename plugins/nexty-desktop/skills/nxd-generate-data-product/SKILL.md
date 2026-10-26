@@ -14,7 +14,7 @@ allowed-tools:
   - Task
 metadata:
   author: nextdata
-  version: 0.68.1
+  version: 0.69.0
 ---
 
 # nxd-generate-data-product skill
@@ -276,7 +276,7 @@ per set of metrics over that table:
 Role builders: `field(number(), primary_key(), dimension(name=...), description="...")` — key roles compose with a dimension, and `grain` is deprecated; `field(string(), dimension(name=..., pii=<flag>), description="...")`; `field(number(), join(to="<model>", to_column="<col>"))` — `to=`, NOT `to_model=`. **Timestamp types are parameterized:** import `DurationUnit` from `nxd.spec.data_types` (`models.py` may import only from `nxd.spec.*`) and use `timestamp(unit=DurationUnit.Milliseconds)` (or the source's required precision); never emit bare `timestamp()`, which raises `TypeError` during supervisor spec compilation. See [reference/nxd-spec-api.md](reference/nxd-spec-api.md) for the full type surface.
 
 **Every field takes a role, except a measure a metric aggregates.** A field carrying a dimension or metric needs a `description=` on the field (the role inherits it); `primary_key()`/`join()` take none. Every `semantic_model` needs `.description(...)`, and a `join(...)` needs a `dimension(...)` on the same field. The semantic view must carry a metric — a bare `COUNT` will do — or the model is unqueryable (`struct.model_not_queryable`); a bare key is likewise not groupable. `describe_models` is all a later consumer sees, so a bare column is invisible and a bare name unusable. Put descriptions on `field()`/`metric_field()` so the dimension or metric inherits the same text shown by the catalog. A dimension a **ruling** created must state that ruling.
-Metrics stay question-driven: a numeric no question aggregates is a `number` dimension. For an approved row-level output, every projected value — including numeric amounts — remains a dimension and must be selected in `dimensions[]`; do not create or query a `total_<field>` metric in place of those record values. If the catalog exposes only an aggregate for a promised row-level field, repair the semantic roles before querying rather than presenting aggregate rows as records. No marker model: produce-verification is `.transform-complete`.
+Metrics stay question-driven: a numeric no question aggregates is a `number` dimension. For an approved row-level output, every projected value — including numeric amounts — remains a dimension and must be selected in `dimensions[]`; do not create or query a `total_<field>` metric in place of those record values. If the catalog exposes only an aggregate for a promised row-level field, repair the semantic roles before querying rather than presenting aggregate rows as records. Name each promised output field, landed column and `dimension(name=...)` exactly as the request or approved plan names it (`stage`, never `deal_stage`): consumers, contracts and later releases query those names, so add no entity prefix and rename nothing. Tag only the non-promised dimensions of a join-connected registry with their model; when two promised names collide, return to the plan instead of renaming either. No marker model: produce-verification is `.transform-complete`.
 `reference/models-example.md` shows the shape.
 
 **Derived models are authored identically** — same DSL, role vocabulary and
