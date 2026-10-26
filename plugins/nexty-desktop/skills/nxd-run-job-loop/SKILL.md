@@ -13,7 +13,7 @@ allowed-tools:
   - Task
 metadata:
   author: nextdata
-  version: 0.69.0
+  version: 0.69.1
 ---
 
 # nxd-run-job-loop skill
@@ -244,7 +244,7 @@ Keep semantic inference, capture, workflow MCP actions, review adjudication, and
 
 Before dispatch, select only the current matching `RequirementView`. On a host without a runner-owned review guard, require a non-content read-only host path/accessibility check for both exact retained paths, including generation, allowed roots, types, and readability. On a host with the eval/live runner's review guard, do not issue a separate owning-thread check: the guard performs and repeats it immediately before dispatch. A host runtime without an equivalent metadata/stat mechanism must stop if it cannot establish availability. If either path is missing, stale, outside the allowed roots, or inaccessible, stop with an explicit incomplete blocker, leave the requirement pending, and never substitute another path. See [reference/workflow-v2.md](reference/workflow-v2.md).
 
-Follow the returned `report_requirement` action only after the reviewer returns; a clear report permits the returned validation and admission actions only after one more `check_data_product` on the unchanged closure (the post-review check, on every cycle including the last), while findings, rejection, indeterminate, or an incomplete handoff leave the requirement unsatisfied.
+Follow the returned `report_requirement` action only after the reviewer returns; a clear report permits the returned validation and admission actions only after one more `check_data_product` on the unchanged closure (the post-review check, on every cycle including the last), while findings, rejection, indeterminate, or an incomplete handoff leave the requirement unsatisfied. When every claim left is `LOW` or advisory, report `verdict: "clear"` with `findings: []`, never `findings`: clear means no blocking claim, not no claims, and the `LOW` claims stay in `review-record.json` and your report to the user. A `findings` entry is always `severity: "blocking"`; if the supervisor rejects an advisory-only report, resend it as clear, and never ask the user or an operator to accept it ([details](reference/workflow-v2.md)).
 
 `workflow/review_findings` with any `behavior_affecting` finding stays
 `needs_user`: ask about its IDs and proposed effects. Do not edit, reset, or

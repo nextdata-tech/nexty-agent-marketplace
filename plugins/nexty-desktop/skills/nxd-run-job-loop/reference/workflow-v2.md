@@ -860,7 +860,11 @@ the round was helper-validated.
 
 **A `LOW` or advisory claim never goes into `findings` and never makes the
 verdict `findings`; it stays in `review-record.json`.** A round whose only
-claims are `LOW` is clear once you resolve them. Record each
+claims are `LOW` is clear once you resolve them. `clear` means no blocking
+claim, not no claims: reporting it while `LOW` claims stay on record hides
+nothing, because the ledger and your report to the user carry them. There is no
+other route to accept advisory claims, so never send them as `findings`, never
+wait for an operator or setting to accept them, and never ask the user to. Record each
 one in the ledger as `classification: "structural_note"`, `state:
 "not_applied"`, `applied_files: []`, and a non-empty `proposed_effect` that
 says no closure change follows (for example `"No closure change; advisory
