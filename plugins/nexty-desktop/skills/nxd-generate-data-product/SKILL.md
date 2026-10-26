@@ -14,7 +14,7 @@ allowed-tools:
   - Task
 metadata:
   author: nextdata
-  version: 0.69.1
+  version: 0.69.2
 ---
 
 # nxd-generate-data-product skill
