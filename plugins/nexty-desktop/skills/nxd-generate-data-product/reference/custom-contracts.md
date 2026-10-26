@@ -372,6 +372,56 @@ stop: a bare `raise` reaches the user as an opaque `RuntimeError` with nothing t
 decide on. A stop in the transform raises with the same offending values and
 counts in its message, and the verifier stays.
 
+**Write an allowed-set check in one shape.** One read-only query selects the
+offending values with their counts, a missing value included, and one `if` on
+that result returns the verdict. Do not pre-check the schema, seed the result
+with an empty default, or combine it with another count in the same test. To
+turn a `FAILED` rule into a provisional `WARNING`, change only the verdict and
+`detail`; keep the query and the branch. Return the verdict literally in that
+branch, never through a variable: a sub-case that must still fail (every row
+missing the value, say) gets its own earlier `if` returning `FAILED`:
+
+```python
+"""Output promise: every order's status is on the official list."""
+
+import duckdb
+
+from nxd import data_product
+from nxd.core.context import DuckDbOutput, VerifyResult, VerifyResultEnum
+
+CONTRACT = "status_in_official_list"
+MODEL = "orders"
+ALLOWED = ("pending", "paid", "shipped", "cancelled")
+
+
+@data_product.on_verify()
+def verify(output: DuckDbOutput) -> VerifyResult:
+    table = output.full_table_name(MODEL)
+    placeholders = ", ".join("?" for _ in ALLOWED)
+    con = duckdb.connect(output.path, read_only=True)
+    try:
+        offending = con.execute(
+            f"SELECT status, COUNT(*) FROM {table} "
+            f"WHERE status IS NULL OR status NOT IN ({placeholders}) "
+            f"GROUP BY status ORDER BY status",
+            list(ALLOWED),
+        ).fetchall()
+    finally:
+        con.close()
+    if offending:
+        return VerifyResult(
+            VerifyResultEnum.FAILED,
+            {
+                "contract": CONTRACT,
+                "model": MODEL,
+                "detail": "rows carry a status outside the official list",
+                "unexpected_status_values": [str(status) for status, _ in offending][:20],
+                "unexpected_status_count": sum(int(count) for _, count in offending),
+            },
+        )
+    return VerifyResult(VerifyResultEnum.PASS, {"contract": CONTRACT, "model": MODEL})
+```
+
 The current enum values are `PASS`, `WARNING`, and `FAILED`; use `FAILED` for a
 broken user guarantee. A bare `pass`, `...`, or unconditional PASS is a
 decorative verifier and fails preflight.

@@ -13,7 +13,7 @@ allowed-tools:
   - Task
 metadata:
   author: nextdata
-  version: 0.68.1
+  version: 0.69.0
 ---
 
 # nxd-run-job-loop skill
@@ -244,13 +244,13 @@ Keep semantic inference, capture, workflow MCP actions, review adjudication, and
 
 Before dispatch, select only the current matching `RequirementView`. On a host without a runner-owned review guard, require a non-content read-only host path/accessibility check for both exact retained paths, including generation, allowed roots, types, and readability. On a host with the eval/live runner's review guard, do not issue a separate owning-thread check: the guard performs and repeats it immediately before dispatch. A host runtime without an equivalent metadata/stat mechanism must stop if it cannot establish availability. If either path is missing, stale, outside the allowed roots, or inaccessible, stop with an explicit incomplete blocker, leave the requirement pending, and never substitute another path. See [reference/workflow-v2.md](reference/workflow-v2.md).
 
-Follow the returned `report_requirement` action only after the reviewer returns; a clear report permits the returned validation and admission actions, while findings, rejection, indeterminate, or an incomplete handoff leave the requirement unsatisfied.
+Follow the returned `report_requirement` action only after the reviewer returns; a clear report permits the returned validation and admission actions only after one more `check_data_product` on the unchanged closure (the post-review check, on every cycle including the last), while findings, rejection, indeterminate, or an incomplete handoff leave the requirement unsatisfied.
 
 `workflow/review_findings` with any `behavior_affecting` finding stays
 `needs_user`: ask about its IDs and proposed effects. Do not edit, reset, or
 recapture in that turn; wait for explicit approval in a later turn. “I don't
 know, you tell me” and “whatever you think” are deflections on a review finding,
-including one about a mapped rename (a renamed-key drift decision outside review follows [failure-handling.md](reference/failure-handling.md)). Record and validate the decision before reset; see [reference/workflow-v2.md](reference/workflow-v2.md). Ask once per round: all of a round's blocking findings go in one list with one plan amendment and one re-approval request; cosmetic hardening is not a plan change; after two rounds whose findings concern only your own fix, stop and tell the user what is left and the consequence of shipping versus not.
+including one about a mapped rename (a renamed-key drift decision outside review follows [failure-handling.md](reference/failure-handling.md)). Record and validate the decision before reset; see [reference/workflow-v2.md](reference/workflow-v2.md). Ask once per round: all of a round's blocking findings go in one list with one plan amendment and one re-approval request; cosmetic hardening is not a plan change; after two rounds whose findings concern only your own fix, stop and tell the user what is left and the consequence of shipping versus not, and keep that stop until publication. Recommend a fix only when a finding changes published results now, and prefer one that fits the approved plan so the decision on its IDs needs no plan re-approval ([reference/workflow-v2.md](reference/workflow-v2.md)).
 
 After a review completes, ordinary Bash remediation remains available for
 non-retained paths until reset; the runner guard rejects owner operations and
