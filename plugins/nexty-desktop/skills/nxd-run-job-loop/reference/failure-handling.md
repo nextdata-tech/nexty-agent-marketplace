@@ -215,6 +215,16 @@ producing the identical error:
   then reset, recapture and review. On a published workflow the fix is a
   behavior-changing revision: report the broken cursor and fix it in place,
   as the rule below says.
+- `budget_exhausted` on a transform that makes a call per row — the run used
+  its whole transform time budget, published nothing, and the calls it finished
+  are paid for. A retry under the same budget stops at the same point. Report
+  the processed count, the per-call time and the estimate for a full run. The
+  budget is fixed at prepare, so raising it needs `remove_workflow` on the
+  user's explicit yes and a fresh prepare with `requested_transform_budget_secs`
+  ([workflow-v2.md § Size the transform time budget at prepare](workflow-v2.md#size-the-transform-time-budget-at-prepare)).
+  Offer the alternative that keeps the workflow: a transform deadline that lands
+  finished rows ([incremental-transforms.md § Per-row calls](../../nxd-generate-data-product/reference/incremental-transforms.md#per-row-calls-time-budget-and-partial-results)),
+  which is a behavior change with its own reset and review.
 - A published workflow is not itself a failure. A same-logic refresh goes to
   the same workflow, and so does a retry once a failed admitted run is terminal
   ([workflow-v2.md § Refresh in place](workflow-v2.md#refresh-in-place)). If

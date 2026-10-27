@@ -14,7 +14,7 @@ allowed-tools:
   - Task
 metadata:
   author: nextdata
-  version: 0.69.2
+  version: 0.69.3
 ---
 
 # nxd-generate-data-product skill
@@ -314,7 +314,10 @@ Contract facts baked into that template — keep every one (each is restated in 
   never raw `duckdb.connect(...)`, DDL, or a hardcoded staging path.
 - `write_disposition="replace"` — reruns must be idempotent, not duplicating. An
   append-only source goes incremental ONLY via
-  [reference/incremental-transforms.md](reference/incremental-transforms.md).
+  [reference/incremental-transforms.md](reference/incremental-transforms.md). A
+  per-row provider/mapper call loop keeps its own deadline under the prepared
+  time budget and lands finished rows, and a capped or versioned refresh follows
+  that file's [refresh replay](reference/incremental-transforms.md#refresh-replay-settle-backlog-and-history-in-the-plan) rules.
 - The read-back-and-assert block and the `.transform-complete` touch are
   MANDATORY: the first enforces the physical-model allowlist (only an absent
   optional-empty table is tolerated), the second is what the readiness gate

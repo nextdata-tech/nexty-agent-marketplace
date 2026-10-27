@@ -8,6 +8,7 @@ do not fall back to a direct CLI or local substitute.
 
 - [Gate on the connected capability](#gate-on-the-connected-capability)
 - [Prepare the prose blueprint](#prepare-the-prose-blueprint)
+  - [Size the transform time budget at prepare](#size-the-transform-time-budget-at-prepare)
   - [Revised or successor plan](#revised-or-successor-plan)
   - [Refresh in place](#refresh-in-place)
   - [Revise a published product in place](#revise-a-published-product-in-place)
@@ -215,6 +216,45 @@ the path named by the mismatch. The legacy
 `validation_issue.expected_source_span` field remains available for v1
 consumers, but it is only a location hint: even when it is present, regenerate
 the complete proposal.
+
+### Size the transform time budget at prepare
+
+The transform's wall-clock budget is fixed by the `prepare_workflow` call that
+creates the workflow: `requested_transform_budget_secs`. It is not in the plan
+text or the closure. `reset_workflow` keeps it, and `prepare_workflow` on an
+existing workflow ID is refused. The only way to change it later is
+`remove_workflow` (on the user's explicit yes) and a fresh prepare, which
+discards consent, capture, review and the spending approval, so the user goes
+through all of them again. Omitting the field leaves the runtime default:
+180 s. The supervisor accepts 5 to 3600 s and refuses a value outside that
+range rather than clamping it. Its results report the bound value and the range
+(`transform_budget_secs`, `source`, `min_secs`, `max_secs`, `default_secs`); a run that runs out of time stops with `budget_exhausted` and
+publishes nothing.
+
+**Estimate the budget before the first prepare whenever the transform makes a
+call per row** — field mapper scoring, any other AI provider call, or a per-row
+API request:
+
+1. Rows per run: the most rows one run can process. That is the per-run cap the
+   plan states, or the largest source size you can expect when there is no cap.
+2. Seconds per row: `calls_per_row` (from `prepare_mapper`; 1 when it does not
+   report one) times the time per call. Calls run one at a time unless the
+   transform is written to run them concurrently. Without a measurement, assume
+   15 s per AI scoring call (the Ashby replay measured about 12 s) and 1 s per
+   plain API request.
+3. Add the fetch and land time, double the total for margin, and round up.
+   Request that value, capped at `max_secs` yourself, since an out-of-range
+   value is refused. Never leave the default
+   for a per-row transform without checking that the estimate fits in 180 s.
+4. If the doubled estimate exceeds the maximum, the plan cannot score every row
+   in one run. Lower the per-run work in the plan before prepare, and design it
+   per [incremental-transforms.md § Per-row calls: time budget and partial
+   results](../../nxd-generate-data-product/reference/incremental-transforms.md#per-row-calls-time-budget-and-partial-results).
+
+State the requested budget and the arithmetic behind it in the prepared-plan
+echo-back, in plain words ("about 45 candidates, one AI call each at about
+15 seconds, so up to about 11 minutes; I'm allowing 25 minutes"). It is a
+setting of this workflow, not a plan Decision.
 
 ### Revised or successor plan
 

@@ -421,7 +421,10 @@ already been resolved.
   credential**, and `chmod 0600 infra-profile.yaml` where a shell can reach
   the closure. The trigger is a legacy literal secret value in a `*-source`
   service's populated `attributes` list; public topology attributes paired
-  with a Desktop-local `attributesSecretRef` do not trigger these files. Phase C
+  with a Desktop-local `attributesSecretRef` do not trigger these files. Templated
+  endpoint paths such as `/repos/{owner}/{repo}` count as public topology in
+  block form, quoted or not, so a Desktop-local profile never needs
+  `.gitignore` or `SENSITIVE`; do not add them to satisfy the check. Phase C
   fails a legacy literal closure when either file is missing.
   `database-source.md`'s **Sensitivity artifacts** section
   is the canonical definition, including the exact file bodies; it applies
