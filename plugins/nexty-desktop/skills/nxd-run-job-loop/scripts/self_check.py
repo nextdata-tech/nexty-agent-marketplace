@@ -2833,7 +2833,7 @@ if profile.exists():
         parts.append(body[start:].strip())
         return parts if all(parts) else None
 
-    def scalar_token(value: str) -> bool:
+    def scalar_token(value: str, flow: bool) -> bool:
         value = value.strip()
         if not value or value[0] in "[{&*!|>" or "\n" in value:
             return False
@@ -2845,7 +2845,11 @@ if profile.exists():
                 return False
         if value.startswith("'"):
             return re.fullmatch(r"'(?:[^']|'')*'", value) is not None
-        return not any(char in value for char in "[]{}\"'") and re.search(r":(?:\s|$)", value) is None
+        # A block plain scalar may carry flow indicators after its first
+        # character (templated paths such as /repos/{owner}/{repo}); inside a
+        # flow mapping they would end or nest the item, so stay strict there.
+        banned = "[]{}\"'" if flow else "\"'"
+        return not any(char in value for char in banned) and re.search(r":(?:\s|$)", value) is None
 
     def credential_key(name: str) -> bool:
         # Query/fragment names also use this base matcher: public attribute
@@ -2905,11 +2909,11 @@ if profile.exists():
         except ValueError:
             return False
 
-    def public_mapping(fields) -> bool:
+    def public_mapping(fields, flow: bool) -> bool:
         mapping = {}
         for field in fields:
             match = re.fullmatch(r"(key|value|public):[ \t]+(.+)", field)
-            if not match or match[1] in mapping or not scalar_token(match[2]):
+            if not match or match[1] in mapping or not scalar_token(match[2], flow):
                 return False
             mapping[match[1]] = match[2].strip()
         if set(mapping) != {"key", "value", "public"} or mapping["public"] != "true":
@@ -2929,7 +2933,7 @@ if profile.exists():
                 if not item.startswith("{") or not item.endswith("}"):
                     return False
                 fields = flat_flow_parts(item[1:-1])
-                if not fields or not public_mapping(fields):
+                if not fields or not public_mapping(fields, flow=True):
                     return False
             return True
         entries, current, item_indent, field_indent = [], [], None, None
@@ -2952,7 +2956,7 @@ if profile.exists():
                 return False
         if current:
             entries.append(current)
-        return bool(entries) and all(public_mapping(fields) for fields in entries)
+        return bool(entries) and all(public_mapping(fields, flow=False) for fields in entries)
 
     def local_public_only(section: str) -> bool:
         lines = section.splitlines()

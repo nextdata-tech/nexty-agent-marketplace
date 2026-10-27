@@ -108,6 +108,12 @@ reported numbers and the source does not settle it:
   to a record with no usable identifier;
 - how a non-text value in a categorical or status field is treated;
 - the rounding or precision of each landed measure and timestamp.
+- for a product that refreshes: what a refresh with no new source rows does (it
+  must keep every table's row count, so no new version or snapshot row), and,
+  when a per-run cap or time limit can leave rows pending, when those rows are
+  processed. Settle both per [incremental-transforms.md § Refresh replay](../../nxd-generate-data-product/reference/incremental-transforms.md#refresh-replay-settle-backlog-and-history-in-the-plan)
+  before the first prepare; validation refuses a design that changes row
+  counts on an unchanged re-run.
 
 Review blocks on unwritten conventions, and each block costs a reset and a fresh
 approval. A review that names conventions one round at a time can use up every
@@ -210,7 +216,10 @@ ten headings above are fixed. List each step in run order, in plain words:
   Decision, and word the matching `Outputs` promise exactly as it checks.
 
 Then state the shared spending limit once for all steps (calls, a dollar cap
-and an expiry) and any per-step call limit. Say that one approval window will
+and an expiry) and any per-step call limit. State how long one run may take (rows per run × calls per row × seconds per
+call) and the transform time limit you will request at prepare, which cannot
+change later without removing the workflow
+([workflow-v2.md](workflow-v2.md#size-the-transform-time-budget-at-prepare)). Say that one approval window will
 cover every step. Describe a checking step as a second opinion that can miss
 errors, never as proof. A single-instruction product lists one step. When
 `prepare_mapper` shows this Desktop runs only one AI step, plan only one and

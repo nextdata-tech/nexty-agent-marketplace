@@ -15,6 +15,8 @@ and re-reading the source whole is not acceptable.
 - [Write first, advance the cursor second](#write-first-advance-the-cursor-second)
 - [Every run yields every promised model](#every-run-yields-every-promised-model)
 - [Verifying the write: count rows, not table names](#verifying-the-write-count-rows-not-table-names)
+- [Per-row calls: time budget and partial results](#per-row-calls-time-budget-and-partial-results)
+- [Refresh replay: settle backlog and history in the plan](#refresh-replay-settle-backlog-and-history-in-the-plan)
 - [Desktop specifics](#desktop-specifics)
 - [Reading prior data back out of DuckDB](#reading-prior-data-back-out-of-duckdb)
 - [Do NOT](#do-not)
@@ -395,6 +397,76 @@ closure that is all of `PHYSICAL_MODELS`. The check then holds on the first run
 (`0 + n == n`), on an empty delta (`n + 0 == n`), on a replaced derived model
 (`landed == n`), and still catches the skipped-model case the table-name assert
 cannot see.
+
+## Per-row calls: time budget and partial results
+
+A transform that makes a call per row — field mapper scoring, another AI
+provider call, a per-row API request — is bounded by the workflow's transform
+time budget, and that budget is set once, at `prepare_workflow`. Size it there
+([workflow-v2.md § Size the transform time budget at
+prepare](../../nxd-run-job-loop/reference/workflow-v2.md#size-the-transform-time-budget-at-prepare)).
+A run that exceeds it stops with `budget_exhausted`, and a failed run publishes
+neither rows nor cursor ([Durability](#durability-rows-and-cursor-do-not-share-fate)):
+every call it completed is paid for and then made again by the next run.
+
+So do not let the budget kill a run that has finished work. Persist what is
+done:
+
+- **Keep your own deadline below the budget.** Read the start time once, and
+  stop dispatching new calls when the elapsed time plus one call's worst case
+  would pass the budget minus a margin for landing and the post-write check
+  (for example, stop at 75 % of the budget). Pass the budget into the transform
+  as a constant that matches the value requested at prepare.
+- **Land the rows already processed and return normally.** Write them, verify
+  the write, then advance the cursor over exactly those rows
+  ([Write first, advance the cursor second](#write-first-advance-the-cursor-second)).
+  The run publishes, and the next run starts after them instead of paying for
+  them again. Rows not reached stay pending: the cursor has not moved past them.
+- **Never mark a pending row as processed.** A row the deadline skipped is not
+  a failed row, a null score or a rejection. Leave it out of the landed tables,
+  or land it with an explicit pending status that the plan names.
+- **Tell the user when a run stopped early,** with the count processed and the
+  count left, so a short run is never mistaken for a complete one.
+
+A per-row transform whose estimate does not fit the maximum budget needs a
+per-run cap or this deadline as a plan Decision, and that choice must pass the
+refresh replay below.
+
+## Refresh replay: settle backlog and history in the plan
+
+Validation replays a stateful transform once with no new source rows, and every
+landed table must keep its row count (`validation/refresh_not_idempotent`,
+[Desktop specifics](#desktop-specifics)). The trusted self-check runs the same
+unchanged rerun offline (`runtime.rerun_row_count_changed`). Two designs that
+look reasonable fail it, and each failure costs a plan amendment, a fresh
+approval and another review. Decide both before the first prepare, write the
+choice as a Decision, and say what the user will see:
+
+- **History or version rows.** A product that adds a version, snapshot or
+  "refreshed at" row per refresh must add none when the source has nothing new.
+  Write it so: "a refresh with no new source rows keeps the tables and the
+  version unchanged". Updating a volatile column in place (a status, a stage)
+  keeps the row count, so it passes; say whether such columns are refreshed or
+  stay as last processed.
+- **A per-run count cap with a backlog.** "Each refresh processes the next N"
+  cannot pass whenever the source holds more than N pending rows: the replay
+  processes the next N and the row count changes. Choose one, up front:
+  1. **One run processes everything pending.** Set the cap at or above the
+     largest source you expect, or drop it, and size the time budget for it.
+     This is the default; prefer it when the budget's range allows.
+  2. **The backlog drains only when the source changes.** A refresh whose
+     source has no new rows changes nothing, even with rows still pending; a
+     refresh that sees new rows processes the pending ones oldest first, up to
+     the cap. State the consequence: pending rows can wait indefinitely if no
+     new rows arrive, and a logic change re-processes from the start
+     ([Desktop specifics](#desktop-specifics)).
+- **A time deadline instead of a count cap** ([Per-row calls](#per-row-calls-time-budget-and-partial-results)).
+  The validation replay calls the stub provider for mapper rows, which answers
+  far inside the deadline, so pass one finishes everything and the replay is
+  unchanged. Only a real run stops early, and its next refresh continues where
+  it stopped. This holds only for mapper calls: a per-row request to a real
+  API in the scratch run can reach the deadline there too, so use option 1 or 2
+  for those.
 
 ## Desktop specifics
 
