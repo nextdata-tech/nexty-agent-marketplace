@@ -14,7 +14,7 @@ allowed-tools:
   - Task
 metadata:
   author: nextdata
-  version: 0.69.3
+  version: 0.69.4
 ---
 
 # nxd-generate-data-product skill
@@ -43,7 +43,7 @@ For `api-source`, the only absent companion is the endpoint map from public `end
 ## The closure layout
 
 Choose and normalize one absolute `<dp-root>` — the exact directory submitted through the supervisor's returned `capture` action — **BEFORE authoring any artifact**. Move or recreate existing closure files into it before creating/checking another. Every closure artifact must be inside `<dp-root>`: root-level artifacts are direct children, nested artifacts are descendants. This includes `spec.py`, `models.py`, `transform/`, `requirements.txt`, `infra-profile.yaml`, and connector artifacts. A declared custom contract additionally requires exactly one verifier under `contracts/expectations/` or `contracts/promises/` plus its matching `spec.py` wiring. For a Desktop-local referenced `api-source`, author the public topology service after plan consent, connect through the native prompt, and let admitted validation fetch the source. A standalone `connectivity_check.py` may remain as a diagnostic artifact, but must defer credentialed execution for a local ref. Record payload inspection and connectivity as **not run** and **unverified** until the admitted fetch succeeds. For legacy literal credentials, follow the existing probe sequence in [reference/api-source.md](reference/api-source.md#payload-inspection-gate--before-authoring).
-Never place credentials, `SENSITIVE`, `.gitignore`, or executable closure artifacts beside/above `<dp-root>`; split executable artifacts must be consolidated first. The sole profile exception is a dedicated source-preparation sibling, never a parent or ancestor, containing only public topology and an opaque local reference before plan consent. After plan approval, copy only that public profile into the canonical closure, preserve its exact bound service identity, and inspect compatibility at the final root before reuse. This sibling is not an executable closure and must not be submitted for capture. Use this same root for capture; supervisor capture owns reserved metadata and trusted checks.
+If a self-check demands `.gitignore` or `SENSITIVE`, add them and say so in the build notes; never ask the user. Never place credentials, `SENSITIVE`, `.gitignore`, or executable closure artifacts beside/above `<dp-root>`; split executable artifacts must be consolidated first. The sole profile exception is a dedicated source-preparation sibling, never a parent or ancestor, containing only public topology and an opaque local reference before plan consent. After plan approval, copy only that public profile into the canonical closure, preserve its exact bound service identity, and inspect compatibility at the final root before reuse. This sibling is not an executable closure and must not be submitted for capture. Use this same root for capture; supervisor capture owns reserved metadata and trusted checks.
 
 The author emits **executable closure inputs only**. Supervisor capture
 materializes and verifies the reserved snapshots, lock, build record, and
