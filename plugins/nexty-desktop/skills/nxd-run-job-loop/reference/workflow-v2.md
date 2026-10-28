@@ -225,7 +225,11 @@ text or the closure. `reset_workflow` keeps it, and `prepare_workflow` on an
 existing workflow ID is refused. The only way to change it later is
 `remove_workflow` (on the user's explicit yes) and a fresh prepare, which
 discards consent, capture, review and the spending approval, so the user goes
-through all of them again. Omitting the field leaves the runtime default:
+through all of them again. Ask that yes once, as a plain yes/no bundled with the
+re-consent request ("to raise the time limit I need to rebuild this and ask you
+to approve it again; okay?"), not as a separate turn or as "confirm in your own
+words". It is the only part of this the user decides: you size the new budget
+yourself within the approved spend. Omitting the field leaves the runtime default:
 180 s. The supervisor accepts 5 to 3600 s and refuses a value outside that
 range rather than clamping it. Its results report the bound value and the range
 (`transform_budget_secs`, `source`, `min_secs`, `max_secs`, `default_secs`); a run that runs out of time stops with `budget_exhausted` and
@@ -956,7 +960,10 @@ consecutive rounds whose findings are only about the previous fix, stop and tell
 the user plainly what is left, what shipping it as is means for the published
 numbers, and what another round would cost, instead of starting a third.
 
-Keep each round to one cheap decision. Recommend a fix only for a finding that
+Keep each round to one cheap decision. Put it in plain business words: the finding's
+effect on the published numbers and your recommendation, never a menu of fixes or
+the reviewer's claim text. Adjudicating the claims is yours
+([who decides what](user-facing-language.md#decisions-the-user-owns-and-decisions-you-own)). Recommend a fix only for a finding that
 changes a published number or contract outcome now; for hardening against a
 source shape nobody has seen, recommend shipping with the limit disclosed and
 offer the fix as optional. Prefer the fix that fits the approved plan's wording

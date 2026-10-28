@@ -179,6 +179,13 @@ Do not argue with a finding you have not verified, and do not fix one either.
 
 ## Relay and authorization
 
+The adjudication itself is yours, not the user's: decide `accepted`, `rejected`
+or `out_of_scope` against the approved plan and record it. Never ask the user
+to adjudicate, or to pick between technical fixes. What needs their word is
+authorization to change the closure for an accepted blocking finding; ask it as
+one plain yes/no with your recommendation, in the same request as any other
+decision the round needs ([who decides what](../../nxd-run-job-loop/reference/user-facing-language.md#decisions-the-user-owns-and-decisions-you-own)).
+
 Relay **every** finding to the user before mutation: ID, severity, claim,
 evidence, adjudication/citation, proposed effect, classification and applied
 state. All review findings default to behavior-affecting because this role hunts
@@ -210,7 +217,9 @@ disclosed in the handoff, never a Decision that would cost its own re-approval. 
 Never recommend deferring or accepting an accepted `HIGH` finding: recommend
 the fix. If no fix fits the approved rulings, say so, name the ruling the fix
 needs and ask for it, without recommending deferral. A `MEDIUM` trade-off may
-be offered as a genuine choice.
+be offered as a genuine choice. Offer it only when the options differ in what the product
+means to the business; when they differ only in implementation, pick one,
+record it and recommend it.
 The only automatic exception is a syntax, mechanical, or procedural
 `structural_note` backed by evidence that the spec hash, model/field set, grain,
 row inclusion, values, aggregations, thresholds, verdicts and assertions remain

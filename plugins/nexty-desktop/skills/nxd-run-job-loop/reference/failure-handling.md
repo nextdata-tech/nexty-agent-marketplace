@@ -165,6 +165,9 @@ on it.
    failure diagnostic — the actual exception from inside the transform. Omit
    `run_id` only to list recent failed-run summaries when the supervisor directs
    that recovery path.
+   Getting the traceback is your call: read the supervisor diagnostic first and
+   use a read-only probe of the same source only if it is not enough. Do not
+   offer the user the choice.
 3. **Classify by the stage it died in**, using the ladder above — never by
    matching the exception text. If no operation or run identity is available,
    say that; do not substitute the outer error string for the diagnostic you
@@ -220,9 +223,10 @@ producing the identical error:
   are paid for. A retry under the same budget stops at the same point. Report
   the processed count, the per-call time and the estimate for a full run. The
   budget is fixed at prepare, so raising it needs `remove_workflow` on the
-  user's explicit yes and a fresh prepare with `requested_transform_budget_secs`
+  user's explicit yes (one plain yes/no bundled with the re-consent request) and a fresh prepare with `requested_transform_budget_secs`
   ([workflow-v2.md § Size the transform time budget at prepare](workflow-v2.md#size-the-transform-time-budget-at-prepare)).
-  Offer the alternative that keeps the workflow: a transform deadline that lands
+  Choose the size yourself within the approved spend. Where the plan's meaning
+  allows it, prefer the alternative that keeps the workflow: a transform deadline that lands
   finished rows ([incremental-transforms.md § Per-row calls](../../nxd-generate-data-product/reference/incremental-transforms.md#per-row-calls-time-budget-and-partial-results)),
   which is a behavior change with its own reset and review.
 - A published workflow is not itself a failure. A same-logic refresh goes to

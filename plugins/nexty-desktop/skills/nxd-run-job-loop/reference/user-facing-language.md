@@ -21,6 +21,7 @@ existing references.
 - [Who blocked this](#who-blocked-this)
 - [Desktop folder-access prompts](#desktop-folder-access-prompts)
 - [Mandatory gates are never skippable](#mandatory-gates-are-never-skippable)
+- [Decisions the user owns and decisions you own](#decisions-the-user-owns-and-decisions-you-own)
 - [Cleanup failed](#cleanup-failed)
 - [Blocker](#blocker)
 - [Retry](#retry)
@@ -268,6 +269,52 @@ Once a gate (validation, review, consent, a spending prompt) is mandatory, never
 offer to skip, bypass, or weaken it, including right after saying it cannot
 pass. Say what is blocking it and the one returned next action, or stop and say
 the work cannot continue yet.
+
+### Decisions the user owns and decisions you own
+
+The person in a Desktop or Cowork session is usually a business user. A turn
+that ends in a menu of technical options does not get a considered answer: they
+rubber-stamp it, and every such turn adds a round trip. Decide the technical
+matters yourself, record them, and ask only what a business owner can answer.
+
+**The user owns:**
+
+- business intent, and any plan or Decision wording that changes what the
+  product means (a definition, a grain, a threshold, a scope, a convention);
+- spend, including the per-run and cumulative AI-scoring approval;
+- credentials, entered only through the masked dialog;
+- irreversible removal of their data or a published product.
+
+**You own, and never ask about:**
+
+- implementation fixes that keep the approved plan's meaning: a transform bug
+  (a type error on refresh, the order of PII masking), closure hygiene files
+  (`.gitignore`, `SENSITIVE`) a self-check demands, and a repair that fits the
+  approved plan's wording;
+- how you gather diagnostics, using access the user already granted: the
+  supervisor's failure diagnostic, `inspect_run` / `inspect_workflow`, or a
+  read-only call to the same source. Choose the cheapest one; do not offer
+  them as options;
+- the transform time budget, sized within the approved spend
+  ([workflow-v2.md](workflow-v2.md#size-the-transform-time-budget-at-prepare));
+- which of two implementations to use for the same approved behavior;
+- adjudicating review claims against the approved plan: accepted, rejected or
+  out of scope, with the citation. Do not ask the user which claims are valid.
+
+Make each such decision, record it in the build notes and the review ledger,
+and report it afterwards as a plain consequence ("I fixed the refresh error
+and the masking order; the plan you approved is unchanged"). Never end a turn
+with "Decision for you", "Which option do you want?" or a request to confirm in
+their own words for a technical matter.
+
+When something does need the user, ask **one** plain business question with
+your recommendation, never a menu of technical options. Fix everything you can
+before the next capture, so they face one re-consent, not one per fix. A fix
+that needs a safety gate (consent, spending approval, a typed yes to remove a
+workflow) bundles that gate into the same single request, phrased as a plain
+yes/no ("To raise the time limit I need to rebuild this from scratch and ask
+you to approve it again. Okay?"). The gates themselves stay: you never decide
+them for the user and never skip them.
 
 ### Cleanup failed
 

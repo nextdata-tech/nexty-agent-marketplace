@@ -13,7 +13,7 @@ allowed-tools:
   - Task
 metadata:
   author: nextdata
-  version: 0.69.3
+  version: 0.69.4
 ---
 
 # nxd-run-job-loop skill
@@ -400,7 +400,7 @@ exit: `healed`, `healed_with_concessions`, `caps_exhausted`, `blocked`,
 ## User-facing narration
 
 Own the conversation and use the canonical [user-facing language](reference/user-facing-language.md)
-reference for workflow and status wording. The user may receive meaningful
+reference for workflow and status wording. Decide technical matters yourself and ask the user only business questions, one at a time with a recommendation ([who decides what](reference/user-facing-language.md#decisions-the-user-owns-and-decisions-you-own)). The user may receive meaningful
 progress, approval or clarification requests, blockers, retries, concessions,
 and final outcomes. Automatically repaired diagnostics stay internal.
 
