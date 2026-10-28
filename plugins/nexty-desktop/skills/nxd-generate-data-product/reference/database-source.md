@@ -138,7 +138,10 @@ value in a `*-source` service's populated `attributes` list in
 `infra-profile.yaml`. A file or CSV source keeps `attributes: []` and needs
 none of this. Public topology attributes paired with a Desktop-local
 `attributesSecretRef` also need none of these plaintext-credential artifacts;
-the masked native prompt stores the secret outside the closure. Emit all three
+the masked native prompt stores the secret outside the closure, as does an env-injected
+`api-source` profile whose only credential-like attribute is `credential_env` naming a
+harness/operator-provided environment variable (see `api-source.md`; the keychain ref
+remains the preferred shape). Emit all three
 in the same step that writes a legacy literal credential — Phase C fails that
 closure if the first two are missing.
 

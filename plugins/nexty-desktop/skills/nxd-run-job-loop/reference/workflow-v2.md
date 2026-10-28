@@ -1049,7 +1049,13 @@ ask the user to say "continue", while that validation or a run you started is
 queued or running. A rate-limited or paginated source can keep it running for
 several minutes, and a hand-back returns control with nothing to decide: the
 next message can change the plan and discard a validation that was about to
-pass. Keep polling until the operation is terminal. Hand back mid-operation only
+pass. Keep polling until the operation is terminal, inside the same turn: call
+`inspect_workflow` (optionally with `after_event` to read only events after the
+last one you saw; it returns the current state without blocking) or `inspect_run`,
+with a short foreground pause between calls (if your host has no pause, poll at a
+modest rate). Never schedule a background timer
+or background command and end the turn to "come back later": nothing resumes
+you, and the work is abandoned. Hand back mid-operation only
 when `inspect_run` reports it as unknown rather than in progress, or when a
 decision only the user can make is waiting. Then use the returned
 `start_run` action with the current `revision` and `invalidation_epoch`.

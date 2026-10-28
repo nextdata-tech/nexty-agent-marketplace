@@ -435,6 +435,22 @@ already been resolved.
   `yaml_schemas::infra_profile::KeyValuePairWithPublic` type and
   `SecretsHandler` construction — not inferred from a single example.
 
+  An env-injected profile (the harness or operator provides the environment
+  variable) is also public: when `credential_env` names that variable (a bare
+  uppercase name of at most 64 characters with underscore-separated
+  segments, such as `NXD_EVAL_SOURCE_TOKEN`), there is no `attributesSecretRef`, and every
+  attribute is `public: true` (only `base_url`, `endpoint_*`, `auth_type`,
+  `auth_key_name`, `auth_key_location`, `header_user_agent` and the one
+  `credential_env`), the closure holds no secret value and needs neither
+  `.gitignore` nor `SENSITIVE`. The profile must be a single YAML document, and
+  `auth_type`, `auth_key_location`, `auth_key_name` and `endpoint_*` values
+  must be plain (`bearer` / `api_key`, since one `credential_env` cannot
+  carry `http_basic` or `oauth2_client_credentials`; `header` / `query`; a
+  letters-only header or parameter name such as `X-Api-Key`; a path starting
+  with `/`). Any other `credential_env` value or
+  attribute key keeps both files. `attributesSecretRef` via native masked entry remains
+  the preferred shape for user builds; do not default to `credential_env`.
+
 ### Expiring credentials: refresh on the session, never on a custom auth class
 
 An API whose token expires mid-extraction needs a retry that re-authenticates
