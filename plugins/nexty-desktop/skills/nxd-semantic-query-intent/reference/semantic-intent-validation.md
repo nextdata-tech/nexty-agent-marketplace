@@ -4,6 +4,7 @@
 
 - [Purpose and boundary](#purpose-and-boundary)
 - [The four techniques](#the-four-techniques)
+- [Derived metrics and native grains in the catalog](#derived-metrics-and-native-grains-in-the-catalog)
 - [Why the gate is client-side](#why-the-gate-is-client-side)
 - [End-to-end flow](#end-to-end-flow)
 - [Execution rule](#execution-rule)
@@ -61,6 +62,25 @@ descriptions. The critic is a judgment over whether that selection answers the
 verbatim question. Passing one does not substitute for the other: a fluent echo
 can faithfully describe the wrong metric, and a critic without an echo hides the
 mapping from the user who must catch a business-meaning error.
+
+## Derived metrics and native grains in the catalog
+
+A derived metric (`aggregation: "derived"` under a semantic composition in
+`describe_model`) is a metric like any other for the critic: match its
+description and expression to the question. Prefer it over selecting its inputs
+separately and combining them by hand when the question asks for the combined
+figure; a selection that does arithmetic across separate queries is
+`likely-wrong`. A derived metric cannot carry a filter on its value, so a
+constraint on it must be expressed on a dimension (SQ-307). A derived metric
+the service cannot plan is refused with SQ-306 ("invalid derived metric");
+report it as a data product defect rather than rewriting the question. A `NULL`
+in a derived total is a missing sum input, not a zero: say so, and never report
+it as 0.
+
+A `time_grain` on a model or metric limits the periods the echo may promise.
+If the question asks for a period finer than the native grain ("daily" on a
+weekly metric) or a window that cuts a period, clarify or remap; the service
+refuses it with SQ-403. Echo a week as the ISO Monday week.
 
 ## Why the gate is client-side
 

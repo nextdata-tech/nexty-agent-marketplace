@@ -22,6 +22,7 @@ do not fall back to a direct CLI or local substitute.
   - [Provider credential access](#provider-credential-access)
   - [Cumulative folder budget](#cumulative-folder-budget)
 - [When validation fails](#when-validation-fails)
+- [Reporting failures and check outcomes](#reporting-failures-and-check-outcomes)
 - [Reset after behavior changes](#reset-after-behavior-changes)
 
 ## Gate on the connected capability
@@ -694,6 +695,8 @@ capture or strict admission.
 
 ## Run and report the review
 
+Wait rule for every validation and run below: `inspect_workflow` and `inspect_run` return at once, so call them back-to-back in this turn until terminal. Never `sleep` (the host blocks it) or background a command, and do not use Monitor or timers: they end your turn with the work abandoned ([Follow returned actions through admission](#follow-returned-actions-through-admission)).
+
 When capture returns a review action, use its `review_input` exactly as supplied
 by the supervisor. The response may contain several `RequirementView` entries:
 select the one in `next_actions[]` whose `requirement_id` is the requirement id
@@ -849,7 +852,7 @@ one such as `semantic_defect`, `deferred_to_operator`, `behavior_gap`,
 disposition. Recipe for an unresolved `MEDIUM` or `HIGH` claim (verified, not
 yet fixed, awaiting the user): `classification: "behavior_affecting"` +
 `disposition: "accepted"` + finding `state: "needs_user"` + round `status:
-"needs_user"`, with `applied_files: []` and `user_decision: null`. A round holding an unresolved `MEDIUM`/`HIGH` claim is `needs_user`, never `complete`, until the user decides; clear, LOW-only and rejected-only rounds are `complete` with `user_decision: null`. Once the user rules, update that same round (do not append a
+"needs_user"`, with `applied_files: []` and `user_decision: null`. A round holding an unresolved `MEDIUM`/`HIGH` claim is `needs_user`, never `complete`, until the user decides; clear and LOW-only rounds, and rounds whose `MEDIUM`/`HIGH` claims are all `rejected` or `out_of_scope`, are `complete` with `user_decision: null`. Once the user rules, update that same round (do not append a
 new one): set `user_decision` with the real `approved_at_unix_ms`, the
 authorizing `citation` and `approved_finding_ids`; move each finding to
 `applied` (with `applied_files`) or, if deferred, move it to `not_applied` and list
@@ -1051,11 +1054,10 @@ several minutes, and a hand-back returns control with nothing to decide: the
 next message can change the plan and discard a validation that was about to
 pass. Keep polling until the operation is terminal, inside the same turn: call
 `inspect_workflow` (optionally with `after_event` to read only events after the
-last one you saw; it returns the current state without blocking) or `inspect_run`,
-with a short foreground pause between calls (if your host has no pause, poll at a
-modest rate). Never schedule a background timer
-or background command and end the turn to "come back later": nothing resumes
-you, and the work is abandoned. Hand back mid-operation only
+last one you saw; it returns the current state without blocking) or `inspect_run`.
+Both return at once, so call them back-to-back. Never `sleep` (the host blocks
+it). Never schedule a background timer or background command and end the
+turn to "come back later": nothing resumes you, and the work is abandoned. Hand back mid-operation only
 when `inspect_run` reports it as unknown rather than in progress, or when a
 decision only the user can make is waiting. Then use the returned
 `start_run` action with the current `revision` and `invalidation_epoch`.
@@ -1615,6 +1617,21 @@ subprocess output from that diagnostic.
 
 `check_data_product` is diagnosis only. It never substitutes for supervisor
 validation, admission, or publication.
+
+## Reporting failures and check outcomes
+
+Report a failed run, failed validation or `check_data_product` result only
+from what the supervisor returned: its outcome (`pass`, `warn`, `fail`,
+`skip`; only `pass` is "passed", and a `skip` examined nothing) and any
+structured cause it carries (`failed_contracts`, `exception_class`, an expired
+budget, a compiler error), translated into plain consequences per
+[user-facing-language.md](user-facing-language.md); keep codes internal unless
+the user asks. A cause you can verify from evidence (a source diff per
+[failure-handling.md](failure-handling.md), or a recorded Decision's expected
+failure) may
+be named as such. When nothing structured comes back and no such evidence
+exists, say the supervisor did not report a cause; never guess one, and never
+explain why a check did or did not flag something beyond its returned finding.
 
 ## Reset after behavior changes
 

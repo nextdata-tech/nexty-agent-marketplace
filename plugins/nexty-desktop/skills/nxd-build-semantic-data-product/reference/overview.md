@@ -110,6 +110,13 @@ home grain before joining the results. It raises a compile error for disconnecte
 paths or combinations that cannot be rolled up safely, which prevents chasm
 traps without banning all cross-model selections.
 
+`list_models` also lists a `semantic_composition` (the model that holds derived
+metrics) beside the physical models. `describe_model` on it returns one metric
+row per derived metric with `aggregation: "derived"`, its `expression`,
+`inputs` and `compatible_dimensions`; `semantic_model` carries a
+`derived_metrics` list. A model or metric with a native grain carries
+`time_grain` as `{dimension: grain}`.
+
 ---
 
 ## Authoring boundary

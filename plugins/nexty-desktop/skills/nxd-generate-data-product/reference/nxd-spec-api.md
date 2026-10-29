@@ -244,6 +244,8 @@ product surface gains a first-class supported aggregation.
   (a `field()`/`metric_field()` result), or a tuple `(dtype, *rest)` where
   trailing items are one optional `str` description plus any number of role
   specs. All three forms are equivalent; mix freely across attributes.
+- `semantic_model` also accepts `time_grain={"<dimension>": TimeGrain.Week}`
+  (see the composition bullet below).
 - **`.field(name) -> FieldRef`** — a handle to one of this model's columns,
   used as `metric(of=base.field("<col>"))` from a `semantic_view`. Does not
   require the field to already be declared.
@@ -253,6 +255,14 @@ product surface gains a first-class supported aggregation.
   `metric_field(...)`; unlike a base model, a `metric()` role is allowed in
   its `.schema({...})` tuples too. A view with zero attributes raises at
   build time — always give it at least one `metric_field`.
+- **`semantic_composition(name, description=None)`** — a table-less model
+  holding only `derived_metric(name, expression, description=)` fields
+  (arithmetic over metric names; `+ - * /`, unary minus, parentheses,
+  `COALESCE`, `NULLIF`, `ABS`, `ROUND`). Register with `.model(...)`, never
+  `.promise(...)`. `semantic_model(..., time_grain={"<dimension>": TimeGrain.Week})`
+  and `metric(..., time_grain=...)` declare a native grain (a `TimeGrain` or
+  its lower-case name). Authoring
+  detail: `nxd-build-semantic-data-product/reference/registry-authoring.md`.
 
 ## `spec.py` builders: `data_product`, `script`, `data_product_output`, `storage`
 

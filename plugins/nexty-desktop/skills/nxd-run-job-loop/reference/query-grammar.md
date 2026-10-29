@@ -4,6 +4,7 @@
 
 - [What `run_semantic_query` accepts](#what-run_semantic_query-accepts)
 - [Grouping by a time period](#grouping-by-a-time-period)
+- [Derived metrics and native grains](#derived-metrics-and-native-grains)
 - [What it does not accept](#what-it-does-not-accept)
 - [The Omission Test](#the-omission-test)
 - [Enforcement corollary: the default read must be right](#enforcement-corollary-the-default-read-must-be-right)
@@ -71,11 +72,43 @@ instead of grouping by day and adding the days up in the agent:
 - The output column keeps the dimension's name, so `order_by` uses the plain
   name: `{"name": "txn_date", "dir": "asc"}`.
 - Filters apply to the raw date, not the period. For "March 2025", filter
-  `>= "2025-03-01"` and `< "2025-04-01"`.
+  `>= "2025-03-01"` and `< "2025-04-01"` (on a dimension without a native
+  `time_grain`; with one, filter on period starts, since a non-period-start
+  value is refused with SQ-403).
 - The response's `time_grains` confirms the grain applied. If it is missing or
   empty, the query grouped by the raw value.
 - Adding up days in the agent is correct for a total, but wrong for a distinct
   count or an average. Always use the grain.
+
+## Derived metrics and native grains
+
+A **derived metric** is a metric computed from metrics, often on different
+models (for example total patients = specialty-pharmacy patients + buy-and-bill
+patients). When the question needs such a combination, select the derived
+metric by name in `measures`; never run one query per model and add or divide
+the results yourself.
+
+- Find it in the catalog: `list_models` lists the `semantic_composition` that
+  holds derived metrics beside the models; `describe_model(<composition>)`
+  returns rows with `aggregation: "derived"`, the `expression`, its `inputs`
+  and `compatible_dimensions`. `semantic_model` carries `derived_metrics`. Read
+  the description and the expression: they say which populations it covers.
+- Group only by the row's `compatible_dimensions`.
+- A group one input has no rows for reads `0` for a count and `NULL` for any
+  other aggregate, and `NULL` propagates through the expression unless the
+  author wrapped it in `COALESCE`. A `NULL` in a derived total is a missing
+  sum input, not a zero; say so rather than reporting it as zero. A division
+  by zero is `NULL`; division returns a float.
+- You cannot filter on a derived metric's value (SQ-307). Filter on a
+  dimension, or read the value from the result. A derived metric the service
+  cannot plan is refused with SQ-306; report it as a data product defect.
+- **Native time grain.** A model or metric (and a derived metric, at the
+  coarsest grain of its inputs) may carry `time_grain` as `{dimension: grain}`.
+  Group that dimension at the native grain or coarser (a weekly metric: `week`,
+  or omit the grain); weeks do not roll up to month, quarter or year. Grouping
+  finer, or filtering with `>`, `<=`, `LIKE` or a non-period-start value, is
+  refused with SQ-403; use `>=` / `<` on period starts. `=` / `IN` on a period
+  start match the whole period, and the response `notice` states the range.
 
 ## What it does not accept
 

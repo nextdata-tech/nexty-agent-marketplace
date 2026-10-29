@@ -320,7 +320,7 @@ KWARGS = {                      # role builder -> allowed keyword names
     "dimension": {"name", "pii", "label", "description"},
     "join": {"to", "to_column", "cardinality", "to_data_product"},
     "metric": {"of", "name", "description", "boolean", "extra_dimensions",
-               "column"},
+               "column", "time_grain"},
     "field": {"roles", "description", "label", "name"},
     "metric_field": {"description", "name"},
 }

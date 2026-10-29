@@ -7,7 +7,7 @@ allowed-tools:
   - Grep
 metadata:
   author: nextdata
-  version: 0.69.5
+  version: 0.70.5
 ---
 
 # Review a generated closure — adversarially
@@ -282,7 +282,7 @@ published results today. A failure that needs a source shape the capture, its
 unreadable value, a missing cursor key, a status word nobody has seen) is
 hypothetical drift: `LOW` and advisory, unless the approved plan promises to
 detect that shape. A limit the approved plan already discloses (a Decision, an
-assumption or an exclusion it states) stays `LOW` on every capture generation.
+assumption or an exclusion it states) stays `LOW` on every capture generation. That includes a deliberate defect the user asked for and the blueprint records as a Decision with its expected failure, when the sanitized original request asks for it: report exactly that expected failure as `LOW`; grade any further affected output or consequence normally.
 A live source, a refresh, or the chance the source may have drifted is not new
 evidence: real drift is what validation against the live source reports, after
 this review.

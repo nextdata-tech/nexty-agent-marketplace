@@ -12,7 +12,7 @@ allowed-tools:
   - AskUserQuestion
 metadata:
   author: nextdata
-  version: 0.69.5
+  version: 0.70.5
 ---
 
 # nxd-build-semantic-data-product skill
@@ -477,6 +477,7 @@ is finished. Before reporting done, confirm all four files exist in the workspac
   pre-aggregated at their home grains; disconnected paths or unsafe roll-ups
   raise `CompileError`.
 - **Agg enum is closed**: count, count_distinct, sum, avg, min, max.
+- **Cross-model arithmetic is a `derived_metric`** on a `semantic_composition`, never agent-side math; weekly/coarser feeds declare `time_grain=`. See `reference/registry-authoring.md`.
 - **Read-only, 200-row cap**: the query path is aggregated and capped. No raw-SQL
   passthrough.
 - **All modules flat at the DP root**: never a `transform/` subdir; import flat.
@@ -489,7 +490,7 @@ is finished. Before reporting done, confirm all four files exist in the workspac
 | File | Content |
 |------|---------|
 | `reference/overview.md` | Design + how public semantic roles flow to the 4 tools |
-| `reference/registry-authoring.md` | Full role grammar + auto-derivation + worked example |
+| `reference/registry-authoring.md` | Full role grammar + auto-derivation + derived metrics + native time grains + worked example |
 | `reference/compiler-and-routing.md` | Compile paths + chasm-trap + Snowflake dialect |
 | `reference/runtime-and-dependencies.md` | Requirements, wheel version, payload delivery + fallback, lineage |
 | `reference/scripts/templates/semantic_dp.py.tmpl` | Complete models.py + transform.py + spec.py example |
