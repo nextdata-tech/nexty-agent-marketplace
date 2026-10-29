@@ -169,6 +169,7 @@ For each finding, first decide and record one of:
   indistinguishable from not having checked.
 - **`out_of_scope`** — real, but outside what this request asked for. Say what
   would have to change for it to be in scope.
+  A deliberate defect the user explicitly asked for fits here, not `rejected` (the claim does hold). Use it only when (a) the blueprint Decision quotes the user's request verbatim (any credential replaced as in the sanitized original request), (b) those words appear in the sanitized original request the reviewer received, and (c) the claim's failure is exactly the Decision's named expected failure, with no further affected output or consequence. Cite both the Decision and the request text. Any additional consequence is adjudicated normally; the claim's severity is not lowered to reach this.
 
 Verify before you act, in both directions. A finding that names a line number
 may be pointing at a line that says something else. A finding that says a

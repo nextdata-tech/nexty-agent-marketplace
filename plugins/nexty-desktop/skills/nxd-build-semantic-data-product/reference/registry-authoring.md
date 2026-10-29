@@ -4,6 +4,8 @@
 - Core concepts
 - Public role grammar
 - Metrics on semantic views
+- Derived metrics and semantic compositions
+- Native time grains
 - Cross-model dimensions
 - Worked example
 - Validation and common mistakes
@@ -172,6 +174,104 @@ and materialize business rulings as physical columns.
 
 ---
 
+## Derived metrics and semantic compositions
+
+Reach for a derived metric when the answer is **arithmetic over metrics that
+live on different models** (a total across channels, a share, a ratio). The
+alternative — two queries and arithmetic in the agent — is wrong whenever a
+group is missing from one side, and it is never governed. A derived metric is
+computed after each input is aggregated per group, so the models' rows are
+never joined to each other. It reads metrics, not columns: row-level arithmetic
+still belongs in the transform.
+
+Declare derived metrics on a `semantic_composition(name, description)`, a model
+that owns no table and holds only `derived_metric(name, expression,
+description=)` fields. Register it with `.model(...)`; never `.promise(...)` it.
+
+```python
+from nxd.spec import derived_metric, semantic_composition
+
+# pums_sp: COUNT_DISTINCT on one model; pums_buynbill: SUM on another.
+pums_metrics = semantic_composition(
+    "pums_metrics", description="Patients under management across both channels."
+).fields(
+    {
+        "pums_total": derived_metric(
+            "pums_total",
+            "COALESCE(pums_sp, 0) + COALESCE(pums_buynbill, 0)",
+            description="Patients across specialty pharmacy and buy-and-bill; a patient served through both channels is counted once per channel.",
+        ),
+        "pums_buynbill_share": derived_metric(
+            "pums_buynbill_share",
+            "COALESCE(pums_buynbill, 0) / NULLIF(pums_total, 0)",
+            description="Share of patients that came through buy-and-bill.",
+        ),
+    }
+)
+output = data_product_output().promise(sp_dispense).promise(bb_claims) \
+    .model(sp_metrics).model(bb_metrics).model(pums_metrics)
+```
+
+- The expression names other metrics, including metrics on other models and
+  other derived metrics. Operators: `+ - * /`, unary minus, parentheses.
+  Functions: `COALESCE(a, b, ...)`, `NULLIF(a, b)`, `ABS(a)`, `ROUND(a)` /
+  `ROUND(a, n)`. Anything else is rejected when `derived_metric(...)` is called.
+  List no inputs; they are read from the expression.
+- Division returns a float and gives `NULL` for a zero denominator, so the
+  `NULLIF` in `pums_buynbill_share` is defensive, not required.
+- **NULL semantics.** Inputs read as the planner returns them: a count over a
+  group with no rows reads `0`; any other aggregate (sum, avg, min, max) reads
+  `NULL`, and `NULL` propagates through `+ - * /`. Where the two channels do not
+  share every group, `sp + bb` is `NULL` for a group only one channel has, if
+  that side is a sum. Wrap a sum that may be missing in `COALESCE(x, 0)` when
+  "no rows" should count as zero, as in `pums_total` above.
+- The build refuses: a derived metric on a `semantic_model` / `semantic_view`,
+  a non-derived field on a composition, an empty composition, a name that is not
+  a declared metric, a cycle, and inputs recorded at grains that do not roll up
+  (below).
+- Give every derived metric a `description` that says what the number is and
+  which channels or populations it covers; the querying agent matches on it.
+
+Constraints to tell the user: a derived metric cannot be filtered on its value
+(SQ-307; filter on a dimension instead), and a selection that names one runs
+against the base tables, not a native Snowflake semantic view.
+
+---
+
+## Native time grains
+
+When a feed is recorded at a coarser grain than its date column (a weekly
+extract keyed by the week's start date), declare it so a query cannot ask for a
+period the data does not have:
+
+```python
+from nxd.spec import TimeGrain
+
+bb_claims = (
+    semantic_model("bb_claims", time_grain={"date": TimeGrain.Week})
+    .description("One row per indication and week.")
+    .fields({...})
+)
+# A metric coarser than its model, on a daily model with a monthly metric:
+#   metric(Agg.SUM, of=..., time_grain={"date": TimeGrain.Month})
+```
+
+A grain is a `TimeGrain` or its lower-case name (`"month"`); both are accepted.
+
+- The key is the **dimension name** (not the column) and must be a `date` or
+  `timestamp` dimension. A metric's grain may only be coarser than its model's
+  grain; a derived metric takes the coarsest grain of its inputs.
+- A week is the ISO Monday week. It does **not** roll up to month, quarter or
+  year, so a weekly model cannot declare a monthly metric grain, and a derived
+  metric over a weekly input and a monthly input is refused at build.
+- At query time, grouping below the native grain, or filtering with `>`, `<=`,
+  `LIKE` or a value that is not a period start, is refused with SQ-403.
+  Equality-style filters (`=`, `IN`) on a period start match the whole period.
+- Declare the grain on the dimension queries actually group by; grouping through
+  another date is not checked.
+
+---
+
 ## Cross-model dimensions
 
 The compiler derives compatible dimensions from a validated N:1 join. If
@@ -295,7 +395,8 @@ dimension is not propagated to the related metrics.
   columns. The transform must seed the same physical tables.
 - Promise every physical base with `.promise(base)`. Register every metric view
   with `.model(view)`.
-- Do not put metrics from different base models into one semantic query. Query
-  each model separately.
+- Do not add up or divide two queries' results in the agent. When the answer is
+  arithmetic over metrics on different models, declare a derived metric on a
+  `semantic_composition` (see above).
 - Do not use a relationship until foreign-key containment and the target key's
   uniqueness have been validated.

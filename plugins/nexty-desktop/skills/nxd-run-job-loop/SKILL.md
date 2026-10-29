@@ -13,7 +13,7 @@ allowed-tools:
   - Task
 metadata:
   author: nextdata
-  version: 0.69.5
+  version: 0.70.5
 ---
 
 # nxd-run-job-loop skill
@@ -154,7 +154,7 @@ under Inputs, promises under Outputs, and behavior-affecting decisions in
 Transform. Terms are inline in this document; do not create or depend on an
 external Glossary DP. Delivery is the platform-fixed local DuckDB semantic
 query path, not a user-authored section. Executable contracts are compiled
-internally from the Input expectations and Output promises.
+internally from the Input expectations and Output promises. **A deviation the user asked for.** When the user explicitly asks for a workflow with a deliberate defect (for example a negative-credential fixture that omits `auth_type`), build it as asked and record it in that workflow's blueprint as an explicit Decision that quotes the user's request verbatim (any credential replaced as in the sanitized original request) and states the expected failure. A reviewer claim whose failure is exactly that expected failure, with no further affected output, may be adjudicated `out_of_scope` citing the Decision and the request text ([conditions](../nxd-generate-data-product/reference/adversarial-review.md#adjudicate-every-finding--this-is-the-point)). Every other `HIGH` or `MEDIUM` claim, disclosed or not, is adjudicated normally.
 
 Every Decision must come from something the user stated or explicitly named as
 controlling policy. Never pre-fill an anticipated decision or reversal; mark an
@@ -301,7 +301,7 @@ action for supervisor validation, then the returned `start_run` action for
 admission and publication. Use the exact envelopes in
 [reference/workflow-v2.md](reference/workflow-v2.md); never reuse stale action
 parameters. Validation can return a queued or running operation before it finishes. Poll `inspect_workflow` until validation is satisfied, then use its current revision and returned admission action. Never end your turn while validation or a run you started is queued or running: a rate-limited source can keep it running for minutes, and a hand-back gives the user nothing to decide.
-On the MCP workflow path, wait inside this same turn: call `inspect_workflow` (pass `after_event` with the last event you saw to read only newer events; it returns the current state at once and does not block) or `inspect_run`, with a short foreground pause between calls (if your host has no pause, poll at a modest rate). Never start a background timer or background command and end the turn to "come back later": nothing wakes you, so the work is abandoned. End the turn only on a terminal state, when `inspect_run` reports it unknown, or when you need the user.
+On the MCP workflow path, wait inside this same turn: `inspect_workflow` (pass `after_event` with the last event you saw to read only newer events; it returns the current state at once and does not block) and `inspect_run` return immediately, so keep calling them back-to-back until the state is terminal. Never start a background timer or background command and end the turn to "come back later", and do not use `sleep`, `run_in_background`, Monitor or timers to wait: nothing wakes you, so the work is abandoned. End the turn only on a terminal state, when `inspect_run` reports it unknown, or when you need the user.
 `start_run` can likewise return an admission before execution finishes: poll `inspect_run` with its run ID and `inspect_workflow` until publication succeeds. A successful tool call alone is not proof of publication. Resume or render the product only after the supervisor reports its published state. An older supervisor may finish these stages before returning; use the same terminal-state checks. Replaying the exact request observes the existing operation; never start a second run to recover a slow call. Route every `phase: capture` diagnostic to the capture-code table in **Reset after behavior changes**; `workflow/capture_proposal_blueprint_mismatch` needs full replacement, not capture-only reset. For `recovery: reprepare`, reset the graph root with `reprepare_retained: true`, follow returned actions, and trust whether consent is pending or carried forward. A validation failure with `recovery: repair_then_retry` is repairable; follow **When validation fails** in workflow-v2.md and read [reference/failure-handling.md](reference/failure-handling.md) before asking the user anything. Other failed or unavailable actions are blockers; do not bypass them with direct build/validation commands, local files, SQLite, raw SQL, pandas, or another database.
 
 ### Step 4a — Render the pinned static artifact
@@ -335,7 +335,7 @@ natural-language translation is yours to do. For each question:
    dimensions; alternatives on one dimension use `IN`. There is no measure-level
    filtering, raw rows, or SQL. The operator list, the sanctioned workarounds
    and the **Omission Test** are in
-   [reference/query-grammar.md](reference/query-grammar.md). Apply that test to
+   [reference/query-grammar.md](reference/query-grammar.md) (also: derived metrics, native grains). Apply that test to
    every constraint first: would a consumer querying with no filters get a
    **wrong** number (a **standing ruling** → materialize it, Step 6) or merely a
    **broader** one (a **per-question constraint** → express it here)? When
@@ -410,7 +410,7 @@ allowed when needed to use or retrieve the result. Preserve ordinary business
 terms, including `schema` when it is needed to describe the user's data;
 translate implementation framing instead.
 If the user asks for technical detail, give only the necessary sanitized explanation.
-Query-answer wording and failure classification remain in their current owners. When describing how the build works, build-step words (promise, annotation, recapture, capability, grant, pin, capture, generation) never reach the user, though the user's own business terms keep their names; use the plain replacements in the user-facing language reference. Name Claude Desktop, Nexty, macOS or the spending prompt as the source of a block only when the evidence shows it; never invent a cause.
+Query-answer wording and failure classification remain in their current owners. When describing how the build works, build-step words (promise, annotation, recapture, capability, grant, pin, capture, generation) never reach the user, though the user's own business terms keep their names; use the plain replacements in the user-facing language reference. Name Claude Desktop, Nexty, macOS or the spending prompt as the source of a block only when the evidence shows it; never invent a cause, or a reason a run or check failed or did not flag, that the returned diagnostics or verified evidence do not show; see `reference/workflow-v2.md`, Reporting failures and check outcomes.
 
 ## Invariants — never violate these
 
