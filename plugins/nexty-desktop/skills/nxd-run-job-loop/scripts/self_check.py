@@ -2909,7 +2909,7 @@ if profile.exists():
         except ValueError:
             return False
 
-    def public_mapping(fields, flow: bool) -> bool:
+    def public_mapping(fields, flow: bool, seen=None) -> bool:
         mapping = {}
         for field in fields:
             match = re.fullmatch(r"(key|value|public):[ \t]+(.+)", field)
@@ -2919,9 +2919,36 @@ if profile.exists():
         if set(mapping) != {"key", "value", "public"} or mapping["public"] != "true":
             return False
         key = re.fullmatch(r"['\"]?([A-Za-z_][A-Za-z0-9_-]*)['\"]?", mapping["key"])
+        if seen is not None:
+            # Ref-less (env-injected) profile: a closed key allowlist. The one
+            # credential-like key is credential_env, and only as the NAME of an
+            # environment variable (underscore-separated segments, <=64 chars,
+            # so AWS-key or base32-secret shapes never qualify).
+            if not key:
+                return False
+            seen.append(key[1])
+            if key[1] == "credential_env":
+                value = re.fullmatch(r"([\"']?)([A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+)\1", mapping["value"])
+                return bool(value and len(value[2]) <= 64)
+            if not (key[1] in ("base_url", "auth_type", "auth_key_name", "auth_key_location",
+                               "header_user_agent")
+                    or re.fullmatch(r"endpoint_[a-z][a-z0-9_]*", key[1])):
+                return False
+            plain = mapping["value"].strip("'\"")
+            if key[1] == "auth_type" and plain not in (
+                    "bearer", "api_key"):
+                return False
+            if key[1] == "auth_key_location" and plain not in ("header", "query"):
+                return False
+            if key[1] == "auth_key_name" and not (
+                    re.fullmatch(r"[A-Za-z][A-Za-z_-]{0,63}", plain)
+                    and not re.match(r"(?i)(?:sk|pk|rk)[_-]", plain)):
+                return False
+            if key[1].startswith("endpoint_") and not plain.startswith("/"):
+                return False
         return bool(key and public_key(key[1].lower()) and public_value(mapping["value"]))
 
-    def public_attributes(lines, indent: int) -> bool:
+    def public_attributes(lines, indent: int, seen=None) -> bool:
         first = lines[0].split(":", 1)[1].strip()
         if first:
             if not first.startswith("[") or not first.endswith("]") or len(lines) != 1:
@@ -2933,7 +2960,7 @@ if profile.exists():
                 if not item.startswith("{") or not item.endswith("}"):
                     return False
                 fields = flat_flow_parts(item[1:-1])
-                if not fields or not public_mapping(fields, flow=True):
+                if not fields or not public_mapping(fields, flow=True, seen=seen):
                     return False
             return True
         entries, current, item_indent, field_indent = [], [], None, None
@@ -2956,7 +2983,7 @@ if profile.exists():
                 return False
         if current:
             entries.append(current)
-        return bool(entries) and all(public_mapping(fields, flow=False) for fields in entries)
+        return bool(entries) and all(public_mapping(fields, flow=False, seen=seen) for fields in entries)
 
     def local_public_only(section: str) -> bool:
         lines = section.splitlines()
@@ -2980,13 +3007,10 @@ if profile.exists():
                 if match[2] in direct:
                     return False
                 direct[match[2]] = (index, match[3] or "")
-        if set(direct) != {"attributes", "attributesSecretRef"}:
+        if "attributes" not in direct:
             return False
         # Removing this service must not hide a second nested/ambiguous list.
         if len(re.findall(r"(?:^|[\s,{])attributes[ ]*:", section)) != 1:
-            return False
-        ref = direct["attributesSecretRef"][1]
-        if not re.fullmatch(r"(?:nxd-desktop-keychain:v1:[A-Za-z0-9_-]+|'nxd-desktop-keychain:v1:[A-Za-z0-9_-]+'|\"nxd-desktop-keychain:v1:[A-Za-z0-9_-]+\")", ref):
             return False
         start = direct["attributes"][0]
         stop = len(lines)
@@ -2998,6 +3022,37 @@ if profile.exists():
             if depth < indent or (depth == indent and not line.lstrip().startswith("- ")):
                 stop = index
                 break
+        if set(direct) == {"attributes"}:
+            # Ref-less env-injected profile (operator/harness-provided
+            # environment variable). Exempt only when no secret ref is spelled
+            # in any case, the file is one document, the service carries only
+            # structural keys, and the attributes are the closed allowlist with
+            # exactly one valid credential_env (checked below).
+            if re.search(r"attributessecretref", section, re.IGNORECASE):
+                return False
+            # One document: a single leading `---` is fine, any other
+            # document marker is not.
+            if re.search(r"^(?:---|\.\.\.)", re.sub(r"\A---[ \t]*\n", "", text, count=1),
+                         re.MULTILINE):
+                return False
+            # Every line outside the attributes block must be an exact
+            # name/driver/type plain scalar; anything else (other keys, nested
+            # content, odd prefixes) fails the exemption.
+            for index, line in enumerate(lines):
+                if start <= index < stop or not line.strip() or line.lstrip().startswith("#"):
+                    continue
+                if not re.fullmatch(r"[ ]{%d}(?:name|driver|type):[ ]+[A-Za-z0-9][A-Za-z0-9_.:/-]{0,63}[ ]*" % indent, line):
+                    return False
+            seen = []
+        elif set(direct) != {"attributes", "attributesSecretRef"}:
+            return False
+        else:
+            ref = direct["attributesSecretRef"][1]
+            if not re.fullmatch(r"(?:nxd-desktop-keychain:v1:[A-Za-z0-9_-]+|'nxd-desktop-keychain:v1:[A-Za-z0-9_-]+'|\"nxd-desktop-keychain:v1:[A-Za-z0-9_-]+\")", ref):
+                return False
+        if set(direct) == {"attributes"}:
+            return (public_attributes(lines[start:stop], indent, seen)
+                    and seen.count("credential_env") == 1)
         return public_attributes(lines[start:stop], indent)
 
     # Only actual service-list items delimit services; key order is immaterial.
