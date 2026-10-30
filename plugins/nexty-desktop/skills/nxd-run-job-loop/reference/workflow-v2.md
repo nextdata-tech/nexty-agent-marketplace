@@ -1611,8 +1611,8 @@ subprocess output from that diagnostic.
   raised on real source data. When a contract failure names no field or row,
   follow [failure-handling.md](failure-handling.md): localise it inside the
   existing verifier and revalidate before asking the user.
-- `recovery: retry_unchanged` means a bounded runtime limit was hit. Retry
-  once with a fresh request id.
+- `recovery: retry_unchanged` means the capture is intact. Retry once with a fresh
+  request id.
 - `recovery: stop` is a blocker. Report the user-visible impact in plain words; keep the code internal.
 
 `check_data_product` is diagnosis only. It never substitutes for supervisor
