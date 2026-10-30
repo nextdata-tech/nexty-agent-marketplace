@@ -165,9 +165,27 @@ on it.
    failure diagnostic — the actual exception from inside the transform. Omit
    `run_id` only to list recent failed-run summaries when the supervisor directs
    that recovery path.
-   Getting the traceback is your call: read the supervisor diagnostic first and
-   use a read-only probe of the same source only if it is not enough. Do not
-   offer the user the choice.
+   When `inspect_run` carries a traceback, repair from it: a non-empty
+   `stdout_tail` / `stderr_tail`, or, on supervisors that return it, an
+   `exception` object with `message` and `frames`. The missing-traceback path
+   below applies only when they are absent: `inspect_run` then carries only
+   `exception_class` with empty `stderr_tail` / `stdout_tail`, and its `log_reference` (a data-dir `diagnostic.json`) names a
+   supervisor-owned path you must not open, list, glob or grep; that is a
+   supervisor limitation, not a pointer to follow. Repair from the failure class
+   and the code: re-run `check_data_product` (no `mode` argument; `mode:
+   "structural"` for a mapper closure, where full mode is refused with
+   `mapper_approval_required`) to catch what it can. A passing check does NOT
+   clear a source-dependent `exception_class`, because `check_data_product` does
+   not run against the live source. The repair must address the exception class:
+   reason from it plus the transform code, and check the documented common
+   causes, such as the mutable-default `ValueError` in
+   [derived-models.md](../../nxd-generate-data-product/reference/derived-models.md).
+   Re-validating an unchanged closure is the forbidden deterministic retry.
+   Never run `ls` or any shell command on the supervisor state directory to
+   look for the missing log.
+   Getting the traceback is your call: read the `inspect_run` diagnostic first;
+   if it is not enough, a read-only probe of the same source is part of the
+   repair, taken after the check above. Do not offer the user the choice.
 3. **Classify by the stage it died in**, using the ladder above — never by
    matching the exception text. If no operation or run identity is available,
    say that; do not substitute the outer error string for the diagnostic you
@@ -191,7 +209,9 @@ transform completed and a verifier returned `FAILED` whose context lacks
 `contract` (the exact `custom("...")` name) or `model`: add both. If the failure
 comes before `promise_verification_started`, the transform raised and no
 verifier ran, so do not touch one: read the raised exception from that same
-`inspect_run` result and classify it by stage (above); when it is source drift
+`inspect_run` result (it may be only `exception_class`; then follow the
+missing-traceback repair path in step 2, never the supervisor data dir) and
+classify it by stage (above); when it is source drift
 after a source change, follow the drift bullet below. A context that is
 absent altogether means nothing survived: nxd omits it when every key the
 verifier returns was dropped, so first check each returned key and value against
@@ -489,8 +509,9 @@ Follow only the recovery the tool returned. Never call a failure "transient" or
 |---|---|
 | Cleanup step failed on a permission error | Say which cleanup failed and whether the saved result is affected. Use only the recovery actions the tool returned. Never `chmod`, delete, edit saved state, or write a repair script, and never ask the user to. |
 | `validation/pin_toolchain_unavailable` | The tooling needed to lock in the build files is not available on this install. Follow the returned recovery; do not call it transient without evidence. |
-| `validation/pin_compile_timeout` | Compiling the build files ran out of time. Follow the returned recovery; do not call it transient without evidence of a retryable result. |
-| `validation/pin_spec_compile_failed` | The build files did not compile. Follow the returned repair-then-retry recovery without saying who or what caused it. |
+| `validation/pin_compile_timeout` | Compiling the build files ran out of time. Follow the returned recovery, which is to retry once unchanged; if the same code recurs, repair what the returned detail points to in the build files. Do not call it transient without evidence of a retryable result. |
+| `validation/pin_compile_interrupted` or `structure/spec_compile_interrupted` | Compiling the build files was stopped from outside before it gave an answer. Follow the returned recovery, which is to retry once unchanged; if the same code recurs, repair what the returned detail points to, because the build files can still be the cause (for example running out of memory). An interruption is not a timeout. |
+| `validation/pin_spec_compile_failed` or `structure/spec_compile_failed` | The build files did not compile. The returned detail now includes the compiler's own error text; act on it, and call `check_data_product` for the full finding. Follow the returned repair-then-retry recovery without saying who or what caused it. |
 | `validation/pin_storage_failed` | Saving the locked build files failed. Follow the returned recovery. Say the saved result is unchanged only when the returned detail says so; never edit or reset saved state by hand. |
 | `validation/pin_seal_failed` | Stop: the sealed copy could not be verified. Say "The saved build files could not be verified, so the run stopped." Keep internal details out of chat; do not retry or enter a repair loop. |
 | `validation/pin_closure_invalid` | The build files failed an integrity check and the run stopped. Report the stop; do not repair or save them again unless the returned recovery says so. Never touch saved state. |

@@ -7,7 +7,7 @@ allowed-tools:
   - Grep
 metadata:
   author: nextdata
-  version: 0.70.5
+  version: 0.70.15
 ---
 
 # Review a generated closure — adversarially
@@ -34,6 +34,17 @@ reachability. Reserve enough time to return the final claims response. The
 caller may enforce a separate finalization reserve by denying further
 inspection calls before the hard deadline; when that happens, stop reading
 and return complete or explicitly partial evidenced claims immediately.
+
+Read the retained capture and blueprint only with the `Read` tool, plus `Glob`
+and `Grep` with an explicit absolute `path` inside them. Never use Bash or any
+shell command (`cd`, `cat`, `wc`, `head`, `ls`) on them. For an exact line count of
+a line-oriented text file (CSV, JSONL), use `Grep` with `output_mode: "count"`,
+pattern `^` and the explicit absolute file path. A line count is not a row
+count: subtract the header line for CSV, and treat the count as an upper bound
+when quoted fields can contain newlines. For binary data (Parquet) use the row
+counts in `build-record.json`; report a byte size, or any figure you cannot
+derive this way, as unverified as prescribed below. `Read` returns at most 2,000
+lines by default and never reports size.
 
 Always pass an explicit absolute `path` to `Glob` and `Grep`. On a restricted
 host, an allowed `Glob` or `Grep` with that path is also a valid non-content
@@ -164,11 +175,21 @@ Grade a verification gap by what it hides today, not by what a future bug might
 do:
 
 - `HIGH` if the gap hides an output that is wrong now.
-- `MEDIUM` if the approved blueprint explicitly promises that independent check.
+- `MEDIUM` if the approved blueprint explicitly promises that independent check
+  and no closure line independently enforces it (an assert that restates the
+  transform's own arithmetic does not count). A blueprint statement that something "is a
+  failure", "is rejected" or "must hold" (for example "all N rows must land" or
+  "a shortfall is a failure") is an explicit promise, the same one the
+  pre-capture audit lists. A plain description of the expected output (for
+  example "the run lands N rows") is not a promise of an independent
+  completeness check.
 - `LOW` otherwise: either you have independently confirmed that the current
   output is correct, or no output exists yet to confirm and the capture shows
   no evidence that it will be wrong. Review runs before validation, so "not yet
   verified" alone never makes a gap blocking.
+
+Grade each workflow independently from its own evidence and the approved
+promise. Severity never depends on the workflow label.
 
 A LOW gap is advisory. Record it so the owner can strengthen the verifier, but
 it does not block publication.

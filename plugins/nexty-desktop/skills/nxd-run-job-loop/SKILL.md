@@ -13,7 +13,7 @@ allowed-tools:
   - Task
 metadata:
   author: nextdata
-  version: 0.70.5
+  version: 0.70.15
 ---
 
 # nxd-run-job-loop skill
@@ -490,10 +490,10 @@ Query-answer wording and failure classification remain in their current owners. 
 - **The supervisor data dir is off-limits.** Everything under the supervisor's `--data-dir` (its `state/`
   tree) — pinned snapshots in `definitions/<id>/`, `state.sqlite*`, `staging/` — is immutable supervisor-owned state;
   never `chmod`, edit, or hand-write it, and a `.../staging/run-<id>/data.duckdb`
-  path inside a pinned `manifest.yaml` is its own resolved runtime path, not a defect. If a served closure
-  is wrong, fix **your** source dir and re-`serve` — the supervisor re-pins. Approved rules/code stay pinned; each admitted live-source run refetches source data. When a mapper is part of the approved plan, that run invokes its bound mapper. Querying or reopening a publication alone is not a fresh run; claim freshness only from admitted-run evidence. Pinned state alone does not establish that a refresh requires a new version: use returned runtime capability/state evidence; a behavior-changing revision also stays in place under the rules above.
+  path inside a pinned `manifest.yaml` is its own resolved runtime path, not a defect. Never list, glob, read, grep or shell into anything under it; the one exception is the exact `review_input` retained paths, where the parent runs only the metadata check [workflow-v2.md](reference/workflow-v2.md) allows. Diagnose a failed validation or run only through `inspect_workflow` then `inspect_run`; an empty `stderr_tail` with a data-dir `log_reference` is a supervisor limitation, not a pointer to follow, so never go looking for `diagnostic.json` ([reference/failure-handling.md](reference/failure-handling.md)). If a served closure
+  is wrong, fix **your** source dir and run the workflow again — the supervisor re-pins. Approved rules/code stay pinned; each admitted live-source run refetches source data. When a mapper is part of the approved plan, that run invokes its bound mapper. Querying or reopening a publication alone is not a fresh run; claim freshness only from admitted-run evidence. Pinned state alone does not establish that a refresh requires a new version: use returned runtime capability/state evidence; a behavior-changing revision also stays in place under the rules above.
 - **Never offer to skip, bypass or weaken a mandatory gate.** Once validation, review, consent or any other gate is mandatory, say what is needed to pass it or stop; "skip validation" is never an option to offer, even after calling the gate impossible.
 - **Bearer only as a tool parameter** — keep it out of narration, never persist or print it. **Never
   present a preview or truncated result as verified data**, and never stall silently.
 ## Reference docs (this skill)
-Use [dp-blueprint](reference/dp-blueprint.md), [build record](reference/build-record.md), [failure handling](reference/failure-handling.md), [user-facing language](reference/user-facing-language.md), [workflow-v2](reference/workflow-v2.md) for mapper budget status and codes, [direct CLI lifecycle](reference/direct-cli-lifecycle.md), [source materialization](reference/source-materialization.md), [scripts bootstrap](reference/scripts-bootstrap.md), [scheduling](reference/scheduling.md), [context and resume](reference/context-and-resume.md), [inference](reference/inference.md), [handoff export](reference/handoff-export.md), [catalog resources](reference/catalog-resources.md), [query grammar](reference/query-grammar.md), and [dlt](reference/dlt.md) for named details.
+Use [dp-blueprint](reference/dp-blueprint.md), [build record](reference/build-record.md), [failure handling](reference/failure-handling.md), [user-facing language](reference/user-facing-language.md), [workflow-v2](reference/workflow-v2.md) for mapper budget status and codes, [source materialization](reference/source-materialization.md), [scripts bootstrap](reference/scripts-bootstrap.md), [scheduling](reference/scheduling.md), [context and resume](reference/context-and-resume.md), [inference](reference/inference.md), [handoff export](reference/handoff-export.md), [catalog resources](reference/catalog-resources.md), [query grammar](reference/query-grammar.md), and [dlt](reference/dlt.md) for named details.

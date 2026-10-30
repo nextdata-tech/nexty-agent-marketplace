@@ -125,7 +125,7 @@ refreshing source data or reopening credential intake.
 
 When the user has an existing product but no live endpoint or token — the
 typical new session — **reattach, do not rebuild.** The supervisor exposes a
-cross-session catalog and a fast re-serve; use them:
+cross-session catalog and a fast reattach; use them:
 
 1. **List.** Call `mcp__nxd-desktop__list_data_products`. It boots nothing —
    no kernel, no Python runtime, no endpoint — and returns every published
@@ -157,9 +157,9 @@ Resuming the **same** workflow again is idempotent — it returns the same live
 endpoint. Resuming or building a **different** workflow replaces the current
 endpoint, so any earlier one from this session stops answering.
 
-`resume_data_product` can return `supervisor_busy`: another session or a
-detached CLI runtime owns the local runtime. Retry shortly, or run
-`nxd-desktop-supervisor stop` to release a detached runtime, then resume again.
+`resume_data_product` can return `supervisor_busy`: another session owns the
+local runtime. Retry shortly; if it persists, ask the user to close the other
+Nexty session, then resume again.
 If it returns `workflow_not_found`, nothing is published under that id — the
 error data lists the `available_workflows`; pick one, call `list_data_products`
 to re-check, or treat it as a fresh build.

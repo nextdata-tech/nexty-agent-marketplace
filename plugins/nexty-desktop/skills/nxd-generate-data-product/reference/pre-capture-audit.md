@@ -14,6 +14,7 @@ subject-bound `session_decision`, the trusted materializer projects it to
 - [Preflight before capture](#preflight-before-capture)
 - [Model, output, and physical-surface checks](#model-output-and-physical-surface-checks)
 - [Source projection checks](#source-projection-checks)
+- [Blueprint promises the closure must enforce](#blueprint-promises-the-closure-must-enforce)
 - [Source-derived semantic checks](#source-derived-semantic-checks)
 - [Landed policy values](#landed-policy-values)
 - [Decision-ledger projection](#decision-ledger-projection)
@@ -64,6 +65,21 @@ policy-literal audit](#landed-policy-values).
 - Compare the closure README with the actual mechanism: describe explicit
   Outputs, physical support relations, the DuckDB surface, and privacy limits
   as they are implemented. Do not preserve a claim that the code cannot enforce.
+
+## Blueprint promises the closure must enforce
+
+- List every blueprint statement that something "is a failure", "is rejected" or
+  "must hold", including a requested "all N rows must land" or "a shortfall is a
+  failure". These are promises; a plain description of expected output (for
+  example "the run lands N rows") is not. Map each to the closure line that enforces it (a
+  raise, an assert or a verifier check) and cite that line. That line must check
+  against an independent read of the source; an assert that restates the transform's
+  own arithmetic does not count.
+- If a promise has no enforcing line, add one to the closure first. That needs
+  no plan change.
+- If it cannot be enforced, ask the user. Never drop a promise silently. Follow
+  the `reset_workflow`, regenerate, fresh prepare and fresh consent path in
+  [nxd-run-job-loop](../../nxd-run-job-loop/SKILL.md) before changing the plan.
 
 ## Source-derived semantic checks
 
