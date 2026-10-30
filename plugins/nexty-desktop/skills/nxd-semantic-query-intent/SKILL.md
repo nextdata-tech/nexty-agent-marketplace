@@ -6,7 +6,7 @@ allowed-tools:
   - AskUserQuestion
 metadata:
   author: nextdata
-  version: 0.70.15
+  version: 0.70.16
 ---
 
 # Semantic query intent validation
