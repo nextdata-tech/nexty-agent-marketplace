@@ -366,7 +366,7 @@ So the unit of sharing is never the lone file:
 |---|---|---|
 | `dp-blueprint.md` alone | yes | no — the recipient approves it themselves |
 | the job directory, document plus its proposal | yes | yes |
-| an exported closure (`export_data_product`) | yes | yes, hash-verified |
+| an exported closure (`export_data_product`) | the build, not the approved plan | no — the zip carries no approved plan or approval; the recipient writes or obtains their own blueprint |
 
 This is deliberate rather than a gap to close. Approval binds an
 interpretation, not just prose; an approval that travelled with the words alone
