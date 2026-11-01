@@ -55,10 +55,12 @@ Three properties, all load-bearing:
   That is what turns "healed with concessions" from an assertion into something
   a reader can check, makes the regenerate cap countable rather than estimated,
   and gives a harness its retry / question / concession queues.
-- **It travels with the closure.** A cold reader and the export handoff read the
-  snapshot for the plan and this file for generation and execution history.
-  Conversation review is read from the supervisor-bound job ledger, never from
-  a mutable file inside the captured closure. Neither source requires the chat.
+- **It stays with the sender's retained capture.** A cold reader of that capture
+  reads the snapshot for the plan and this file for generation and execution
+  history. The export handoff does not carry it: the zip never contains
+  `build-record.json`. Conversation review is read from the supervisor-bound job
+  ledger, never from a mutable file inside the captured closure. Neither source
+  requires the chat.
 
 **This is not the old hand-written closure context document under a new name.**
 The plan sections such a document used to duplicate are gone —
