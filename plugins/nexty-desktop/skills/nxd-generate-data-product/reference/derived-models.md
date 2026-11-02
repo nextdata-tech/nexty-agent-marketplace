@@ -916,6 +916,9 @@ def _assert_<derived_model>_reconciles(
     source: list[dict[str, str]], derived: list[dict[str, Any]]
 ) -> None:
     """<one sentence naming the invariant, not the implementation>."""
+    # Tier 1 row count, for an expansion model where every source row lands.
+    # When the Tier 2 block below drops blanks or other populations, delete
+    # this count and keep the landed count there instead.
     expected_rows = sum(int(row["<term_column>"]) for row in source)
     if len(derived) != expected_rows:
         raise RuntimeError(
@@ -925,6 +928,33 @@ def _assert_<derived_model>_reconciles(
     keys = [row["<key_column>"] for row in derived]
     if len(set(keys)) != len(keys):
         raise RuntimeError("<derived_model> has duplicate <key_column> keys")
+    # Tier 2 (measure column): UNFILTERED source total minus one NAMED term per
+    # dropped population, in Decimal. Blanks add 0, so they also get a COUNT term.
+    # Compute every name from `source`, as above.
+    nonblank = [r for r in source if r["<measure_column>"].strip()]  # NO model filter
+    source_total = sum(Decimal(r["<measure_column>"]) for r in nonblank)
+    dropped_a = [r for r in nonblank if <dropped_a_predicate>]
+    # Disjoint: a row is in at most one dropped population, or it is subtracted twice.
+    dropped_b = [
+        r for r in nonblank if not (<dropped_a_predicate>) and <dropped_b_predicate>
+    ]
+    derived_total = sum(Decimal(str(r["<measure_column>"])) for r in derived)
+    expected_total = (
+        source_total
+        - sum(Decimal(r["<measure_column>"]) for r in dropped_a)
+        - sum(Decimal(r["<measure_column>"]) for r in dropped_b)
+    )
+    if derived_total != expected_total:
+        raise RuntimeError(f"<derived_model> total {derived_total} != {expected_total}")
+    # Landed rows == non-null source cells - dropped rows. This REPLACES the
+    # Tier 1 count above when rows are dropped: keep one row-count assert,
+    # never two with different expectations.
+    landed_expected = len(nonblank) - len(dropped_a) - len(dropped_b)
+    if len(derived) != landed_expected:
+        raise RuntimeError(
+            f"<derived_model> landed {len(derived)}, expected {landed_expected} "
+            f"(blank cells skipped {len(source) - len(nonblank)})"
+        )
 ```
 
 Raise `RuntimeError` carrying the actual-vs-expected numbers. The failure is
@@ -948,6 +978,13 @@ proves nothing and gives false confidence.
 **This is not a menu.** The table below is a floor, not a set of options to
 pick the most convenient one from. Picking the invariant that is easiest to
 satisfy is how a wrong derivation ships green.
+
+**A reference or dimension model lands every source row**, with or without a
+measure column. Roll-ups, out-of-scope rows and unclassified rows are excluded
+only in the derived or fact model that needs the exclusion, with that model's
+reconciliation terms. The base model keeps them (carrying whatever column
+identifies them) so its row count equals the source's and the exclusion stays
+queryable and reviewable.
 
 ### Tier 1 — mandatory for EVERY derived model, no exceptions
 
@@ -976,6 +1013,23 @@ quantity, a duration, anything summable — you MUST also reconcile the measure:
                    - transfer_rows_total     # internal transfers, not expenses
   ```
 
+- **Every dropped population is a term.** Aggregate or roll-up rows removed
+  by a derived model, rows whose code matched no mapping, and blank or null
+  observations skipped are EACH a divergence: each gets its own named term (and
+  its own `if ...: raise RuntimeError(actual vs expected)`), never one lumped
+  "other" delta.
+- **The source side is the UNFILTERED total.** Read every observation
+  independently from the base files and subtract the named terms from it. Never
+  apply the model's own inclusion filter to the source side and compare like
+  with like: that equation cannot fail, whatever the filter wrongly dropped.
+- **A blank exclusion needs a COUNT term.** A null or blank contributes 0 to a
+  signed sum, so the money equation cannot see it. Also assert the count:
+  landed rows == non-null source cells - dropped rows, and the number of blank
+  cells is its own named, reported figure.
+- **A count check does not replace the total.** Even when the measure is a
+  rate, price or yield (not meaningfully additive), sum it as a checksum:
+  derived sum == unfiltered source sum - named terms. Row-count and uniqueness
+  asserts are Tier 1; the signed sum is the separate Tier 2 assert.
 - **Signed, not absolute.** Sum the values with their sign. A refund that is
   the exact negative of a charge nets to zero only if you never took
   `abs()`; an unsigned total hides exactly the error this catches.
@@ -1087,6 +1141,47 @@ derivation removes nothing. The moment a real requirement adds one — "net out
 refund pairs" — the equation grows a named `- refund_pairs_total` term, and
 per the rule above the model is reclassified as a **removal** and gets the
 removal invariants too.
+
+A removal with its exclusion terms. Every dropped population is read
+independently from the UNFILTERED source rows and named; blanks get a count:
+
+```python
+def _assert_observations_reconcile(
+    source: list[dict[str, str]], derived: list[dict[str, Any]],
+    rollup_codes: set[str], mapped_codes: set[str],
+) -> None:
+    """Landed total == unfiltered source total - roll-ups - unmatched; blanks counted."""
+    nonblank = [r for r in source if r["value"].strip()]   # the source side: NO model filter
+    source_total = sum(Decimal(r["value"]) for r in nonblank)
+    rollups_total = sum(
+        Decimal(r["value"]) for r in nonblank if r["code"] in rollup_codes
+    )
+    unmatched_total = sum(
+        Decimal(r["value"]) for r in nonblank
+        if r["code"] not in rollup_codes and r["code"] not in mapped_codes
+    )
+    derived_total = sum(Decimal(str(r["value"])) for r in derived)
+    expected = source_total - rollups_total - unmatched_total
+    if derived_total != expected:
+        raise RuntimeError(
+            f"observations total {derived_total} != {expected} = source "
+            f"{source_total} - rollups {rollups_total} - unmatched {unmatched_total}"
+        )
+    # A blank adds 0 to a signed sum, so count it: money cannot see it. This is
+    # the model's one row-count assert. A source value the mapping does not cover
+    # is dropped here only under a landed ruling that it is out of scope; an
+    # uncovered classification value still goes to a needs_review/unmapped bucket
+    # (derivation-plan.md step 5), never a silent drop.
+    blank_cells = len(source) - len(nonblank)
+    landed_expected = len(nonblank) - sum(
+        1 for r in nonblank if r["code"] in rollup_codes or r["code"] not in mapped_codes
+    )
+    if len(derived) != landed_expected:
+        raise RuntimeError(
+            f"observations landed {len(derived)} rows, expected {landed_expected} "
+            f"(non-null cells {len(nonblank)}, blank cells skipped {blank_cells})"
+        )
+```
 
 ## A complete ingest with both kinds of model
 

@@ -1056,7 +1056,10 @@ pass. Keep polling until the operation is terminal, inside the same turn: call
 `inspect_workflow` (optionally with `after_event` to read only events after the
 last one you saw; it returns the current state without blocking) or `inspect_run`.
 Both return at once, so call them back-to-back. Never `sleep` (the host blocks
-it). Never schedule a background timer or background command and end the
+it). Never look at the disk to see whether the operation is progressing: while
+polling, never look at the supervisor's `--data-dir` (anything holding
+`captures/`, `definitions/`, `checks/` or `gc/`) with `ls` or any other shell
+command; these two tools are the only progress signal. Never schedule a background timer or background command and end the
 turn to "come back later": nothing resumes you, and the work is abandoned. Hand back mid-operation only
 when `inspect_run` reports it as unknown rather than in progress, or when a
 decision only the user can make is waiting. Then use the returned

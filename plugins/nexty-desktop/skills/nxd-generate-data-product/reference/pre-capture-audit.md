@@ -181,7 +181,10 @@ Set `provenance` from authorship, not lifecycle or review vocabulary:
 - `user_confirmed`: the value was explicitly supplied by the user.
 - `agent_authored`: the agent supplied an otherwise unspecified value or
   anchor; user approval changes `status`, never this provenance.
-- `source_derived`: the value was read from source data.
+- `source_derived`: the source itself states the value. A rule the source never
+  states, which the agent inferred from a pattern in the data (for example "a
+  blank classification column marks a roll-up row"), is `agent_authored` even
+  when the evidence is the data.
 - `deferred`: the step was deliberately not taken and nothing was authored.
 
 Use only `confirmed`, `proposed`, and `blocked` for ledger `status`, and only
