@@ -13,7 +13,7 @@ allowed-tools:
   - Task
 metadata:
   author: nextdata
-  version: 0.70.20
+  version: 0.70.22
 ---
 
 # nxd-run-job-loop skill
@@ -154,7 +154,7 @@ under Inputs, promises under Outputs, and behavior-affecting decisions in
 Transform. Terms are inline in this document; do not create or depend on an
 external Glossary DP. Delivery is the platform-fixed local DuckDB semantic
 query path, not a user-authored section. Executable contracts are compiled
-internally from the Input expectations and Output promises. **A deviation the user asked for.** When the user explicitly asks for a workflow with a deliberate defect (for example a negative-credential fixture that omits `auth_type`), build it as asked and record it in that workflow's blueprint as an explicit Decision that quotes the user's request verbatim (any credential replaced as in the sanitized original request) and states the expected failure. A reviewer claim whose failure is exactly that expected failure, with no further affected output, may be adjudicated `out_of_scope` citing the Decision and the request text ([conditions](../nxd-generate-data-product/reference/adversarial-review.md#adjudicate-every-finding--this-is-the-point)). Every other `HIGH` or `MEDIUM` claim, disclosed or not, is adjudicated normally.
+internally from the Input expectations and Output promises. **A deviation the user asked for.** When the user explicitly asks for a workflow with a deliberate defect (for example a negative-credential fixture that omits `auth_type`), build it as asked and record it in that workflow's blueprint as an explicit Decision that quotes the user's request verbatim (any credential replaced as in the sanitized original request) and states the expected failure. A reviewer claim whose failure is exactly that expected failure, with no further affected output, may be adjudicated `out_of_scope` citing the Decision and the request text ([conditions](../nxd-generate-data-product/reference/adversarial-review.md#adjudicate-every-finding--this-is-the-point)). Every other `HIGH` or `MEDIUM` claim, disclosed or not, is adjudicated normally. Adjudicating normally includes `rejected` for a claim that objects to exactly the outcome an explicit instruction in the request requires and names no other affected output (never a deliberate defect, which stays `out_of_scope` as above, nor an approval, consent or credential claim); do not stop a workflow on a claim you have not verified as a defect, and when the user asks for a terminal step (validation, refusal on record), reach it.
 
 Every Decision must come from something the user stated or explicitly named as
 controlling policy. Never pre-fill an anticipated decision or reversal; mark an

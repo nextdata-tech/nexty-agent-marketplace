@@ -167,6 +167,13 @@ For each finding, first decide and record one of:
   refutes it: `file:line`, or the request text. **"I checked and it is fine" is
   not a rejection.** A rejection without a citation is a shrug, and it is
   indistinguishable from not having checked.
+  A claim that objects to exactly the outcome an explicit instruction in the
+  request requires (a required byte-for-byte copy, a named column, a stated
+  rule), naming no other affected output, does not hold as a defect: reject it
+  citing those words. It is not a blocking finding, and it is not a reason to
+  stop other workflows. This never covers a deliberate defect the user asked
+  for (that goes through `out_of_scope` below), an approval, consent or
+  credential claim, or a disclosure the request cannot waive.
 - **`out_of_scope`** — real, but outside what this request asked for. Say what
   would have to change for it to be in scope.
   A deliberate defect the user explicitly asked for fits here, not `rejected` (the claim does hold). Use it only when (a) the blueprint Decision quotes the user's request verbatim (any credential replaced as in the sanitized original request), (b) those words appear in the sanitized original request the reviewer received, and (c) the claim's failure is exactly the Decision's named expected failure, with no further affected output or consequence. Cite both the Decision and the request text. Any additional consequence is adjudicated normally; the claim's severity is not lowered to reach this.

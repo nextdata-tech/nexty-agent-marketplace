@@ -140,6 +140,10 @@ query, not a support ticket, because `needs_review` is a value in a dimension.
 | many input rows collapsed into one (monthly regrain) | **derived**, new composite key from the grain |
 | a judgement the user supplied, not the system | **base reference model** — see below |
 
+A source that spreads one measure across period columns (wide, e.g. one column
+per year) is the unpivot row: land a long (entity, period, value) model as the
+queryable model, not only an in-memory reshape inside another derivation.
+
 A derived model needs a real reason to exist. If a question is answerable by a
 metric over an existing column grouped by an existing column — optionally scoped
 by ANDed `filters[]`, `order_by[]` and `limit` — do **not** derive anything: add
@@ -153,6 +157,10 @@ a single-use column — that reference lists the sanctioned patterns.
 Merchant→category rules, account mappings, department rollups: these are
 judgements, and they are not in the export. They are also the most tempting
 thing to hardcode, because a dict literal in the transform "just works".
+The same goes for a list of codes that picks out roll-ups, groups or regions: if
+the source marks them (an empty field, a flag, a code pattern), derive the rule
+from that column and keep the rows in the landed reference model; a literal
+list or set of codes in the transform is hardcoded reference data.
 
 **Never do that.** A constant baked into generated transform code is an
 unreviewable fabrication sitting inside a governed answer: the user cannot see
@@ -237,7 +245,7 @@ decisions are still unconfirmed?" is a query.
 |---|---|---|
 | `decision_id` | `primary_key()` | stable snake_case slug — `merchant_categories`, `fx_rates`. Name it after what it rules on, so the same ruling keeps the same id across rebuilds. Never derive it from a timestamp or a random value. |
 | `status` | `dimension()` | review state — exactly one of `confirmed`, `proposed`, `blocked` |
-| `provenance` | `dimension()` | who authored it — exactly one of `user_confirmed`, `agent_authored`, `source_derived`, `deferred` |
+| `provenance` | `dimension()` | who authored it — exactly one of `user_confirmed`, `agent_authored`, `source_derived` (the source itself states it; a rule inferred from a data pattern is `agent_authored`), `deferred` |
 | `ruling` | `dimension()` | the ruling in one sentence |
 | `applies_to` | `dimension()` | the models and columns it materializes in — `classified_spend.category, merchant_categories`. Empty for `blocked`, which materializes nothing. |
 | `detail` | `dimension()` | the evidence or basis a reviewer should check. For `blocked`: exactly the missing datum and which questions are limited until it arrives. |

@@ -49,6 +49,17 @@ Nextdata data product, and not the k8s/mesh `nxd-add-inputs` topology.
 One base URL, one or more resources/endpoints, each mapped to a promised
 physical model.
 
+A live API is a snapshot: what lands is the source as of the fetch, and a
+rebuild refetches and may land revised figures. Land that as a ruling row in
+`nxd_decisions` (the as-of nature of the fetch, plus that each rebuild fully
+replaces the landed rows), never only in README or blueprint prose. The
+upstream's own as-of value (an envelope's `lastupdated`, a response date header)
+is fetch-specific: do not freeze it into `dp-blueprint.md`, and do not
+hand-write `build-record.json` to hold it: the supervisor owns that file and
+capture rejects a closure that contains one (`workflow/capture_reserved_artifact`).
+Print the observed value from the transform so it reaches the run log, and cite
+that in the ruling's `detail`.
+
 ## The `RESTAPIConfig` / `rest_api_resources` shape
 
 ```python

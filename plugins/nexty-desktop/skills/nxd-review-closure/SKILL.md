@@ -7,7 +7,7 @@ allowed-tools:
   - Grep
 metadata:
   author: nextdata
-  version: 0.70.20
+  version: 0.70.22
 ---
 
 # Review a generated closure — adversarially
@@ -191,6 +191,13 @@ do:
 Grade each workflow independently from its own evidence and the approved
 promise. Severity never depends on the workflow label.
 
+A Tier 2 reconciliation that applies the model's own inclusion filter to the
+source side, or has no named term for a visibly dropped population, is at least
+`MEDIUM` when the closure drops rows, even when you confirmed the output and the
+exclusion is an approved Decision (this overrides every `LOW` rule in this
+skill, including the per-finding severity definitions); `HIGH` if it hides a
+wrong output now.
+
 A LOW gap is advisory. Record it so the owner can strengthen the verifier, but
 it does not block publication.
 
@@ -199,6 +206,10 @@ it does not block publication.
 - blanks coerced to zero, fabricating a real measurement
 - rows dropped by a join or filter without the loss being stated
 - an exclusion applied but not itemized as a named term
+- a reconciliation whose source side applies the model's own inclusion filter,
+  or that has no term for a visibly dropped population (aggregate rows,
+  unmatched codes, skipped blanks): graded by the Tier 2 rule in section 6
+  (at least `MEDIUM`). Such an assert cannot fail, so it is assert theatre
 - a dense grid fabricated where the source is sparse
 
 ### 8. Mapper grant scope
@@ -297,6 +308,14 @@ escalate the previous round's fix for a finding into a new blocking finding unle
 the fix introduces a real defect you can evidence; hardening the fix further is
 not one.
 
+A claim that objects to exactly the outcome an explicit instruction in the
+request requires (a required copy, a named column, a stated rule), naming no
+other affected output, is `LOW` at most, with that instruction cited. This cap
+does not apply to a deliberate defect the user asked for (graded by the
+disclosed-limit rule below, its further consequences normally), to the §8
+approval, consent and disclosure rules, to credential handling, or to the Tier 2
+exclusion-term floor in section 6, which each keep their own severity.
+
 Grade every claim, not only a verification gap, by what it changes in the
 published results today. A failure that needs a source shape the capture, its
 `data/` and its `build-record.json` do not show (a renamed or dropped field, an
@@ -339,8 +358,9 @@ Return, per finding:
 - `severity` — `HIGH` (a consumer gets a wrong answer, or a question is
   unanswerable), `MEDIUM` (correct but misleading or undisclosed), `LOW`
   (a real consumer-facing or public-contract quality defect with limited
-  impact, including a verification gap over output you confirmed correct;
-  never a style, formatting, or internal-reference nit). Robustness against a
+  impact, including a verification gap over output you confirmed correct,
+  except the Tier 2 exclusion-term rule in section 6, which is at least
+  `MEDIUM`; never a style, formatting, or internal-reference nit). Robustness against a
   hypothetical future bug is never HIGH or MEDIUM on its own. Neither is a
   presentation gap: output that already discloses a fact accurately, in a
   shape consistent with every approved Decision and Output Promise, but

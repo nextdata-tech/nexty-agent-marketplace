@@ -132,6 +132,10 @@ cross-session catalog and a fast reattach; use them:
    workflow with its `workflow` id, `definition_id`, `publish_seq`,
    `published_at_unix_ms`, the model tables with row counts, and an
    `artifact_status`. Call this **first** in a fresh session.
+   When the request asks for a closing listing after the workflows' outcomes are
+   known, call it once, alone, after every workflow has reached its terminal
+   outcome (published, refused, or stopped by a rule the user gave), never in the
+   same batch as a query or resume.
 2. **Resume.** If the workflow appears with `artifact_status: available`, call
    `mcp__nxd-desktop__resume_data_product` with that `workflow` id (pass it
    verbatim). It reuses the durable published artifact and returns a fresh
