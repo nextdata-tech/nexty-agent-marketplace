@@ -82,14 +82,15 @@ Two consequences:
 
 `import_notes` is appended **below** a generated header. That header already
 lists which credentials the recipient must refill and the exact rebuild
-commands — so **do not repeat those**. Put only product-specific context the
-recipient needs and the header cannot know:
+commands — so **do not repeat those**, and do not mention credentials or
+rebuilding at all, not even to say that none need refilling. Put only
+product-specific context the recipient needs and the header cannot know:
 
 - What the data is and what the product answers.
-- Any ruling or derived-model caveat worth flagging. The bundle already carries
-  the contract: `dp-blueprint.approved.md` is the approved plan, byte for byte, and
-  `build-record.json` is what happened when it was built — `import_notes` can
-  point at either rather than restating them.
+- Any ruling or derived-model caveat worth flagging. The bundle carries the
+  product's code and settings, not the approved plan or the record of how it was
+  built, so state here any ruling the recipient needs; do not point them at a
+  file the bundle does not contain.
 - Who to ask, or where the live source lives, if the recipient must supply their
   own credential.
 
@@ -125,8 +126,7 @@ The call returns:
 
 The zip contains the whole closure —
 `spec.py`, `models.py`, `infra-profile.yaml`, `transform/main.py`,
-`requirements.txt`, `dp-blueprint.approved.md`, `dp-blueprint.lock.json`,
-`build-record.json`, `README.md`, the connector companion artifact where the type has one — and,
+`requirements.txt`, `README.md`, the connector companion artifact where the type has one — and,
 for a credentialed source, `SENSITIVE` and `.gitignore`
 — plus the generated `IMPORT.md` and a machine-readable `export.json`. The
 sensitivity files in this frozen inventory apply to legacy literal profiles,
@@ -136,16 +136,17 @@ only public topology and an opaque ref, with `reconnect_on_destination` in the
 manifest. It needs neither sensitivity file and cannot grant source access to
 the recipient without native reconnection.
 
-The recipient gets the plan and the outcome together and needs no separate
-document: `dp-blueprint.approved.md` is the approved plan byte for byte,
-`dp-blueprint.lock.json` binds it to this closure by hash, and `build-record.json`
-records what the build actually did — including any concession taken to reach
-green. Nothing in the bundle points outside itself.
+The bundle carries the authoring closure only, plus `IMPORT.md` and
+`export.json`. It does not carry the approved blueprint, its lock or the build
+record: those stay with the sender's retained capture and never travel in a zip.
+When you tell the user what they are sharing, say it in plain words: the export
+contains the data product itself, and the approved plan stays with them. If the
+recipient needs a ruling from that plan, put it in `import_notes`.
 
 **Importing is reopen-through-workflow-v2 with the recipient's own credential.**
 The recipient unzips and reconnects any Desktop-local reference through native
 entry, or handles legacy literal credentials named by `IMPORT.md` (a file/CSV
-closure needs none), places the approved blueprint beside the imported
+closure needs none), writes or obtains their own blueprint for the imported
 closure, and follows the v2 construction sequence so capture, retained review,
 and admission remain mandatory. If the recipient's supervisor cannot admit the
 closure, report that blocker rather than substituting a direct build. Because
