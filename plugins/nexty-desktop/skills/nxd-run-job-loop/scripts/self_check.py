@@ -1958,8 +1958,9 @@ def fail_b():
     finish(1)
 
 nxd = types.ModuleType("nxd"); core = types.ModuleType("nxd.core")
-ctx = types.ModuleType("nxd.core.context"); ctx.DuckDbOutput = DuckDbOutput; dp = types.SimpleNamespace(
-    on_transform=lambda *a, **k: (lambda fn: fn), main=lambda: None)
+ctx = types.ModuleType("nxd.core.context"); ctx.DuckDbOutput = DuckDbOutput
+dp = types.ModuleType("nxd.data_product")
+dp.on_transform = lambda *a, **k: (lambda fn: fn); dp.main = lambda: None
 nxd.data_product, nxd.core, core.context = dp, core, ctx
 # The stub stands in for `nxd` so the dry run needs no installed SDK. But a bare
 # ModuleType has no `__path__`, and a module without one cannot have submodules:
@@ -1993,9 +1994,18 @@ else:
         # before it starts; a path-less stub is the pre-existing behaviour.
         _spec = None
     _real_path = _spec.submodule_search_locations if _spec is not None else None
-if _real_path:
-    nxd.__path__ = list(_real_path)
-sys.modules.update({"nxd": nxd, "nxd.core": core, "nxd.core.context": ctx})
+# The stubbed `nxd.core` and `nxd.data_product` are packages too, borrowing the
+# matching real subpackage directories. `import nxd.data_product` gets the stub,
+# while a real submodule beneath it (`nxd.data_product.context`,
+# `nxd.core.yaml_schemas`) still resolves when the SDK is installed. Without an
+# SDK every path is empty: the stubs are still packages, so the dotted import
+# does not die as "'nxd' is not a package".
+nxd.__path__ = list(_real_path) if _real_path else []
+def _real_subpackage(name):
+    return [d for d in (os.path.join(r, name) for r in nxd.__path__) if os.path.isdir(d)]
+core.__path__ = _real_subpackage("core"); dp.__path__ = _real_subpackage("data_product")
+sys.modules.update({"nxd": nxd, "nxd.core": core, "nxd.core.context": ctx,
+                    "nxd.data_product": dp})
 # A labeled multi-source closure carries its transform-only exports in
 # data-<label>/ roots rather than the ordinary data/ root. The supervisor names
 # the immutable snapshot explicitly, so the dry run must do the same instead
