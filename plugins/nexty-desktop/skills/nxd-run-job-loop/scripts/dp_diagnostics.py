@@ -232,6 +232,15 @@ LEGACY_CLOSURE_ARTIFACTS = (
 )
 
 
+def _write_lf(path: Path, text: str) -> None:
+    """Write ``text`` as UTF-8 with LF line endings on every platform.
+
+    ``Path.write_text`` translates ``\\n`` to ``\\r\\n`` on Windows, and these
+    files are hashed and compared byte for byte.
+    """
+    path.write_bytes(text.encode("utf-8"))
+
+
 def _drop_superseded_legacy_artifacts(closure: Path) -> list[str]:
     """Remove the pre-v0.38.0 pair a fresh lock write has just superseded.
 
@@ -1842,7 +1851,7 @@ def _write_v3_lock(
         },
         "copied_at_unix_ms": now_ms if now_ms is not None else int(time.time() * 1000),
     }
-    (closure / CLOSURE_LOCK).write_text(json.dumps(lock, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    _write_lf(closure / CLOSURE_LOCK, json.dumps(lock, indent=2, ensure_ascii=False) + "\n")
     for name in _drop_superseded_legacy_artifacts(closure):
         report.info(
             f"removed the superseded pre-v0.38.0 artifact {name}",
@@ -2152,9 +2161,7 @@ def write_lock(
         },
         "copied_at_unix_ms": now_ms if now_ms is not None else int(time.time() * 1000),
     }
-    (closure / CLOSURE_LOCK).write_text(
-        json.dumps(lock, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
-    )
+    _write_lf(closure / CLOSURE_LOCK, json.dumps(lock, indent=2, ensure_ascii=False) + "\n")
     for name in _drop_superseded_legacy_artifacts(closure):
         report.info(
             f"removed the superseded pre-v0.38.0 artifact {name}",
@@ -4075,9 +4082,7 @@ def read_record(path: Path) -> dict:
 
 def write_record(path: Path, record: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
-        json.dumps(record, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
-    )
+    _write_lf(path, json.dumps(record, indent=2, ensure_ascii=False) + "\n")
 
 
 def query_record(record: dict, **filters) -> dict:
