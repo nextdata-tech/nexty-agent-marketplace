@@ -13,7 +13,7 @@ allowed-tools:
   - Task
 metadata:
   author: nextdata
-  version: 0.70.24
+  version: 0.70.25
 ---
 
 # nxd-run-job-loop skill
@@ -300,7 +300,7 @@ latest response: do not start validation unless the last successful `check_data_
 action for supervisor validation, then the returned `start_run` action for
 admission and publication. Use the exact envelopes in
 [reference/workflow-v2.md](reference/workflow-v2.md); never reuse stale action
-parameters. Validation can return a queued or running operation before it finishes. Poll `inspect_workflow` until validation is satisfied, then use its current revision and returned admission action. Never end your turn while validation or a run you started is queued or running: a rate-limited source can keep it running for minutes, and a hand-back gives the user nothing to decide.
+parameters. Validation can return a queued or running operation before it finishes. Poll `inspect_workflow` until validation is satisfied, then use its current revision and returned admission action. Never end your turn while validation or a run you started is queued or running: a rate-limited source can keep it running for minutes, and a hand-back gives the user nothing to decide. Each poll returns at once, so dozens of identical `running` replies are normal and never mean it is stuck; only a terminal state, a failure code or a refusal ends the wait.
 On the MCP workflow path, wait inside this same turn: `inspect_workflow` (pass `after_event` with the last event you saw to read only newer events; it returns the current state at once and does not block) and `inspect_run` return immediately, so keep calling them back-to-back until the state is terminal. Never start a background timer or background command and end the turn to "come back later", and do not use `sleep`, `run_in_background`, Monitor or timers to wait: nothing wakes you, so the work is abandoned. End the turn only on a terminal state, when `inspect_run` reports it unknown, or when you need the user.
 `start_run` can likewise return an admission before execution finishes: poll `inspect_run` with its run ID and `inspect_workflow` until publication succeeds. A successful tool call alone is not proof of publication. Resume or render the product only after the supervisor reports its published state. An older supervisor may finish these stages before returning; use the same terminal-state checks. Replaying the exact request observes the existing operation; never start a second run to recover a slow call. Route every `phase: capture` diagnostic to the capture-code table in **Reset after behavior changes**; `workflow/capture_proposal_blueprint_mismatch` needs full replacement, not capture-only reset. For `recovery: reprepare`, reset the graph root with `reprepare_retained: true`, follow returned actions, and trust whether consent is pending or carried forward. A validation failure with `recovery: repair_then_retry` is repairable; follow **When validation fails** in workflow-v2.md and read [reference/failure-handling.md](reference/failure-handling.md) before asking the user anything. Other failed or unavailable actions are blockers; do not bypass them with direct build/validation commands, local files, SQLite, raw SQL, pandas, or another database.
 

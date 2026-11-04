@@ -57,8 +57,44 @@ upstream's own as-of value (an envelope's `lastupdated`, a response date header)
 is fetch-specific: do not freeze it into `dp-blueprint.md`, and do not
 hand-write `build-record.json` to hold it: the supervisor owns that file and
 capture rejects a closure that contains one (`workflow/capture_reserved_artifact`).
-Print the observed value from the transform so it reaches the run log, and cite
-that in the ruling's `detail`.
+
+Record it through the supported channel instead. Every transform run gets
+`NXD_SOURCE_STATE_PATH`, the path of a private file outside the closure; write
+one JSON document there and the supervisor validates it and merges it into the
+run-level build record as `evidence.source_state` (`origin: agent_observed`),
+readable through `inspect_run` as `run.build_record.source_state`:
+
+```python
+state_path = os.environ.get("NXD_SOURCE_STATE_PATH")
+if state_path:  # absent outside a supervised run
+    with open(state_path, "w", encoding="utf-8") as handle:
+        json.dump({
+            "schema": "nxd-source-state-v1",
+            "sources": {"<source_name>": {
+                "observed": {"lastupdated": last_updated, "pages": pages_fetched},
+                "observed_at": fetched_at_rfc3339,   # optional
+                "note": "response envelope",          # optional
+            }},
+        }, handle)
+```
+
+Limits: 16 KiB, 1 to 16 sources, at most 32 keys per source, names matching
+`[A-Za-z][A-Za-z0-9_.-]*` (64 characters), scalar or null values only, strings of
+at most 256 characters with no control characters. Write the file once per run
+and never fail the transform because of it: a refused document is reported as
+`run.build_record.diagnostic` (`run/source_state_invalid`) and the run still
+succeeds, while a missing file simply records nothing. Values are redacted, and a
+path-like value such as `/v2/country/all` is rewritten to `<path>/...`. Never
+write a host, base URL or endpoint literal into the document (not in `observed`,
+not in `note`): the transform takes those only from `secrets`, and a literal
+host anywhere in the transform counts as a hardcoded URL. Name the source by its
+model or resource instead. Also print the observed
+value so it reaches the run log. Cite the value in the ruling's `detail` only
+after reading it back from `inspect_run`; the ruling still states the as-of
+nature of the fetch, since source state is evidence about staleness, not a
+substitute for the ruling. This channel needs a supervisor that provides
+`NXD_SOURCE_STATE_PATH`; on one that does not, the variable is unset and the
+printed value is the only record.
 
 ## The `RESTAPIConfig` / `rest_api_resources` shape
 
