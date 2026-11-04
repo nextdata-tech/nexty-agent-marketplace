@@ -236,8 +236,9 @@ def merge_record(path, stages):
             "models": ROW_COUNTS}
     tmp = p.with_name(p.name + ".tmp")
     try:
-        tmp.write_text(
-            json.dumps(rec, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+        # Bytes, not text, so Windows writes the same LF file as POSIX.
+        tmp.write_bytes(
+            (json.dumps(rec, indent=2, ensure_ascii=False) + "\n").encode("utf-8")
         )
         tmp.replace(p)
     except OSError as exc:

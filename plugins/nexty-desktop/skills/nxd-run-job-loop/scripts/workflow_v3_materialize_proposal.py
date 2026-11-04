@@ -26,7 +26,9 @@ approved = authoring.approve(
     parsed, approved_proposal, base_hash=authoring.semantic_hash(parsed)
 )
 approved_path = source.with_name("approved.md")
-approved_path.write_text(approved, encoding="utf-8")
+# Bytes, not text: on Windows text mode would write CRLF, and the lock
+# check below compares this file byte for byte.
+approved_path.write_bytes(approved.encode("utf-8"))
 lock, write_report = diagnostics.write_lock(
     approved_path,
     closure,
