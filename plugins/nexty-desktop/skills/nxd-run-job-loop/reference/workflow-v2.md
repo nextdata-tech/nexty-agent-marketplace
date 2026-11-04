@@ -1056,7 +1056,11 @@ pass. Keep polling until the operation is terminal, inside the same turn: call
 `inspect_workflow` (optionally with `after_event` to read only events after the
 last one you saw; it returns the current state without blocking) or `inspect_run`.
 Both return at once, so call them back-to-back. Never `sleep` (the host blocks
-it). Never look at the disk to see whether the operation is progressing: while
+it). Expect many polls: validation of a mapper closure keeps running after its
+scratch build ends (output check, read-back, environment checks), often for
+a minute or two, and an unchanged `running` reply is progress, not a stall.
+The supervisor bounds every step, so the operation always reaches a terminal
+state; wait for it rather than reporting that it never finished. Never look at the disk to see whether the operation is progressing: while
 polling, never look at the supervisor's `--data-dir` (anything holding
 `captures/`, `definitions/`, `checks/` or `gc/`) with `ls` or any other shell
 command; these two tools are the only progress signal. Never schedule a background timer or background command and end the

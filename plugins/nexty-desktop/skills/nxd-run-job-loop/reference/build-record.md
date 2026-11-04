@@ -435,14 +435,25 @@ predicate false either way.
   "required_capture": { "origin": "agent_observed",
     "fields": [ { "field": "github_url", "required_by": "scored_candidates",
                   "missing_rows": 14, "sample_keys": ["a_812", "a_930"] } ] },
-  "source_state": { "origin": "agent_observed",
-    "cursor_field": "created_at", "watermark": "2026-07-30T00:00:00Z",
-    "note": "SOURCE DATA STALENESS — a separate axis. Never participates in materialization." },
+  "source_state": { "origin": "agent_observed", "schema": "nxd-source-state-v1",
+    "note": "SOURCE DATA STALENESS — a separate axis. Never participates in materialization.",
+    "sources": { "<source_name>": {
+      "observed": { "lastupdated": "2026-09-15", "pages": 3 },
+      "observed_at": "2026-10-01T12:00:00Z" } } },
   "supervisor_detail": { "origin": "supervisor_reported",
     "path": "tool:inspect_run.run.stdout_tail",
     "note": "verbatim path-redacted traceback quoted from inspect_run; per-attempt identity remains unbound" }
 }
 ```
+
+`source_state` is not written by the loop or the closure into the closure's own
+`build-record.json`, which the supervisor seals at capture. The transform writes
+one `nxd-source-state-v1` document to the file named by `NXD_SOURCE_STATE_PATH`;
+the supervisor validates and redacts it and merges it into the **run-level**
+record (`<data-dir>/diagnostics/<run-id>/build-record.json`). Read it with
+`inspect_run` as `run.build_record.source_state` and quote it verbatim; a refused
+document shows as `run.build_record.diagnostic` (`run/source_state_invalid`) and
+does not fail the run. It exists only on a supervisor that provides the channel.
 
 Each sub-block carries its own `origin`, governed by the same relay criterion as
 a diagnostic — a sub-block claiming `supervisor_reported` must be quoting a

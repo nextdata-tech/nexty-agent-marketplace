@@ -87,9 +87,13 @@ What the hash buys, concretely: regeneration is skippable when nothing changed;
 *"once approved, the spec is frozen for that build"* stops being honour-system
 and becomes tamper-evident; provenance is recoverable; and the regenerate cap
 becomes countable rather than estimated. Source **data** staleness is a wholly
-separate axis — it lives in `build-record.json` `evidence.source_state` and never
-merges with this one, because a correctly built product whose input is a day old
-is not a broken product.
+separate axis — it lives in the run-level build record's `evidence.source_state`
+and never merges with this one, because a correctly built product whose input is
+a day old is not a broken product. The closure cannot write it into its own
+sealed `build-record.json`; the transform writes a `nxd-source-state-v1` document
+to the file named by `NXD_SOURCE_STATE_PATH` (see `api-source.md`), and the
+supervisor merges it into the run-level record, readable as
+`inspect_run` → `run.build_record.source_state`.
 
 ## 3. Open the build record (supervisor capture implementation)
 
