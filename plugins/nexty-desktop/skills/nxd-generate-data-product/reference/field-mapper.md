@@ -279,7 +279,8 @@ install has depends on its supervisor, so read it from the requirements that
   is never prompted for and stops at trusted validation with
   `validation/mapper_closure_unsupported` (recovery `stop`). Report that code
   and stop. Do not strip the mapper to get past it, and do not describe mapper
-  approval as available on that install.
+  approval as available on that install. The current workflow already exists, so
+  installing a newer Desktop keeps this contract; do not offer it as the fix.
 
 Upgrading does not switch an existing data directory over while it still holds
 workflow instances: setup keeps the previously activated contract, registers

@@ -135,7 +135,8 @@ cross-session catalog and a fast reattach; use them:
    When the request asks for a closing listing after the workflows' outcomes are
    known, call it once, alone, after every workflow has reached its terminal
    outcome (published, refused, or stopped by a rule the user gave), never in the
-   same batch as a query or resume.
+   same batch as a query or resume. If the response carries `update.status:
+   available`, apply the [update notice rule](workflow-v2.md#gate-on-the-connected-capability).
 2. **Resume.** If the workflow appears with `artifact_status: available`, call
    `mcp__nxd-desktop__resume_data_product` with that `workflow` id (pass it
    verbatim). It reuses the durable published artifact and returns a fresh

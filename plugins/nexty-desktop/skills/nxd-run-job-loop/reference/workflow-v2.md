@@ -34,6 +34,22 @@ supervisor CLI or local substitute as a fallback for this construction path,
 and do not infer capability from a tool catalog, a binary, or a previous
 session.
 
+The same response may carry an `update` object, and so may `list_data_products`.
+It is informational and never part of this gate: `current`, `unknown` and
+`disabled` never block or delay construction. Do not raise it unprompted unless
+`update.status` is exactly `available`. When it is, tell the user once per
+conversation, whichever of the two responses showed it first, briefly and
+without pausing the task: a newer Nexty Desktop is available, and they can open
+the link for the update steps for their setup. Never name a version in chat
+(not `latest_version`, not `installed_version`). Present `download_url` for the
+user to open, verbatim, only when it starts with `https://`; it is the guide
+page at the site root. Without a usable link, point them to the page where they
+first downloaded Nexty Desktop; never invent a URL. Never download, open or run
+the installer yourself. Never offer an update as the fix for an unrelated
+failure, including the Keychain, provider-credential and saved-state outcomes
+whose rows forbid suggesting a reinstall; do not repeat the notice next to
+them.
+
 ## Prepare the prose blueprint
 
 Write and deterministically validate the prose `dp-blueprint.md` first. Then
@@ -1127,7 +1143,8 @@ the install has from the requirements `prepare_workflow` returns:
 - Older supervisors activate four requirements with no approval step. There a
   mapper closure is never prompted for and stops at validation with
   `validation/mapper_closure_unsupported`. Report that and stop. Do not
-  remove the mapper to get past it.
+  remove the mapper to get past it. The current workflow already exists, so
+  installing a newer Desktop keeps this contract; do not offer it as the fix.
 - An upgraded install whose data directory still held workflows keeps its
   previous contract: setup does not replace it while instances exist, and says
   to use `remove_workflow` or an empty `--data-dir` to adopt the new one. Only
@@ -1545,7 +1562,7 @@ Scratch validation proves wiring, not the quality of mapped values.
 
 | Validation code | Recovery | Next action |
 |---|---|---|
-| `validation/mapper_closure_unsupported` | `stop` | The activated contract has no mapper approval requirement: an older supervisor, or an upgraded install that kept its previous contract because workflows existed. Report it; mapper closures cannot be built on this install as activated. |
+| `validation/mapper_closure_unsupported` | `stop` | The activated contract has no mapper approval requirement: an older supervisor, or an upgraded install that kept its previous contract because workflows existed. Report it; mapper closures cannot be built on this install as activated. The current workflow already exists, so installing a newer Desktop keeps this contract; do not offer it as the fix. |
 | `validation/mapper_scope_invalid` | `repair_then_retry` | The supervisor could not read the mapper proposal (spec or grant). Fix the files in the authoring closure, then reset capture, recapture, review and validate again. |
 | `validation/mapper_approval_missing` | `stop` | The mapper closure reached validation with no approval binding. Report it; do not work around it. |
 | `validation/mapper_subject_changed` | `stop` | The pinned closure does not match the approved one. Report it as a bug or tampering; do not retry. |

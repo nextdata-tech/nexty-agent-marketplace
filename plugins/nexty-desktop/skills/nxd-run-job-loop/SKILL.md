@@ -13,7 +13,7 @@ allowed-tools:
   - Task
 metadata:
   author: nextdata
-  version: 0.70.25
+  version: 0.70.26
 ---
 
 # nxd-run-job-loop skill
@@ -71,7 +71,7 @@ Choose this order before invoking any runtime command:
    `list_data_products`, `resume_data_product`, `describe_models`, and
    `run_semantic_query`, plus read-only `export_data_product` for on-demand
    handoffs. On provider failure, use capability-advertised `provider_credential_status` for its read-only check; see [workflow-v2](reference/workflow-v2.md#provider-credential-access).
-   Use `inspect_workflow` once for an admitted failure rather than classifying it from prose.
+   Use `inspect_workflow` once for an admitted failure rather than classifying it from prose. If `get_workflow_capabilities` or `list_data_products` returns `update.status: available` (and only then, unprompted), mention a newer Nexty Desktop once per conversation per [workflow-v2](reference/workflow-v2.md#gate-on-the-connected-capability): never name a version; link `download_url` verbatim only if it starts with `https://`; never fetch or run the installer or offer the update as a fix.
    This is the supported route for Claude Desktop and Claude Cowork. Read-only `nxd://`
    **resources** — with tool bridges where a client exposes none — expose what a
    release *declares*: [reference/catalog-resources.md](reference/catalog-resources.md).
