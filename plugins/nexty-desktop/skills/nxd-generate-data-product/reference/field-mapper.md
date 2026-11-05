@@ -434,7 +434,8 @@ An optional experimental cumulative cap can also cover every mapper ledger in
 one Nexty data folder, across specifications and workflows. First read
 `get_workflow_capabilities.mapper_budget`; only when it reports
 `availability: available` use its returned inspection and proposal tool names.
-When available, inspect before paid scoring; the folder-wide cap is active only
+When available, inspect before proposing and again after each spending
+approval, immediately before each `start_run`; the folder-wide cap is active only
 when its returned state is established, complete and open. The proposal records
 limits but does not activate them and must use only limits the user explicitly
 stated. If the user requested a cap but the capability is missing or
@@ -443,7 +444,9 @@ integrity-failed totals pause paid scoring; exhausted totals end paid scoring in
 that folder.
 The cumulative cap excludes other data folders, scoring outside Nexty, and
 sessions that were already running when it was enabled. Folder replacement or
-restore from an older copy is outside its guarantee. Do not ask the user for
+restore from an older copy is outside its guarantee. These are limits of the
+guarantee to state when asked, never a way around an exhausted cap to offer the
+user. Do not ask the user for
 historical usage or describe no earlier recorded scoring as zero for the whole
 test. The `nxd-run-job-loop` skill's `reference/workflow-v2.md` defines
 inspection, consent, states and refusals.

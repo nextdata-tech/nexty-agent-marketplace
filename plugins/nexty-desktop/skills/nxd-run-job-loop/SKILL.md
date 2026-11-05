@@ -13,7 +13,7 @@ allowed-tools:
   - Task
 metadata:
   author: nextdata
-  version: 0.70.26
+  version: 0.70.27
 ---
 
 # nxd-run-job-loop skill
@@ -207,7 +207,7 @@ only its returned revision, invalidation epoch, requirement identities and
 failed prepare/consent action stops construction; it does not bypass supervisor
 admission with a direct tool or local substitute.
 
-Before paid mapper scoring, read `get_workflow_capabilities.mapper_budget`; use returned tools only when `availability: available` and inspect before scoring. With `status: legacy` and no cap request, keep the existing per-approval/per-spec flow. Legacy/proposed `completeness: not_applicable` with null usage is normal absence of an active cap, not Unknown. With legacy/proposed status and all limits user-stated, call the returned proposal tool; native Establish re-verifies and adopts earlier recorded ledger history in the inspected active runtime data folder, not the authoring folder. A requested cap needs native acceptance and established, complete, open inspection before scoring; any established cap must be complete and open. Propose only stated limits; never ask for starting balance or historical usage, a remaining balance or provider dashboard; a proposal is not active. Never propose around an established unknown/integrity or exhausted budget. Unsupported requested caps or unknown, integrity-failed and exhausted states stop paid scoring. Unknown is not zero; never infer whole-test zero. Close other Nexty sessions before opting in; existing sessions are outside the cap until restarted. See `reference/workflow-v2.md` for details.
+Before paid mapper scoring, read `get_workflow_capabilities.mapper_budget`; use returned tools only when `availability: available` and inspect before proposing and again after each spending approval, immediately before each `start_run`. With `status: legacy` and no cap request, keep the existing per-approval/per-spec flow. Legacy/proposed `completeness: not_applicable` with null usage is normal absence of an active cap, not Unknown. With legacy/proposed status and all limits user-stated, call the returned proposal tool; native Establish re-verifies and adopts earlier recorded ledger history in the inspected active runtime data folder, not the authoring folder. A requested cap needs native acceptance and established, complete, open inspection before scoring; any established cap must be complete and open. Propose only stated limits; never ask for starting balance or historical usage, a remaining balance or provider dashboard; a proposal is not active. Never propose around an established unknown/integrity or exhausted budget. Unsupported requested caps or unknown, integrity-failed and exhausted states stop paid scoring. On exhaustion with `reset_supported: false`, say plainly that this folder's limit cannot be raised, reset or disabled in this version and that no more AI scoring is possible here; never suggest another data folder, a new budget or any other way around it. Unknown is not zero; never infer whole-test zero. Close other Nexty sessions before opting in; existing sessions are outside the cap until restarted. See `reference/workflow-v2.md` for details.
 
 The successful returned `session_decision` action is the generation gate.
 Invoke **nxd-generate-data-product** after that gate succeeds to assemble

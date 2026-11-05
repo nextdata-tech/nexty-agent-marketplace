@@ -1444,7 +1444,8 @@ First call `get_workflow_capabilities` and read its structured
 `experimental: true` and `reset_supported: false`. Treat the capability as
 available only when `availability` is `available`; a tool-catalog listing is
 not a substitute. When available, call the returned inspection tool before
-paid scoring and use its returned data-folder identity and status. Call the
+proposing, and again after each spending approval, immediately before each
+`start_run`; use its returned data-folder identity and status. Call the
 returned proposal tool only with limits the user explicitly stated; never fill
 missing dimensions from examples or ask for a starting balance. A proposal
 records requested limits but does not activate them.
@@ -1490,7 +1491,10 @@ For `completeness: unknown` or `state: integrity`, `used` and `remaining` are
 null. Pause paid scoring, continue unpaid work where possible, and never
 reinterpret null as zero or ask the user to estimate historical usage. For
 `state: exhausted`, paid scoring in this folder is finished. Do not propose a
-raise, reset or disable. Report verified call, token and USD amounts only when
+raise, reset or disable. While the capability reports `reset_supported: false`,
+tell the user plainly that this folder's limit cannot be raised, reset or
+disabled in this version and allows no more AI scoring here. Never suggest another data folder, a new budget or any other way
+around it. Report verified call, token and USD amounts only when
 inspection provides them. A recorded zero means only that no earlier AI
 scoring is recorded in this data folder; it never means the whole test or
 experiment spent zero.
