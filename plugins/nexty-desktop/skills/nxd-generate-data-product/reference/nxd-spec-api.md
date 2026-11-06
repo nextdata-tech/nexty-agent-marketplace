@@ -95,11 +95,16 @@ which return an `AttributeSpec` (a full column) already carrying the role blob.
   model-tagged name, per `dimension` below: naming it after the key it
   points at duplicates the dimension the target already declares, and a
   join makes the two models connected by construction.
-- **`dimension(name=None, pii=False, label=None, description="")`** — a
+- **`dimension(name=None, pii=False, label=None, description="", grains=None, list_values=False, private=False)`** — a
   groupable/filterable column. `label` attaches a companion display column
-  (`label_column` in the compiled blob). `description=` is **deprecated** here
-  and emits a `FutureWarning`: write it on the field instead, and the dimension
-  inherits it.
+  (`label_column` in the compiled blob); results show the label, and a
+  query-time `=` / `IN` filter matches the stored id or the label (`LIKE` /
+  `ILIKE` read the label). The label column must hold text, one label per id.
+  `private=True` (runtimes that support it) keeps the dimension out of the
+  catalog and out of queries — a query that names it is refused as an unknown
+  name (SQ-103) — while metric-local filters and joins can still read it.
+  `description=` is **deprecated** here and emits a `FutureWarning`: write it
+  on the field instead, and the dimension inherits it.
 
   **`name` is unique across the join-connected registry, not per model.** Two
   models that a `join()` relates may not both declare a dimension called
@@ -150,6 +155,26 @@ which return an `AttributeSpec` (a full column) already carrying the role blob.
   explicit `column=` override — pass one or neither, never both. Use
   `column="*"` only for `COUNT(*)`. For `Agg.EXPRESSION`, omit both `of` and
   `column`; the output port's `expressions={...}` SQL names the fields.
+  Newer runtimes add keyword arguments (check the installed signature before
+  using one; an older `nxd.spec` raises `TypeError`):
+  - `non_additive_over=["snapshot_date"]` — the metric is a snapshot (balance,
+    stock level, headcount) that must never be summed across those
+    dimensions. Each name must be a dimension on the metric's model or a model
+    joined to it in the same data product, or the build fails. Queries must
+    group by each named dimension at its stored grain or pin it to one value;
+    anything else is refused with SQ-308. `describe_model` lists the field.
+  - `private=True` — a helper metric (an input to a derived metric) kept out
+    of the catalog and refused as an unknown name (SQ-103). A derived metric
+    can still read it, and its `inputs` / `expression` stay visible, so keep
+    the name free of anything sensitive. A public metric listing a private
+    dimension in `extra_dimensions` fails the build.
+  - `display_name="Net revenue"` and `format={"type": "number" | "percent" |
+    "currency", "decimals": 0-20, "code": "USD"}` (`code`, three uppercase
+    letters, only for currency) — catalog metadata for whoever renders the
+    value; query results are never scaled or rounded, so a `percent` metric
+    still returns `0.25`. A bad type, `decimals` or `code`, or a blank
+    `display_name`, fails the build; any other key in `format` is ignored.
+  `derived_metric(...)` takes none of these.
 - **`field(dtype, *role_args, roles=None, description=None, label=None, name="")`**
   — builds a base-model column. `role_args` takes `primary_key()` /
   `dimension()` / `join()` positionally; a `metric()` role here **raises** —

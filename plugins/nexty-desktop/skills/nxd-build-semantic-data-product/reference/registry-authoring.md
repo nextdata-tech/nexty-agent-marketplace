@@ -6,6 +6,9 @@
 - Metrics on semantic views
 - Derived metrics and semantic compositions
 - Native time grains
+- Snapshot metrics that must not be summed
+- Private helper fields
+- Display names and value formats
 - Cross-model dimensions
 - Worked example
 - Validation and common mistakes
@@ -80,6 +83,15 @@ the source has a validated composite key.
 `name` is the stable concept used in a semantic query, `description` is what the
 consuming agent reads when deciding whether this is the concept the question
 meant, and `pii=True` marks governed personal data.
+
+`label="SEGMENT_NAME"` attaches a text display column to a coded dimension.
+Results show the label; a query-time `=` / `IN` filter matches a row whose id
+**or** label equals the value, `!=` / `NOT IN` require neither to match (a row
+whose id is `NULL` never matches), and `LIKE` / `ILIKE` search the label. Keep
+one label per id, and avoid labels that equal another row's id: such a value
+matches both rows. Metric-local filters still compare the id column. A filter
+on a labelled dimension always runs against the base tables, not a native
+Snowflake semantic view.
 
 Write the description so it distinguishes this concept from its neighbours and
 states anything a consumer would otherwise have to assume — the unit, the
@@ -232,9 +244,11 @@ output = data_product_output().promise(sp_dispense).promise(bb_claims) \
 - Give every derived metric a `description` that says what the number is and
   which channels or populations it covers; the querying agent matches on it.
 
-Constraints to tell the user: a derived metric cannot be filtered on its value
-(SQ-307; filter on a dimension instead), and a selection that names one runs
-against the base tables, not a native Snowflake semantic view.
+Constraints to tell the user: a derived metric's value is filtered with a
+metric-value filter, `{"measure": "pums_total", "op": ">", "value": 10}`, with
+the metric in `measures` (a `dimension` filter that names it is refused with
+SQ-307), and a selection that names one runs against the base tables, not a
+native Snowflake semantic view.
 
 ---
 
@@ -269,6 +283,109 @@ A grain is a `TimeGrain` or its lower-case name (`"month"`); both are accepted.
   Equality-style filters (`=`, `IN`) on a period start match the whole period.
 - Declare the grain on the dimension queries actually group by; grouping through
   another date is not checked.
+
+---
+
+## Snapshot metrics that must not be summed
+
+A balance, a stock level or a headcount is a snapshot: one row per day holds
+the amount at that moment, so summing a month of daily rows reports about
+thirty times the stock. Declare the dimensions it must never be added across
+(runtimes that support it; an older `nxd.spec` raises `TypeError` on
+`non_additive_over`. Then do not keep a plain `sum`, which would add the
+snapshots across dates with no error: aggregate with `avg`/`min`/`max`, or
+expose the column as a `number` dimension whose description says it is a
+daily snapshot that must not be summed):
+
+```python
+"stock_on_hand": metric_field(
+    int64(),
+    metric(Agg.SUM, of=inventory.field("QTY"), name="stock_on_hand",
+           non_additive_over=["snapshot_date"]),
+    description="Units on hand at the end of each snapshot day, per warehouse.",
+),
+```
+
+- Each name must be a dimension on the metric's model or on a model joined to
+  it in the same data product; the build refuses any other name, so a typo
+  cannot leave the metric silently summable.
+- A query is answered only when, for each named dimension, it groups by it at
+  the grain its rows are recorded at (no grain, or the native `time_grain`; a
+  `DATE` with no native grain allows `day` only) or filters it to one value
+  with `=` / single-value `IN`. Everything else — a grand total, a grouping
+  without the date, `month` over daily rows, a date range — is refused with
+  SQ-308. Rows are still added across the other dimensions (warehouses).
+- A derived metric over a snapshot input follows the same rule. There is no
+  "latest snapshot" aggregation; a caller filters to the latest date.
+- `describe_model` and `semantic_model` list `non_additive_over` on the metric,
+  so the querying agent sees the rule before it queries. Say in the metric's
+  description which dimension it is a snapshot over.
+- Only the named dimension (or another dimension on the same model and column)
+  counts; a joined date carrying the same value does not.
+
+---
+
+## Private helper fields
+
+Mark a metric or dimension `private=True` (runtimes that support it) when it
+exists only to build other things, such as an input that a derived metric
+reads but that callers should not query by itself:
+
+```python
+"refunded_amount": metric_field(
+    float64(),
+    metric(Agg.SUM, of=refunds.field("AMOUNT_USD"), name="refunded_amount",
+           private=True),
+),
+# on a semantic_composition:
+"net_revenue": derived_metric(
+    "net_revenue", "total_revenue - COALESCE(refunded_amount, 0)",
+    description="Gross order revenue minus refunds, in USD.",
+),
+```
+
+- A private field is left out of `list_models`, `describe_model`,
+  `semantic_model` and every `compatible_dimensions` / `extra_dimensions` /
+  `reaches_dimensions` list.
+- A query that selects, groups by or filters on it is refused with SQ-103,
+  exactly like a name that was never declared; ordering by it gets the same
+  SQ-104 an undeclared name gets. The refusal never confirms the name exists.
+- The data product can still use it: a derived metric can read a private
+  metric, and a join keys on the column whatever the dimension is called.
+- A derived metric's `inputs` and `expression` stay visible, including the
+  private names they read, so keep those names free of anything sensitive.
+- A public metric that lists a private dimension in `extra_dimensions` fails
+  the build: make the metric private too, or drop the dimension.
+- A native Snowflake semantic view built from the registry still lists private
+  fields as ordinary members; restrict access to the view itself.
+
+Private is not a governance control on stored data; warehouse permissions
+still decide who can read the table.
+
+---
+
+## Display names and value formats
+
+A metric can carry a label and a format for the application that shows it:
+
+```python
+metric(Agg.SUM, of=orders.field("AMOUNT"), name="revenue",
+       display_name="Net revenue",
+       format={"type": "currency", "code": "USD", "decimals": 2})
+```
+
+| `format` | Meaning |
+|---|---|
+| `{"type": "number", "decimals": n}` | A plain number with `n` decimals. |
+| `{"type": "percent", "decimals": n}` | A ratio shown as a percentage: `0.25` is 25%. |
+| `{"type": "currency", "code": "USD", "decimals": n}` | An amount in an ISO 4217 currency (three uppercase letters). |
+
+`decimals` is a whole number from 0 to 20. An unknown `type`, a bad `decimals`,
+a missing or malformed currency `code`, a `code` on a non-currency format, or a
+blank `display_name` fails the build. Any other key in a `format` object is
+ignored. Both fields are catalog metadata on the metric's `describe_model` row:
+query values are never scaled, rounded or converted, so store a percentage as a
+ratio and declare `percent`, not a value already multiplied by 100.
 
 ---
 
