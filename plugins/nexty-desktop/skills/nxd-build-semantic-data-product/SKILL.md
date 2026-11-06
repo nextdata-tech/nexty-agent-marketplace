@@ -12,7 +12,7 @@ allowed-tools:
   - AskUserQuestion
 metadata:
   author: nextdata
-  version: 0.70.27
+  version: 0.71.0
 ---
 
 # nxd-build-semantic-data-product skill
@@ -147,13 +147,14 @@ Declare the blob on the MANY-side FK with explicit `to_model` and `to_column`. I
 the samples don't overlap, that is evidence AGAINST the join — probe or ask.
 
 **Additive vs non-additive numerics.** A numeric column is a `sum` metric only if
-it is **additive across rows** (amounts, quantities, per-row durations). Balances,
-scores, points, percentages, rates, and point-in-time snapshots (e.g.
-`loyalty_points`, `account_balance`, `discount_pct`) are NOT sum metrics — summing
-them answers nothing. Aggregate such a column only when a question justifies it
-(`avg`/`min`/`max` can be legitimate); otherwise expose it as a `number`
-dimension whose description says what it is and why it is not summed. Never
-leave it unannotated — that hides the column instead of explaining it.
+it is **additive across rows** (amounts, quantities, per-row durations). Scores,
+points, percentages and rates (`loyalty_points`, `discount_pct`) are NOT sum
+metrics; aggregate one only when a question justifies it (`avg`/`min`/`max`),
+else expose it as a `number` dimension whose description says why it is not
+summed; never leave one unannotated. A **snapshot** written once per period
+(`stock_on_hand` per `snapshot_date`) adds across warehouses, never across
+dates: where supported, declare `non_additive_over=["snapshot_date"]` (a query
+summing across dates then gets SQ-308); never a plain `sum` without it (`reference/registry-authoring.md`).
 
 **DuckDB declared type → `AttributeSpec` data type** (for the `models.py` attributes). Timestamp columns import `DurationUnit` from `nxd.spec.data_types` and require an explicit unit; the example below uses millisecond precision.
 
@@ -490,7 +491,7 @@ is finished. Before reporting done, confirm all four files exist in the workspac
 | File | Content |
 |------|---------|
 | `reference/overview.md` | Design + how public semantic roles flow to the 4 tools |
-| `reference/registry-authoring.md` | Full role grammar + auto-derivation + derived metrics + native time grains + worked example |
+| `reference/registry-authoring.md` | Full role grammar + auto-derivation + derived metrics + native time grains + snapshot, private and presentation fields + worked example |
 | `reference/compiler-and-routing.md` | Compile paths + chasm-trap + Snowflake dialect |
 | `reference/runtime-and-dependencies.md` | Requirements, wheel version, payload delivery + fallback, lineage |
 | `reference/scripts/templates/semantic_dp.py.tmpl` | Complete models.py + transform.py + spec.py example |

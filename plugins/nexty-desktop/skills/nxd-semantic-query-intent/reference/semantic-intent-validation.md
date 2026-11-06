@@ -5,6 +5,7 @@
 - [Purpose and boundary](#purpose-and-boundary)
 - [The four techniques](#the-four-techniques)
 - [Derived metrics and native grains in the catalog](#derived-metrics-and-native-grains-in-the-catalog)
+- [OR groups, metric thresholds, labels and snapshots](#or-groups-metric-thresholds-labels-and-snapshots)
 - [Why the gate is client-side](#why-the-gate-is-client-side)
 - [End-to-end flow](#end-to-end-flow)
 - [Execution rule](#execution-rule)
@@ -70,8 +71,9 @@ A derived metric (`aggregation: "derived"` under a semantic composition in
 description and expression to the question. Prefer it over selecting its inputs
 separately and combining them by hand when the question asks for the combined
 figure; a selection that does arithmetic across separate queries is
-`likely-wrong`. A derived metric cannot carry a filter on its value, so a
-constraint on it must be expressed on a dimension (SQ-307). A derived metric
+`likely-wrong`. A threshold on its value ("where the total exceeds 10") is a
+metric-value filter on the derived metric, not a dimension filter (that is
+refused with SQ-307). A derived metric
 the service cannot plan is refused with SQ-306 ("invalid derived metric");
 report it as a data product defect rather than rewriting the question. A `NULL`
 in a derived total is a missing sum input, not a zero: say so, and never report
@@ -81,6 +83,53 @@ A `time_grain` on a model or metric limits the periods the echo may promise.
 If the question asks for a period finer than the native grain ("daily" on a
 weekly metric) or a window that cuts a period, clarify or remap; the service
 refuses it with SQ-403. Echo a week as the ISO Monday week.
+
+## OR groups, metric thresholds, labels and snapshots
+
+Filters can now express more of a question, so the critic checks that each
+form says what the question says:
+
+- **OR vs AND.** "EU or web" across two dimensions is one `any` group; two
+  top-level filters would mean "EU and web" and is `likely-wrong`. "EU or US"
+  on one dimension is an `IN` list. When the question's scope is genuinely
+  unclear about AND vs OR ("customers in Spain and online"), clarify rather
+  than pick. In the echo, read a group back with its connective and
+  brackets: "orders that are (EU **or** web) **and** paid".
+- **Row filter vs metric threshold.** A condition on a stored attribute
+  ("orders over 100 euros" when `amount` is a dimension) is a dimension
+  filter on rows. A condition on an aggregated value ("customers whose revenue
+  is over 1M", "regions with more than 50 orders") is a metric-value filter
+  on a metric that is also in `measures`, applied after grouping. Swapping one
+  for the other answers a different question: `likely-wrong`. Echo the
+  threshold with the grouping it applies to: "customers, keeping those whose
+  total revenue is over 1,000,000". Do not substitute "the top N" for a
+  threshold the question states, or a threshold for a top N.
+- **Labelled dimensions.** On a dimension with a display label, `=` / `IN`
+  match the stored id or the label, so a value taken from a result or the
+  user's own wording usually works as given; there is no need to translate a
+  label to its code first. A negative filter (`!=`, `NOT IN`) excludes rows
+  whose id or label matches, and rows with no id. If the value could be both
+  one row's label and another row's id, the filter keeps both: say so, or
+  clarify which was meant.
+  A labelled dimension cannot sit inside an `any` group of two or more
+  entries (or an `all` nested in one); the service refuses it with SQ-505.
+  When the question's OR needs such a dimension ("Enterprise customers or web
+  orders"), the faithful answer is separate queries reported as possibly
+  overlapping, or a clarification; an echo that silently drops the branch,
+  turns the OR into AND, or adds the two results is `likely-wrong`.
+- **Snapshot metrics.** A metric whose catalog row lists `non_additive_over`
+  is a point-in-time amount. A question about "total stock this month" or
+  "the balance over Q1" cannot be a sum over the period: map it to one pinned
+  date (the period's last day, when the question means "at the end of") or to
+  a grouping by the date at its stored grain, and say which in the echo. A
+  selection that would sum the snapshots is `likely-wrong` even before the
+  service refuses it with SQ-308.
+- **Private fields.** A concept the user names that is absent from the
+  catalog may be undeclared or private; both are refused with SQ-103 and look
+  the same. Treat it as unavailable and do not speculate that it exists.
+- **Presentation.** When a metric row carries `display_name` or `format`,
+  use them in the echo and the answer (a `percent` value `0.25` is 25%); they
+  never change which concept answers the question.
 
 ## Why the gate is client-side
 
