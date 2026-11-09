@@ -434,8 +434,9 @@ already been resolved.
 - **Non-secret request headers use the `header_` prefix** — one attribute per
   header, `header_<name>` with `-` written as `_` (`header_user_agent` →
   `User-Agent`), `public: true`. This is the *only* supported way to add a
-  required client header; see **Custom request headers** below for why the
-  prefix exists and how the transform reassembles it. A **secret-valued**
+  required client header; see **Custom request headers** below for how to find
+  which ones the source requires in its own documentation, why the prefix
+  exists, and how the transform reassembles it. A **secret-valued**
   header (an API key sent as `X-API-Key`) does NOT go here — it belongs to
   `auth_type: api_key`, which already sends a header and keeps the value
   `public: false`.
@@ -592,6 +593,19 @@ which sends `curl/x.y.z`. That contrast reads as "Python traffic is blocked" or
 with a browser-ish `User-Agent` — throws away the connector for a one-line
 config change and fails the acceptance check. **Diagnose a 403 by comparing the
 headers the two clients send before touching the credential.**
+
+**Read the source's own documentation to find the required headers.** When a
+REST source refuses requests made with valid credentials (a `401` or `403` with
+no authentication challenge such as `WWW-Authenticate`), or before the first
+build against an unfamiliar REST API, fetch the source's documentation: its
+root and any documentation path it advertises (for example `/docs`), using
+whatever fetch tool the session has (`WebFetch`, or `curl` when Bash exists).
+Look for required client headers: `User-Agent`, tenant or routing headers, an
+API version header. Set each through the connector's `header_*` configuration
+(see below). Send no credentials with the fetch: the documentation is read
+unauthenticated, and a credential never goes into the fetched URL or headers.
+Reading documentation for headers is not payload inspection; the payload
+inspection gate above still applies unchanged.
 
 `RESTAPIConfig`'s `client` accepts a `headers` mapping (verified by
 introspection against the pinned `dlt==1.28.2`: `ClientConfig.headers` is typed
