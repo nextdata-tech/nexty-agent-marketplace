@@ -70,7 +70,7 @@ def ingest(duckdb: DuckDbOutput, secrets: dict[str, Any]) -> None:
             continue
         reader = filesystem(
             bucket_url=str(source_root / model), file_glob="*.csv"
-        ) | read_csv()
+        ) | read_csv(encoding="utf-8-sig")
         resources.append(reader.with_name(duckdb.model_tables[model]))
     # Derived models (Step 3a) append their @dlt.resource here — same list.
     pipeline.run(resources, write_disposition="replace")

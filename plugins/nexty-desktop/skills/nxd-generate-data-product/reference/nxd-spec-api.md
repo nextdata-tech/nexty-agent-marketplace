@@ -83,6 +83,10 @@ which return an `AttributeSpec` (a full column) already carrying the role blob.
 
 - **`primary_key()`** — no arguments. The entity-key role.
 
+  `primary_key()` itself contributes no dimension; any dimension on the key
+  column comes from a paired `dimension(...)`, whose name is registry-wide (see
+  `dimension` below).
+
   **Pair it with a `dimension(...)` on the same field.** Roles compose —
   `field(string(), primary_key(), dimension(name=...), description=...)` is
   accepted — and a key that carries only `primary_key()` is **not groupable**:
@@ -93,8 +97,8 @@ which return an `AttributeSpec` (a full column) already carrying the role blob.
   quietly having no answerable form. The same applies to a `join()` column a
   consumer needs to group by — and give that companion dimension a
   model-tagged name, per `dimension` below: naming it after the key it
-  points at duplicates the dimension the target already declares, and a
-  join makes the two models connected by construction.
+  points at duplicates the dimension the target already declares, and
+  dimension names are unique across the whole registry, join or no join.
 - **`dimension(name=None, pii=False, label=None, description="", grains=None, list_values=False, private=False)`** — a
   groupable/filterable column. `label` attaches a companion display column
   (`label_column` in the compiled blob); results show the label, and a
@@ -106,21 +110,17 @@ which return an `AttributeSpec` (a full column) already carrying the role blob.
   `description=` is **deprecated** here and emits a `FutureWarning`: write it
   on the field instead, and the dimension inherits it.
 
-  **`name` is unique across the join-connected registry, not per model.** Two
-  models that a `join()` relates may not both declare a dimension called
-  `created_at`, and the compiler refuses the whole spec:
+  **`name` is unique across every model in the spec, joined or not.** Two
+  models may not both declare a dimension called `order_id` (or `created_at`),
+  and the registry refuses the whole spec at the first compile:
 
   ```
-  error: Duplicate dimension name 'created_at', declared 2 times across models
-  'm1', 'm2'. Every dimension must have a unique name within the registry —
-  rename all but one of those declarations.
+  Duplicate dimension name 'order_id', declared 2 times across models
+  'orders', 'order_revenue'
   ```
 
-  Unconnected models do not collide, which is what makes the timing surprising:
-  the same two columns compile fine until the join that relates them is added,
-  so the error arrives with a change that touched neither column. A name the
-  request or approved plan promises is never renamed. Tag every other dimension
-  of a join-connected registry with its model —
+  A name the request or approved plan promises is never renamed. Tag every
+  other dimension of the registry with its model —
   `dimension(name="issue_created_at", ...)` — rather than renaming only the
   collisions already reported; when two promised names collide, return to the
   plan instead of renaming either. Piecemeal renaming is not
@@ -338,10 +338,17 @@ product surface gains a first-class supported aggregation.
 ## Version pin and drift
 
 Verified against the installed `nxd` package at **`v0.41.139`**
-(`nxd/version.py`). The two compiler rules above — registry-wide dimension
-names and join-covers-grain — were additionally reproduced against `0.41.172`
-by compiling closures that violate each; the rest of this file has not been
-re-verified at that version. Treat this the same way the closure pins
+(`nxd/version.py`). Dimension names are registry-wide by the nxd registry
+code itself: `SemanticRegistry.build()` refuses a duplicate dimension name
+across any two models (SQ-801), with or without a join, and has done so since
+the semantic module landed. The Rust spec compiler does not check this; the
+Python `build()` does, and the desktop check runs it whenever the definition
+declares semantic content. A 2026-08-24 probe at `0.41.172` saw a narrower
+scope (an unjoined pair compiled clean); the current code does not reproduce
+that, and the likely explanation is that the probed path did not build the
+Python registry over both models. The join-covers-grain rule was reproduced
+against `0.41.172` by compiling a closure that violates it; the rest of this
+file has not been re-verified at that version. Treat this the same way the closure pins
 `dlt[duckdb]==1.28.2` — if the installed version differs, this file may be
 stale; re-derive only the specific signature that produces an unexpected
 error, not the whole surface.

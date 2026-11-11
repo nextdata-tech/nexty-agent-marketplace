@@ -13,6 +13,8 @@ a metric. Use it as the concrete shape to match; do not deviate from the
 `primary_key()` / `dimension(...)` / `join(...)` / `metric_field(metric(...))`
 DSL calls shown here.
 
+> **Dimension names are registry-wide.** Every `dimension(name=...)`, including the one paired with a key, is unique across the registry; a key column shared by two models needs a model-qualified name on one of them, such as `dimension(name="orders_order_id")` (see [nxd-spec-api.md](nxd-spec-api.md)).
+
 ```python
 """Base models and query-time metrics for the desktop DP."""
 

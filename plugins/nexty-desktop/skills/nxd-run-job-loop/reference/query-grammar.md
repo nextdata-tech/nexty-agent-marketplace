@@ -31,6 +31,8 @@ Do not replace a projected numeric dimension with a `total_<field>` or
 the approved output promises at row grain, repair the product or report the
 blocker; never present aggregate rows as record rows.
 
+`op` must be spelled exactly as one of the operators listed above; aliases such as `GTE` or `eq` are refused with SQ-501. There is no `"name:grain"` string form; a grain is only the `{"dimension", "grain"}` object.
+
 Filter values are validated and normalized for the dimension's declared type;
 they are not always strings. `IN` / `NOT IN` take a non-empty list. For null
 tests, omit `value` entirely.

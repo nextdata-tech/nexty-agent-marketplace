@@ -108,6 +108,8 @@ and the `.schema({...})` shape are identical. The difference is only in where
 the schema keys come from (yielded dict keys, not CSV headers) and that the
 primary key may be the grain-derived composite.
 
+> **Dimension names are registry-wide.** Every `dimension(name=...)`, including the one paired with a key, is unique across the registry; a key column shared by two models needs a model-qualified name on one of them, such as `dimension(name="orders_order_id")` (see [nxd-spec-api.md](nxd-spec-api.md)).
+
 ```python
 """Base models, a derived model, and query-time metrics for the desktop DP."""
 
@@ -705,7 +707,7 @@ import csv
 def _read_source_rows(source_root: Path, model: str) -> list[dict[str, str]]:
     rows: list[dict[str, str]] = []
     for path in sorted((source_root / model).glob("*.csv")):
-        with path.open(newline="") as handle:
+        with path.open(newline="", encoding="utf-8-sig") as handle:
             rows.extend(csv.DictReader(handle))
     return rows
 ```
@@ -1193,7 +1195,7 @@ base-reader loop and `pipeline.run(...)` — that is the whole change:
     for model in BASE_MODELS:
         reader = filesystem(
             bucket_url=str(source_root / model), file_glob="*.csv"
-        ) | read_csv()
+        ) | read_csv(encoding="utf-8-sig")
         resources.append(reader.with_name(duckdb.model_tables[model]))
 
     # Derived models: computed here, yielded into the SAME run.

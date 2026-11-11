@@ -302,6 +302,8 @@ same dlt reader loop with no special casing (on a file connector; an
 2. Declare the model in `models.py` with a metric view beside it so the rows are
    selectable:
 
+> **Dimension names are registry-wide.** Every `dimension(name=...)`, including the one paired with a key, is unique across the registry; a key column shared by two models needs a model-qualified name on one of them, such as `dimension(name="orders_order_id")` (see [nxd-spec-api.md](nxd-spec-api.md)).
+
 ```python
 # These rows are AGENT-PRODUCED. Nothing but the descriptions tells a later
 # consumer that — so the model description says it once and the score says it
