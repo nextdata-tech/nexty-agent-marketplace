@@ -711,7 +711,7 @@ capture or strict admission.
 
 ## Run and report the review
 
-Wait rule for every validation and run below: `inspect_workflow` and `inspect_run` return at once, so call them back-to-back in this turn until terminal. Never `sleep` (the host blocks it) or background a command, and do not use Monitor or timers: they end your turn with the work abandoned ([Follow returned actions through admission](#follow-returned-actions-through-admission)).
+Wait rule for every validation and run below: when `get_workflow_capabilities` lists `inspect_wait`, call `inspect_workflow` with `wait_seconds: 25`, which blocks while an operation is queued or running; otherwise `inspect_workflow` and `inspect_run` return at once, so call them back-to-back in this turn until terminal. Never run `check_data_product` or another call as a timer while validation runs. Never `sleep` (the host blocks it) or background a command, and do not use Monitor or timers: they end your turn with the work abandoned ([Follow returned actions through admission](#follow-returned-actions-through-admission)).
 
 When capture returns a review action, use its `review_input` exactly as supplied
 by the supervisor. The response may contain several `RequirementView` entries:
@@ -1070,8 +1070,9 @@ several minutes, and a hand-back returns control with nothing to decide: the
 next message can change the plan and discard a validation that was about to
 pass. Keep polling until the operation is terminal, inside the same turn: call
 `inspect_workflow` (optionally with `after_event` to read only events after the
-last one you saw; it returns the current state without blocking) or `inspect_run`.
-Both return at once, so call them back-to-back. Never `sleep` (the host blocks
+last one you saw) or `inspect_run`. With `inspect_wait` advertised, pass
+`wait_seconds: 25` so each `inspect_workflow` call blocks until the operation
+settles or 25 s pass; without it both return at once, so call them back-to-back. Never `sleep` (the host blocks
 it). Expect many polls: validation of a mapper closure keeps running after its
 scratch build ends (output check, read-back, environment checks), often for
 a minute or two, and an unchanged `running` reply is progress, not a stall.
