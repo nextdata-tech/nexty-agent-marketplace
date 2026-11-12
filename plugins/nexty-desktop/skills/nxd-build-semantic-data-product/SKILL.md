@@ -12,7 +12,7 @@ allowed-tools:
   - AskUserQuestion
 metadata:
   author: nextdata
-  version: 0.71.1
+  version: 0.72.1
 ---
 
 # nxd-build-semantic-data-product skill
@@ -69,11 +69,10 @@ Interview the user or read the table DDL to establish, per source table:
 
 1. **Model** — the physical table: a unique name + one or more **primary-key**
    columns (the entity key, e.g. `order_id`) + a **description** (one line:
-   what one row is). It reaches the agent in both `list_models` and
-   `describe_model`.
+   what one row is). It reaches the agent in both `list_models` and `describe_model`.
 2. **Dimensions** — columns an agent can group or filter by. Each: a concept
    `name`, the physical `column`, a logical `type` (`string` / `date` / `number`),
-   a `description`, and `pii: true` if governed.
+   a `description`, and `pii: true` if governed. Dimension names are unique across all models in the spec, joined or not.
 3. **Metrics** — named aggregated measures. Each: a concept `name`, the physical
    `column` it aggregates, the `agg` function (`count`, `count_distinct`, `sum`,
    `avg`, `min`, `max`), a `description`, and `boolean: true` for a flag that counts

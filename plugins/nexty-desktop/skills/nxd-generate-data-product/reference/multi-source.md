@@ -337,7 +337,7 @@ for label, model in (("orders", "orders"), ("users", "users")):
     reader = filesystem(
         bucket_url=str(model_root),
         file_glob="*.csv",
-    ) | read_csv()
+    ) | read_csv(encoding="utf-8-sig")
     resources.append(reader.with_name(duckdb.model_tables[model]))
 ```
 

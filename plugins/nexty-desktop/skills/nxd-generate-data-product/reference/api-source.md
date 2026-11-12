@@ -944,7 +944,7 @@ root = Path(os.environ["NXD_TRANSFORM_ROOT"])
 # sorted() because glob order is filesystem-dependent.
 decision_rows: list[dict[str, str]] = []
 for path in sorted((root / "data" / "nxd_decisions").glob("*.csv")):
-    with path.open(newline="", encoding="utf-8") as handle:
+    with path.open(newline="", encoding="utf-8-sig") as handle:
         decision_rows.extend(csv.DictReader(handle))
 
 @dlt.resource(name=duckdb.model_tables["nxd_decisions"])

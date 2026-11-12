@@ -335,6 +335,8 @@ model needs a real reason to exist.
 2. Declare it in `models.py` with a metric view beside it, so the rows are
    selectable (`run_semantic_query` needs a measure in the selection):
 
+> **Dimension names are registry-wide.** Every `dimension(name=...)`, including the one paired with a key, is unique across the registry; a key column shared by two models needs a model-qualified name on one of them, such as `dimension(name="orders_order_id")` (see [nxd-spec-api.md](nxd-spec-api.md)).
+
 ```python
 # The column meanings in the Shape table above belong IN the descriptions, not
 # only in this doc. A ledger whose own columns are unexplained in the catalog

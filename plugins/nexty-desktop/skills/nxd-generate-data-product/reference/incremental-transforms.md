@@ -717,7 +717,7 @@ def ingest(
     # Read the source ourselves so we can filter and compute the new cursor.
     rows: list[dict[str, Any]] = []
     for path in sorted((source_root / "events").glob("*.csv")):
-        with path.open(newline="") as handle:
+        with path.open(newline="", encoding="utf-8-sig") as handle:
             for row in csv.DictReader(handle):
                 event_id = int(row["event_id"])
                 if event_id > last_seen:
