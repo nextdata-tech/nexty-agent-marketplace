@@ -906,9 +906,9 @@ round's other decisions. Never add a new ID to `deferred_finding_ids` on the
 strength of the earlier ruling.
 Never recommend deferring an accepted `HIGH` finding; recommend its fix (see
 [Relay and authorization](../../nxd-generate-data-product/reference/adversarial-review.md#relay-and-authorization)).
-When shell access is available, load the shipped
-`$JOB_HELPER_DIR/scripts/dp_diagnostics.py` and call
-`validate_review_round(round)` before writing the round; fix every reported
+When shell access is available, put the shipped
+`$JOB_HELPER_DIR/scripts` on `sys.path`, `import dp_diagnostics`, and call
+`validate_review_round(round)` (it is not a CLI subcommand) before writing the round; fix every reported
 problem first. Without shell access, apply these rules inline and do not claim
 the round was helper-validated.
 

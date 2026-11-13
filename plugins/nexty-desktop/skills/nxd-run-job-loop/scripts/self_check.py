@@ -117,6 +117,13 @@ if "--record" in sys.argv:                 # no argparse: the closure's copy of
     RECORD_PATH = (sys.argv[_i + 1]        # byte-identical twin stays readable
                    if _i + 1 < len(sys.argv) else "build-record.json")
 
+# Findings echo closure content (file names, CSV headers). A Windows console or
+# pipe defaults to a legacy code page that cannot encode all of it; report the
+# character as "?" rather than dying on UnicodeEncodeError mid-report. stderr
+# already uses backslashreplace, which cannot raise and loses less.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(errors="replace")
+
 # The closure's own artifact names. This script is COPIED INTO THE CLOSURE and
 # run with a bare interpreter, so the shared diagnostics helper is out of reach
 # and its constants have to be inlined here: these are the twins of
@@ -1268,7 +1275,7 @@ if not network_declared:
 for vpath in sorted(p for p in Path("contracts").rglob("*.py")
                     if p.name != "__init__.py"):
     try:
-        v_imports = imported_roots(vpath.read_text(encoding="utf-8"), str(vpath))
+        v_imports = imported_roots(vpath.read_text(encoding="utf-8"), vpath.as_posix())
     except (OSError, UnicodeDecodeError, SyntaxError):
         # UnicodeDecodeError subclasses ValueError, not OSError, so a verifier
         # that is valid Python under a non-UTF-8 coding declaration escaped this
@@ -1284,11 +1291,11 @@ for vpath in sorted(p for p in Path("contracts").rglob("*.py")
     for root in sorted(r for r in MODEL_ROOTS
                        if any(denied_hit(m, {r}) for m in v_imports)):
         eerr("reach.model_sdk_import",
-            f"{vpath} imports {root!r} — a model-provider SDK. A contract "
+            f"{vpath.as_posix()} imports {root!r} — a model-provider SDK. A contract "
             f"verifier decides pass/fail from data that has already landed; it "
             f"never calls a model. A verifier that asks a model is not a "
             f"check — it re-decides the answer on every run, so the same rows "
-            f"can pass today and fail tomorrow.", str(vpath))
+            f"can pass today and fail tomorrow.", vpath.as_posix())
 
 if eerrors:
     say("\nPHASE E FAILED — reach gate (no raw provider SDK; infer through the seam):")
@@ -1470,7 +1477,7 @@ if legacy_file:
 for vpath in sorted(p for p in Path("contracts").rglob("*.py")
                     if p.name != "__init__.py"):
     try:
-        gv_imports = imported_roots(vpath.read_text(encoding="utf-8"), str(vpath))
+        gv_imports = imported_roots(vpath.read_text(encoding="utf-8"), vpath.as_posix())
     except (OSError, SyntaxError):
         # Same reasoning as Phase E's verifier scan: an unreadable verifier is
         # Phase C's finding. "Could not scan" is not a consent verdict.
@@ -1490,11 +1497,11 @@ for vpath in sorted(p for p in Path("contracts").rglob("*.py")
         # The hit, not MAPPER_ROOT: interpolating the constant would name the
         # dotted path in a finding raised by a legacy import.
         gerr("grant.verifier_maps",
-             f"{vpath} imports {v_hit!r}. A contract verifier decides "
+             f"{vpath.as_posix()} imports {v_hit!r}. A contract verifier decides "
              f"pass/fail from data that has already landed; it never calls a "
              f"model. No grant authorizes this — consent covers mapping in the "
              f"transform, and a verifier that maps re-decides the answer every "
-             f"run.", str(vpath))
+             f"run.", vpath.as_posix())
 
 if mapper_import:
     # --- Discover specs and grants under contracts/, BY SHAPE. -------------
@@ -1520,6 +1527,11 @@ if mapper_import:
     spec_files, grant_files = [], []
     malformed_grants = []
     for jpath in sorted(Path("contracts").rglob("*.json")):
+        # Closure-relative identifiers are POSIX-form on every OS: they are
+        # compared with SUPERVISOR_* constants and reported as finding paths.
+        # The filesystem only ever sees them again as relative paths, which
+        # Windows resolves with forward slashes too.
+        jrel = jpath.as_posix()
         try:
             doc = json.loads(jpath.read_text(encoding="utf-8"))
         except (OSError, ValueError):
@@ -1527,21 +1539,21 @@ if mapper_import:
         if not isinstance(doc, dict):
             continue
         if SPEC_KEYS <= set(doc):
-            spec_files.append(jpath)
+            spec_files.append(jrel)
         elif GRANT_KEYS <= set(doc):
-            grant_files.append((jpath, doc))
+            grant_files.append((jrel, doc))
         elif "mapper_spec_id" in doc:
             missing = sorted(GRANT_KEYS - set(doc))
-            malformed_grants.append(jpath)
+            malformed_grants.append(jrel)
             gerr("grant.invalid",
-                 f"{jpath} carries mapper_spec_id, so it is a consent grant, "
+                 f"{jrel} carries mapper_spec_id, so it is a consent grant, "
                  f"but it is missing {missing}. Every one of "
                  f"{sorted(GRANT_KEYS)} is required: a grant without a stated "
                  f"purpose cannot be reviewed by the person who gave it, and "
                  f"one that names no provider or model does not say what the "
-                 f"content was authorized to reach.", str(jpath),
+                 f"content was authorized to reach.", jrel,
                  ev={"missing_keys": missing},
-                 fix=f"add {missing} to {jpath}; the grant itself does not need "
+                 fix=f"add {missing} to {jrel}; the grant itself does not need "
                      f"re-consenting, only completing")
 
     # Both supervisor grant paths at once. Checked on existence alone, not on
@@ -1643,7 +1655,8 @@ if mapper_import:
                 proc = subprocess.run(
                     [sys.executable, "-m", "nxd.experimental.field_mapper",
                      "spec-id", str(spath)],
-                    capture_output=True, text=True, timeout=60)
+                    capture_output=True, text=True, errors="replace",
+                    timeout=60)
                 if proc.returncode != 0:
                     # LAST line of stderr, not the whole of it. A broken package
                     # exits with a full traceback, and pasting that into a
@@ -1728,7 +1741,8 @@ if mapper_import:
                 proc = subprocess.run(
                     [sys.executable, "-m", "nxd.experimental.field_mapper",
                      "grant-check", spath, gpath],
-                    capture_output=True, text=True, timeout=60)
+                    capture_output=True, text=True, errors="replace",
+                    timeout=60)
                 verdict = json.loads(proc.stdout.strip())
             except Exception as exc:
                 gerr("grant.spec_unreadable",
@@ -2077,7 +2091,8 @@ for source_root in source_roots:
     for child in children:
         if child.is_symlink():
             berr("closure.csv_root_invalid",
-                 f"source export contains a symlink: {child}", str(child))
+                 f"source export contains a symlink: {child.as_posix()}",
+                 child.as_posix())
             continue
         if not _real_directory(child):
             continue
@@ -2086,7 +2101,7 @@ for source_root in source_roots:
         if prior != source_root:
             berr("closure.csv_root_invalid",
                  f"model directory {child.name!r} is claimed by both "
-                 f"{prior} and {source_root}", str(child))
+                 f"{prior} and {source_root}", child.as_posix())
     root_models[source_root] = model_dirs
 
 for source_root in labeled_roots:
@@ -2098,8 +2113,8 @@ for source_root in labeled_roots:
     for member in source_root.rglob("*"):
         if member.is_symlink():
             berr("closure.csv_root_invalid",
-                 f"labeled export tree contains a symlink: {member}",
-                 str(member))
+                 f"labeled export tree contains a symlink: {member.as_posix()}",
+                 member.as_posix())
     path_file = Path(f"csv-source-{label}-path")
     if not _real_regular_file(path_file):
         berr("closure.csv_root_invalid",
@@ -2461,7 +2476,7 @@ def _lock_snapshot_ref(path):
 
 _snap_ref, _snap_escaped = _lock_snapshot_ref(lockp)
 snap = _snap_ref if _snap_ref is not None else closure_path(CLOSURE_SNAPSHOT)
-snap_name = str(snap)
+snap_name = snap.as_posix()
 if _snap_escaped:
     cerr("closure.escaping_reference",
          "the lock's snapshot reference points outside the closure.", lock_name)
@@ -2768,8 +2783,8 @@ scan = ["README.md", snap_name, "spec.py", "models.py",
 # rglob, not glob: contracts/ now holds expectations/ and promises/ subtrees as
 # well as the flat contracts/<name>.md, and a verifier that points out of the
 # closure escapes just as effectively from one level down.
-scan += [str(p) for p in Path(".").rglob("contracts/*")]
-scan += [str(p) for p in Path(".").rglob("contracts/*/*")]
+scan += [p.as_posix() for p in Path(".").rglob("contracts/*")]
+scan += [p.as_posix() for p in Path(".").rglob("contracts/*/*")]
 for rel in scan:
     p = Path(rel)
     if not p.is_file():
@@ -3442,10 +3457,14 @@ if _spec_tree is not None:
         for p in sorted(d.rglob("*.py")):
             if p.name == "__init__.py":
                 continue
-            if str(p) not in referenced:
+            # spec.py references verifiers with forward slashes on every OS,
+            # so compare the POSIX form: str(p) is backslashed on Windows and
+            # would flag every wired verifier as unreferenced.
+            rel = p.as_posix()
+            if rel not in referenced:
                 cerr("closure.contract_verifier_unreferenced",
-                     f"{p}: not referenced by any custom(...) in spec.py — a "
-                     f"verifier nothing wires never runs.", str(p))
+                     f"{rel}: not referenced by any custom(...) in spec.py — a "
+                     f"verifier nothing wires never runs.", rel)
 
     # --- the local desktop runtime binding for source-aligned inputs -----------------
     # These apply to EVERY source_aligned_input(), contract or not: on this
@@ -3544,8 +3563,8 @@ if _spec_tree is not None:
                     cerr("closure.model_path_unresolved",
                          f"spec.py: model_paths[{model!r}] must resolve to an "
                          f"existing csv-source-path/*.csv file; "
-                         f"{csv_root / rel} does not exist.", "spec.py",
-                         {"found": str(csv_root / rel)})
+                         f"{(csv_root / rel).as_posix()} does not exist.", "spec.py",
+                         {"found": (csv_root / rel).as_posix()})
 
     # The profile must name the services spec.py references, bound to the
     # drivers this runtime provides. Binding driver TO service name catches a
@@ -3779,10 +3798,10 @@ for pcsv in sorted(Path("data").rglob("*.csv")):
                 v.lower() not in GENERIC_TOKENS)
             if distinctive and v in tlits:
                 derr("policy.literal_duplicates_landed_value",
-                    f"{pcsv}: value {v!r} (column '{col}') is landed AND "
+                    f"{pcsv.as_posix()}: value {v!r} (column '{col}') is landed AND "
                     f"appears as a literal in transform/main.py. The "
                     f"transform must READ it from the row; a copy diverges "
-                    f"from the row the user edits.", f"{pcsv}:{col}")
+                    f"from the row the user edits.", f"{pcsv.as_posix()}:{col}")
 
 # === PHASE-D-END ===
 
@@ -3911,7 +3930,7 @@ for vcsv in sorted(Path("data").rglob("*.csv")):
             diag("s2_transform", "semantic.absent_vocabulary",
                  f"ABSENT {vcsv.parent.name}.{col}: declared {missing} — never "
                  f"produced in any derived column",
-                 path=cpath(f"{vcsv}:{col}"),
+                 path=cpath(f"{vcsv.as_posix()}:{col}"),
                  evidence={"source": vcsv.parent.name, "column": col,
                            "declared_missing": missing})
 

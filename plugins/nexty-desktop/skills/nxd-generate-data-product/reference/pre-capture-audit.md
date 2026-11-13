@@ -121,6 +121,7 @@ Output names coverage or a ratio metric:
   unmatched identity list. An aggregate match count is not evidence for both
   source sides.
 - Confirm that aggregate ratios use separate additive numerator and denominator metrics and are computed from those query results at the approved grain. A row-level ratio (such as per-campaign CPA) must never be exposed as a metric with `Agg.AVG` or any other reduction, including `SUM`, `MIN`, or `MAX`, and a ratio column must never be summed to produce an aggregate ratio. The allowed row-grain alternative is a derived ratio column validated with `assert_row_ratios`; it must remain at that row grain and must not be reduced. Use the fail-closed recipe in `reference/derived-models.md` and inspect the actual assertions, not only the model column names.
+- Confirm that no distinct count pre-computed per bucket (accounts active per week, per week and feature) is exposed as a `SUM` metric: summing it across buckets counts one entity once per bucket. Use `COUNT_DISTINCT` over the entity key in a `semantic_view` over an event-level model that carries the bucket column, or declare `non_additive_over` on every bucket dimension where the installed runtime supports it.
 - Run the transform assertions against the complete supplied sources before
   capture. A retained review may find a semantic defect, but it does not make a
   missing source contract or a failed assertion safe to publish.

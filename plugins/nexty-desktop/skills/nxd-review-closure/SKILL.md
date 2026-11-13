@@ -7,7 +7,7 @@ allowed-tools:
   - Grep
 metadata:
   author: nextdata
-  version: 0.74.0
+  version: 0.75.0
 ---
 
 # Review a generated closure — adversarially
@@ -150,6 +150,8 @@ words is not re-raised as `HIGH` or `MEDIUM` under a new ID; at most note it
 - a **semi-additive** measure summed over time (rates, balances, yields — you
   may average or take end-of-period, never sum)
 - an average of averages presented as an overall average
+- a distinct count pre-computed per bucket (accounts active per week) and
+  exposed as a `sum`, so any coarser grouping counts one entity once per bucket
 - a measure summed across a many-to-many bridge, so entities in several groups
   are counted several times
 - a rollup whose grain silently differs from the grain its key declares

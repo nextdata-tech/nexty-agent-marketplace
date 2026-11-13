@@ -268,8 +268,8 @@ approval timestamps; never estimate or invent them. `state: "applied"` requires 
 and all other states, including `not_applied`, require `applied_files: []`; list only files actually changed. Defer only accepted
 `behavior_affecting` findings the user explicitly deferred. Never defer
 rejected, `out_of_scope`, or `structural_note` findings. When shell is available,
-load `$JOB_HELPER_DIR/scripts/dp_diagnostics.py` and call
-`validate_review_round(round)` before writing; fix every reported problem.
+put `$JOB_HELPER_DIR/scripts` on `sys.path`, `import dp_diagnostics`, and call
+`validate_review_round(round)` before writing (it is not a CLI subcommand); fix every reported problem.
 Without shell access, apply these rules inline and do not claim helper
 validation.
 

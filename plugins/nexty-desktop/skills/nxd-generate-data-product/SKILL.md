@@ -14,7 +14,7 @@ allowed-tools:
   - Task
 metadata:
   author: nextdata
-  version: 0.74.0
+  version: 0.75.0
 ---
 
 # nxd-generate-data-product skill
@@ -27,8 +27,7 @@ carrying intent, questions, the model plan and every ruling, which this skill
 *compiles*, never re-derives; the **inferred semantic model** — the per-column
 roles produced by **nxd-build-semantic-data-product**'s inference mode, which this
 skill *places*, never redesigns; and the **connector config(s)** naming where
-each source lives and its **connector type** (never invent connection details or
-credentials).
+each source lives and its **connector type** (never invent connection details or credentials).
 
 **If the intent carries a procedure** — a rubric, gates, thresholds, a verdict
 vocabulary — the Workflow's **policy read-back gate** runs before any file is
@@ -262,6 +261,7 @@ per set of metrics over that table:
   `metric_field(<type>(), metric(Agg.<AGG>, of=<base>.field("<column>"), ...))` —
   query-time, not a physical table.
 - **A row-level ratio is not an aggregate metric.** Never expose a row-level ratio (such as per-campaign CPA) through `metric(Agg.AVG, ...)` or any other reduction. For aggregate queries, expose additive numerator and denominator metrics separately and calculate the ratio from those query results. The allowed row-grain alternative is a derived ratio column validated with `assert_row_ratios`; expose it only at that row grain, without a reducing metric over the ratio column.
+- **A distinct count landed per bucket is not additive.** Never `Agg.SUM` a per-bucket distinct count (accounts active per week) across buckets: it counts one entity once per bucket. Land the bucket column on the event-level model and define `Agg.COUNT_DISTINCT` over the entity key in a `semantic_view` over that model, or declare `non_additive_over` on every bucket dimension where the installed `metric()` accepts it.
 - **Aggregate-only outputs still need a governed count.** Add
   `metric_field(number(), metric(Agg.COUNT, column="*", name="<model>_row_count", ...))`
   (or count a non-null key) in a semantic view. Metric names are global across

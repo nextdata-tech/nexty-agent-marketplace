@@ -13,7 +13,7 @@ allowed-tools:
   - Task
 metadata:
   author: nextdata
-  version: 0.74.0
+  version: 0.75.0
 ---
 
 # nxd-run-job-loop skill
@@ -241,7 +241,7 @@ definition path before capture. A new result-changing gap returns
 ### Step 3b — Capture, review, and adjudicate
 
 After generation authors the executable closure inputs and optional agent-side evidence, follow only the supervisor's returned `capture` action with its host-visible authoring root; never modify the captured tree afterward. Run **exactly one mandatory review per capture generation** by immediately dispatching one built-in `Agent` or `Task` conversation subagent, supplying the supervisor's matching `review_input` paths, sanitized request, and the canonical dispatch marker from [reference/workflow-v2.md](reference/workflow-v2.md).
-Keep semantic inference, capture, workflow MCP actions, review adjudication, and the rich `review-record.json` ledger in the main thread; the main thread must not invoke `Skill(nxd-review-closure)`, inspect the retained capture inline, or launch the reviewer through MCP/supervisor. Write the required `NXD_EVAL_ATTESTATIONS_PATH` sidecar before `start_run` as specified in the reference.
+Keep semantic inference, capture, workflow MCP actions, review adjudication, and the rich `review-record.json` ledger in the main thread; the main thread must not invoke `Skill(nxd-review-closure)`, inspect the retained capture inline, or launch the reviewer through MCP/supervisor. Write the required `NXD_EVAL_ATTESTATIONS_PATH` sidecar before `start_run` as specified in the reference. With shell access, before writing every ledger round (including later edits to the same round), put `$JOB_HELPER_DIR/scripts` on `sys.path`, `import dp_diagnostics`, and call `validate_review_round(round)` (it is not a CLI subcommand), and fix each reported problem; reading the rules is not a substitute. Without it, check the round inline against the reference and do not claim it was helper-validated. Its vocabularies are closed: copy round `status`, finding `classification` and `state`, and adjudication `disposition` verbatim from the ledger table in [reference/workflow-v2.md](reference/workflow-v2.md), never composing one (`open_needs_user`, `semantic_defect_reported_medium`). A round that fails validation invalidates the review it records.
 
 Before dispatch, select only the current matching `RequirementView`. On a host without a runner-owned review guard, require a non-content read-only host path/accessibility check for both exact retained paths, including generation, allowed roots, types, and readability. On a host with the eval/live runner's review guard, do not issue a separate owning-thread check: the guard performs and repeats it immediately before dispatch. A host runtime without an equivalent metadata/stat mechanism must stop if it cannot establish availability. If either path is missing, stale, outside the allowed roots, or inaccessible, stop with an explicit incomplete blocker, leave the requirement pending, and never substitute another path. See [reference/workflow-v2.md](reference/workflow-v2.md).
 
