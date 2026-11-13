@@ -12,7 +12,7 @@ allowed-tools:
   - AskUserQuestion
 metadata:
   author: nextdata
-  version: 0.74.0
+  version: 0.75.0
 ---
 
 # nxd-build-semantic-data-product skill
@@ -153,7 +153,7 @@ else expose it as a `number` dimension whose description says why it is not
 summed; never leave one unannotated. A **snapshot** written once per period
 (`stock_on_hand` per `snapshot_date`) adds across warehouses, never across
 dates: where supported, declare `non_additive_over=["snapshot_date"]` (a query
-summing across dates then gets SQ-308); never a plain `sum` without it (`reference/registry-authoring.md`).
+summing across dates then gets SQ-308); never a plain `sum` without it (`reference/registry-authoring.md`). A **distinct count landed per bucket** (accounts active per week, per week and feature) is not additive either: summing it across weeks or features counts one account once per bucket. Prefer a `count_distinct` metric on the event-level model, with the bucket (`week_start`) landed as a dimension column in the first build, so every grouping is a true distinct count; a kept pre-aggregated count takes `non_additive_over` on each bucket dimension where supported, else is a `number` dimension, never a plain `sum`.
 
 **DuckDB declared type → `AttributeSpec` data type** (for the `models.py` attributes). Timestamp columns import `DurationUnit` from `nxd.spec.data_types` and require an explicit unit; the example below uses millisecond precision.
 
