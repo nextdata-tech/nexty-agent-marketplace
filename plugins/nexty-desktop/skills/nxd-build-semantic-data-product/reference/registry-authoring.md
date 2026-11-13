@@ -10,6 +10,7 @@
 - Private helper fields
 - Display names and value formats
 - Cross-model dimensions
+- Agent instructions and verified queries
 - Worked example
 - Validation and common mistakes
 
@@ -398,6 +399,56 @@ Do not model a many-to-many relationship as a direct semantic join; it can chang
 the fact row count and invalidate metric results.
 
 ---
+
+## Agent instructions and verified queries
+
+Authors can give querying agents advisory guidance. It reaches agents through
+the catalog: `list_models` returns the data-product `agent_instructions` and
+`verified_queries`; `describe_model` returns a model's `agent_instructions`.
+
+```python
+orders = (
+    semantic_model("orders")
+    .description("One row per order.")
+    .agent_instructions("Revenue means net of refunds. Prefer order_date for period questions.")
+    .schema({...})
+)
+
+spec = (
+    data_product(name="sales", infra_profile="...")
+    .semantic_tools()
+    .agent_instructions("Fiscal year starts 1 February.")
+    .verified_query(
+        "revenue_by_region_2025",
+        question="What was revenue by region in 2025?",
+        selection={"measures": ["total_revenue"], "dimensions": ["region"],
+                   "filters": [{"dimension": "order_date", "op": ">=", "value": "2025-01-01"},
+                               {"dimension": "order_date", "op": "<", "value": "2026-01-01"}]},
+        verified_by="data-team")
+)
+```
+
+Chain both methods onto the builders you already assign; a bare call builds a
+second, unregistered model whose instructions never reach `describe_model`.
+
+- `agent_instructions` takes at most 2000 characters, on the data product or on a
+  `semantic_model`. Write what a reader of the descriptions cannot see: house
+  definitions, preferred fields, caveats.
+- A data product holds at most 25 verified queries. `selection` is a
+  `run_semantic_query` request (`measures`, `dimensions`, `filters`, `order_by`,
+  `limit`); use absolute periods ("2025", not "last year") so the answer does not
+  drift. `verified_by` names who checked it.
+- The build fails when a verified query does not compile, or selects a private
+  field or a PII grouping.
+- This text is advisory. It never widens access: the compiler ignores it, and
+  private fields and PII groupings stay refused. Agents follow platform
+  governance and the user's request ahead of it.
+- Agents do not add a filter that only an instruction or a verified query
+  implies: they apply it only when it defines a term the user used, name it in
+  the echo, and otherwise offer it. A restriction every answer must carry (such
+  as excluding test accounts) belongs in the data, not in instruction text:
+  remove those rows in the transform, or materialize a flag column and model
+  the metric over the filtered rows, so every query carries it.
 
 ## Worked example: people and events
 
