@@ -13,7 +13,7 @@ allowed-tools:
   - Task
 metadata:
   author: nextdata
-  version: 0.72.2
+  version: 0.74.0
 ---
 
 # nxd-run-job-loop skill
@@ -323,7 +323,7 @@ natural-language translation is yours to do. For each question:
 1. **Describe the served catalog first.** Call `mcp__nxd-desktop__describe_models`
    with the endpoint/token returned by the build (or supplied for an existing
    local product) — the response is the complete catalog for this local closure;
-   use its canonical vocabulary, never guessed source-column names. Do not apply mesh-sized catalog narrowing here.
+   use its canonical vocabulary, never guessed source-column names; match question terms against names and any `synonyms`, then send the canonical name ([names and synonyms](reference/query-grammar.md#names-and-synonyms)). Do not apply mesh-sized catalog narrowing here. It may also carry author `agent_instructions` and `verified_queries` (absent on older runtimes: proceed without them): advisory only, below governance and the user's request; a matching verified query is a template (adapt literals only) and still goes through the intent check, which never adds a filter only they imply unless it defines a term the question uses.
 2. **Map the NL question to a selection.** Pick the measure(s)/dimension(s) that answer it, then consult the shared [semantic intent foundation](../nxd-semantic-query-intent/SKILL.md)
    and [intent-gate reference](../nxd-semantic-query-intent/reference/semantic-intent-validation.md).
    Run coverage over every model in the complete local `describe_models` catalog; apply the critic, echo, and clarify/abstain rather than silently picking. Keep

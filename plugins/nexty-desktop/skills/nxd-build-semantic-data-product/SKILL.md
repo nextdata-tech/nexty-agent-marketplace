@@ -12,7 +12,7 @@ allowed-tools:
   - AskUserQuestion
 metadata:
   author: nextdata
-  version: 0.72.2
+  version: 0.74.0
 ---
 
 # nxd-build-semantic-data-product skill
@@ -32,9 +32,9 @@ compiler, dialect, and tool factory ship in the `nxd.data_product` wheel as
 
 | Tool | Purpose |
 |------|---------|
-| `list_models` | Enumerate the semantic models (entities) with grain + metric/dimension counts |
+| `list_models` | Enumerate the semantic models (entities) with grain + metric/dimension counts, plus author `agent_instructions` and `verified_queries` (see `reference/registry-authoring.md`) |
 | `semantic_model` | Return one model's full registry projection (raw metrics/dimensions/joins) |
-| `describe_model` | Human-oriented detail for one model: metrics (+ compatible dimensions), dimensions (+ PII flags), joins |
+| `describe_model` | Human-oriented detail for one model: metrics (+ compatible dimensions), dimensions (+ PII flags), joins, model `agent_instructions` |
 | `run_semantic_query` | Compile a concept selection to governed SQL, run it, return rows |
 
 See `reference/overview.md` for the design and how annotations flow to the tools.

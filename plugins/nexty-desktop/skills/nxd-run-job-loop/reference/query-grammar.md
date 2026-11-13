@@ -3,6 +3,7 @@
 ## Contents
 
 - [What `run_semantic_query` accepts](#what-run_semantic_query-accepts)
+- [Names and synonyms](#names-and-synonyms)
 - [Grouping by a time period](#grouping-by-a-time-period)
 - [Filter groups and metric-value filters](#filter-groups-and-metric-value-filters)
 - [Filtering a dimension that has a label](#filtering-a-dimension-that-has-a-label)
@@ -53,6 +54,27 @@ dimension) and `dir` (`asc` or `desc`):
 Do not fetch the unrestricted grouped result and sort or truncate it in the
 agent. That loses the endpoint's ordering/limit contract and can turn a
 bounded top-N question into an incomplete or misleading answer.
+
+## Names and synonyms
+
+A metric or dimension in `describe_models` may list `synonyms`: other names its
+author declared, such as "PUMs" or "patients under management" for `pums_sp`.
+
+- Match the question's terms against every concept's name **and** its
+  `synonyms` when you pick the selection, then send the canonical `name`. A
+  synonym match is a candidate the intent critic still checks against the
+  description; it does not skip the gate.
+- No `synonyms` key means none were declared or the runtime predates them; fall
+  back to names and descriptions.
+- A runtime that resolves synonyms also accepts a synonym or a different letter
+  case and reports what it did in the response's `resolved` list
+  (`{requested, resolved, kind, via}`, `via` `case` or `synonym`); result
+  columns keep the canonical name. Treat that as a backstop: check each
+  `resolved` concept is the one you meant, and mention a substitution that
+  matters to the answer.
+- SQ-108 means a name matched more than one concept; the message lists the
+  candidates. Resend one of them exactly when the question decides which, else
+  ask the user. Never guess or retry another spelling.
 
 ## Grouping by a time period
 
