@@ -114,6 +114,9 @@ reported numbers and the source does not settle it:
   processed. Settle both per [incremental-transforms.md § Refresh replay](../../nxd-generate-data-product/reference/incremental-transforms.md#refresh-replay-settle-backlog-and-history-in-the-plan)
   before the first prepare; validation refuses a design that changes row
   counts on an unchanged re-run.
+- for a source that serves only a recent window or revises past days: the
+  lookback and late-arrival handling, settled per
+  [incremental-transforms.md § Rolling-window sources](../../nxd-generate-data-product/reference/incremental-transforms.md#rolling-window-sources-settle-the-lookback-before-the-first-build).
 
 Review blocks on unwritten conventions, and each block costs a reset and a fresh
 approval. A review that names conventions one round at a time can use up every
