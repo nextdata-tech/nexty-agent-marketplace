@@ -13,7 +13,7 @@ allowed-tools:
   - Task
 metadata:
   author: nextdata
-  version: 0.75.1
+  version: 0.75.2
 ---
 
 # nxd-run-job-loop skill
@@ -98,7 +98,7 @@ Establish the following (ask the user for whatever is missing). Before asking fo
 - **Sources** — where the in-scope local data lives. Preserve each source
   exactly by default; for an in-scope file, use only the declared projection
   exception for unneeded personal data. Keep generated exports separate from
-  the supplied source.
+  the supplied source. A REST API that serves only a recent window or revises past days, when the request implies repeated refreshes ("ready each morning"): settle the lookback and late-arrival handling with the user before the first build, and build it into the first transform ([incremental-transforms.md § Rolling-window sources](../nxd-generate-data-product/reference/incremental-transforms.md#rolling-window-sources-settle-the-lookback-before-the-first-build)).
 - **Questions** — the natural-language questions the DP must answer. These
   drive the whole inference (right-to-left): the model is judged by whether it
   answers them.
@@ -383,9 +383,9 @@ exit: `healed`, `healed_with_concessions`, `caps_exhausted`, `blocked`,
   Step 2/3 and use `reset_workflow` while the v2 construction is still pending.
   After publication, a refresh with unchanged logic (new rows under `data/`, or a live source refetched) is a
   recapture of the same workflow: capture, review, approval, validation, `start_run` ([reference/workflow-v2.md § Refresh in place](reference/workflow-v2.md#refresh-in-place)).
-  The same applies once a failed admitted run is terminal. Never reset or remove a published workflow to refresh it. Validate against the live source first, running only the review `next_actions` require (no wider re-audit); propose no logic change until validation shows real drift or returns a code whose recovery is a logic change, and put new values or drift in front of the user first. If a refresh fails because the source changed, report what changed (values and counts) and ask; change no closure, diagnostics and hardening included, until the user decides.
+  The same applies once a failed admitted run is terminal. Never reset or remove a published workflow to refresh it. Validate against the live source first, running only the review `next_actions` require (no wider re-audit); propose no logic change until validation shows real drift or returns a code whose recovery is a logic change, and put new values or drift in front of the user first. If a refresh fails because the source changed, report what changed (values and counts) and ask; change no closure, diagnostics and hardening included, until the user decides. Before any edit outside `data/` to a published stateful product, check that the source still serves every row the release holds; if not, the edit loses rows, so tell the user what and let them choose ([workflow-v2.md § Edits that lose rows](reference/workflow-v2.md#edits-that-lose-rows-on-a-refresh)).
   A behavior-changing revision of a published product also goes in place, on the same workflow ID ([reference/workflow-v2.md § Revise a published product in place](reference/workflow-v2.md#revise-a-published-product-in-place)): before the plan approval, say the next publication replaces the current results
-  and rebuilds from empty (a full re-score for a mapper, with its cost); revise the plan with `reset_workflow` and a replacement blueprint, whose plan starts with that source probe;
+  and rebuilds from empty, losing any rows the source no longer serves (a full re-score for a mapper, with its cost); revise the plan with `reset_workflow` and a replacement blueprint, whose plan starts with that source probe;
   the user's approval of the revised plan authorizes the change. If the supervisor refuses, say in plain words the change can't be applied in place here and offer a separate product (asked first).
   Build a separate versioned product under a new workflow ID only when the user asks to keep the current release unchanged: ask and wait for the yes,
   never call `prepare_workflow` for the new ID in the same turn as the ask, and never fold that authorization into the plan approval.

@@ -17,6 +17,7 @@ and re-reading the source whole is not acceptable.
 - [Verifying the write: count rows, not table names](#verifying-the-write-count-rows-not-table-names)
 - [Per-row calls: time budget and partial results](#per-row-calls-time-budget-and-partial-results)
 - [Refresh replay: settle backlog and history in the plan](#refresh-replay-settle-backlog-and-history-in-the-plan)
+- [Rolling-window sources: settle the lookback before the first build](#rolling-window-sources-settle-the-lookback-before-the-first-build)
 - [Desktop specifics](#desktop-specifics)
 - [Reading prior data back out of DuckDB](#reading-prior-data-back-out-of-duckdb)
 - [Do NOT](#do-not)
@@ -467,6 +468,28 @@ choice as a Decision, and say what the user will see:
   it stopped. This holds only for mapper calls: a per-row request to a real
   API in the scratch run can reach the deadline there too, so use option 1 or 2
   for those.
+
+## Rolling-window sources: settle the lookback before the first build
+
+A REST API that serves only a recent window (say the last two weeks) and can
+revise a day it already reported breaks two ways: a logic edit later restarts
+from empty and cannot re-fetch what the source dropped
+([Desktop specifics](#desktop-specifics)), and a plain "new rows only" cursor
+misses revisions. When the request implies repeated refreshes, settle this
+before the first prepare and write it as a Decision:
+
+- Ask the user, in business terms: how far back may the source still change a
+  figure, and is a revised figure to replace the earlier one? Recommend a
+  default (for example reread the last 7 days each run).
+- Build the answer into the **first** transform: land by the source's event or
+  record id, deduplicate on it, and reread the lookback on every run, so a
+  later refresh needs no logic edit. Choose the lookback now: changing it later is itself a
+  logic edit.
+- Say plainly what the user can expect: history older than the window is kept
+  only because the product keeps it, and a rebuild from scratch cannot bring
+  it back.
+- Later, before any edit outside `data/`, check what the source still serves
+  ([workflow-v2.md § Edits that lose rows](../../nxd-run-job-loop/reference/workflow-v2.md#edits-that-lose-rows-on-a-refresh)).
 
 ## Desktop specifics
 

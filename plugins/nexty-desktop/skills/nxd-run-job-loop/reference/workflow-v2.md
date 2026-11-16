@@ -11,6 +11,7 @@ do not fall back to a direct CLI or local substitute.
   - [Size the transform time budget at prepare](#size-the-transform-time-budget-at-prepare)
   - [Revised or successor plan](#revised-or-successor-plan)
   - [Refresh in place](#refresh-in-place)
+  - [Edits that lose rows on a refresh](#edits-that-lose-rows-on-a-refresh)
   - [Revise a published product in place](#revise-a-published-product-in-place)
   - [Classify admission failures before recovery](#classify-admission-failures-before-recovery)
   - [Recovering a rejected proposal](#recovering-a-rejected-proposal)
@@ -399,6 +400,45 @@ user in plain terms what changed (the values and counts) and ask what to do
 with it. Make no closure change, including adding diagnostics or hardening,
 until the user decides; hardening comes after that answer, never in front of it.
 
+#### Edits that lose rows on a refresh
+
+An edit outside `data/` (spec, models, transform, contracts; diagnostics and
+hardening included) starts the run from an empty database, empty dlt state and
+empty `transform_state` bags (the mechanics:
+[incremental-transforms.md § Desktop specifics](../../nxd-generate-data-product/reference/incremental-transforms.md#desktop-specifics)).
+That is harmless when the source can still serve everything the release holds,
+and silently destructive when it cannot, for example a REST API that serves
+only its last two weeks: the rows it no longer serves are gone from the next
+release. So, **before any such edit to a published stateful product**:
+
+1. Compare the earliest data in the current release with the earliest the
+   source still serves (probe the live source; count the rows involved).
+2. If the source serves everything, edit as the plan allows.
+3. If it does not, do not edit yet. Tell the user in plain words what the
+   edit would lose (the dates and how many rows or records) and that the
+   current numbers would then be wrong or incomplete for that period. When
+   the edit is optional to you (hardening, diagnostics), offer: refresh
+   without the edit (the default; recommend it), accept the loss, or keep the
+   current release and build a separate product (asked first, as below).
+   When the user asked for a change the refresh does not need, state the loss
+   and ask whether to make it anyway, keep the current release and build the change as a separate
+   product, or drop the change; recommend nothing against their request. When
+   the refresh cannot run without the edit, even if the user asked for it (an expired or exceeded mapper
+   grant, `validation/refresh_not_idempotent`, drift whose recovery is a
+   logic change), "refresh without the edit" is not an option: say so, and
+   say that waiting only postpones the loss, because every later refresh
+   needs the same edit while the source keeps dropping older rows that
+   nothing captures. When the lost period must stay available and the
+   product must keep refreshing, recommend keeping the current release and
+   building a separate product (asked first, as below), the only option that
+   keeps both; otherwise offer accepting the loss. Offer holding the refresh
+   only as a short pause while the user decides. Make the edit only on the
+   user's answer, never silently.
+
+Say it in consequences ("the source only keeps the last two weeks, so
+rebuilding now would drop April 8 to April 12, about 600 events"), not in
+terms of state, bags or lineage.
+
 ### Revise a published product in place
 
 A change to what a published product computes (a new rule, a corrected
@@ -411,7 +451,9 @@ workflow, no successor product and no switch for them to make.
    current results with ones computed by the new logic; the earlier results
    stop being served and are not kept as a separate product; and the run
    rebuilds from an empty database, which for a scoring step means scoring
-   every row again, with its cost. Never mix old-logic and new-logic rows.
+   every row again, with its cost, and which loses any rows the source no
+   longer serves ([Edits that lose rows](#edits-that-lose-rows-on-a-refresh):
+   name the dates and counts). Never mix old-logic and new-logic rows.
 2. **Revise the plan** when its text no longer describes the new logic: edit
    `dp-blueprint.md`, record each change as a Decision, and run the normal
    replacement on the same workflow (`reset_workflow` with the graph-root
