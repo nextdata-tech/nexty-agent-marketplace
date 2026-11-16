@@ -1,6 +1,6 @@
 ---
 name: nxd-build-semantic-data-product
-description: Builds a governed text-to-SQL / metrics / semantic-layer data product on Nextdata OS, exposing curated metrics and dimensions over MCP so an AI agent can answer natural-language questions without writing raw SQL. Use when the task is to create or extend a data product that lets agents query business metrics by name (e.g. order_count, revenue) sliced by dimensions (e.g. region, product_category), when you need NL-to-SQL governance over a Snowflake data product, or when exposing a semantic layer as an MCP server tool set. Also covers INFERRING the semantic model when no schema doc exists — profiling a materialized source table (local DuckDB sample) and deriving grains, metrics, dimensions, joins, and PII flags from the profile plus the user's natural-language questions. The author writes only per-field semantic annotations on the models; the one-line .semantic_tools() spec flag auto-generates the four governed MCP tools from the installed nxd.data_product wheel.
+description: Builds a governed text-to-SQL / metrics / semantic-layer data product on Nextdata OS, exposing curated metrics and dimensions over MCP so an AI agent can answer natural-language questions without writing raw SQL. Use when the task is to create or extend a data product that lets agents query business metrics by name (e.g. order_count, revenue) sliced by dimensions (e.g. region, product_category), when you need NL-to-SQL governance over a Snowflake data product, or when exposing a semantic layer as an MCP server tool set. Also covers INFERRING the semantic model when no schema doc exists — profiling a materialized source table (local DuckDB sample) and deriving grains, metrics, dimensions, joins, and PII flags from the profile plus the user's natural-language questions. The author writes only per-field semantic annotations on the models; the one-line .semantic_tools() spec flag auto-generates the three governed MCP tools from the installed nxd.data_product wheel.
 allowed-tools:
   - Bash
   - Read
@@ -12,7 +12,7 @@ allowed-tools:
   - AskUserQuestion
 metadata:
   author: nextdata
-  version: 0.75.2
+  version: 0.75.3
 ---
 
 # nxd-build-semantic-data-product skill
@@ -25,15 +25,14 @@ compiles a correct, governed SQL query and returns rows — no raw SQL escapes t
 DP boundary.
 
 **You author only the per-field semantic annotations on the models.** A single
-`.semantic_tools(service=...)` flag on the spec auto-generates the four governed
+`.semantic_tools(service=...)` flag on the spec auto-generates the three governed
 MCP tools at pod boot. The kernel compiles the annotations into typed payloads; the
 compiler, dialect, and tool factory ship in the `nxd.data_product` wheel as
-`nxd.experimental.semantic` — imported, not vendored. The four tools:
+`nxd.experimental.semantic` — imported, not vendored. The three tools:
 
 | Tool | Purpose |
 |------|---------|
-| `list_models` | Enumerate the semantic models (entities) with grain + metric/dimension counts, plus author `agent_instructions` and `verified_queries` (see `reference/registry-authoring.md`) |
-| `semantic_model` | Return one model's full registry projection (raw metrics/dimensions/joins) |
+| `list_models` | Enumerate the semantic models (entities) with grain + metric/dimension counts, plus author `agent_instructions` and `verified_queries` (see `reference/registry-authoring.md`), the owning `data_product` per model, and — on a data product's own MCP — `is_view` on every model, `over` on views and `to_data_product` on a join that reaches another data product's model |
 | `describe_model` | Human-oriented detail for one model: metrics (+ compatible dimensions), dimensions (+ PII flags), joins, model `agent_instructions` |
 | `run_semantic_query` | Compile a concept selection to governed SQL, run it, return rows |
 
@@ -360,7 +359,7 @@ param gets a raw `Context` with no driver methods.
 
 ### Step 4 — Wire `spec.py`: transform + storage port + `.semantic_tools()`
 
-`.semantic_tools(service=...)` auto-wires the four MCP tools + an mcp-api port.
+`.semantic_tools(service=...)` auto-wires the three MCP tools + an mcp-api port.
 **Promise every annotated model** on the storage port so its attributes reach the
 kernel-generated manifest (and thus the `.nxd/semantic/<model>.json` payloads); add
 the marker model so produce-verification passes.
@@ -389,7 +388,7 @@ spec = (
         code(transform).compute(f"/infra-profile/{INFRA_PROFILE}#/services/<compute>")
     )
     .output(_storage)
-    # ONE line — auto-wires the four tools + the mcp-api port (defaults
+    # ONE line — auto-wires the three tools + the mcp-api port (defaults
     # port_name="mcp-api", mcp_path="/mcp").
     .semantic_tools(service="<mcp-service-name>")
 )
@@ -400,7 +399,7 @@ view_name=None, view_names=None)` — `service` names the infra-profile service.
 
 Key facts:
 - **RPC output:** `.semantic_tools()` creates one when absent and composes its
-  four tools onto an existing RPC output; `service`, `port_name`, and `mcp_path`
+  three tools onto an existing RPC output; `service`, `port_name`, and `mcp_path`
   are ignored in that compose case.
 - **Promise every annotated model**, or its attributes never reach the manifest and
   its `.nxd/semantic/<model>.json` payload is never written.
@@ -489,7 +488,7 @@ is finished. Before reporting done, confirm all four files exist in the workspac
 
 | File | Content |
 |------|---------|
-| `reference/overview.md` | Design + how public semantic roles flow to the 4 tools |
+| `reference/overview.md` | Design + how public semantic roles flow to the 3 tools |
 | `reference/registry-authoring.md` | Full role grammar + auto-derivation + derived metrics + native time grains + snapshot, private and presentation fields + worked example |
 | `reference/compiler-and-routing.md` | Compile paths + chasm-trap + Snowflake dialect |
 | `reference/runtime-and-dependencies.md` | Requirements, wheel version, payload delivery + fallback, lineage |

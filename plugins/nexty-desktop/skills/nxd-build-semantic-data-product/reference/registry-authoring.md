@@ -318,7 +318,7 @@ daily snapshot that must not be summed):
   SQ-308. Rows are still added across the other dimensions (warehouses).
 - A derived metric over a snapshot input follows the same rule. There is no
   "latest snapshot" aggregation; a caller filters to the latest date.
-- `describe_model` and `semantic_model` list `non_additive_over` on the metric,
+- `describe_model` lists `non_additive_over` on the metric,
   so the querying agent sees the rule before it queries. Say in the metric's
   description which dimension it is a snapshot over.
 - Only the named dimension (or another dimension on the same model and column)
@@ -345,8 +345,8 @@ reads but that callers should not query by itself:
 ),
 ```
 
-- A private field is left out of `list_models`, `describe_model`,
-  `semantic_model` and every `compatible_dimensions` / `extra_dimensions` /
+- A private field is left out of `list_models`, `describe_model`
+  and every `compatible_dimensions` / `extra_dimensions` /
   `reaches_dimensions` list.
 - A query that selects, groups by or filters on it is refused with SQ-103,
   exactly like a name that was never declared; ordering by it gets the same

@@ -4,7 +4,7 @@
 Writes placeholder `models.py`, `transform.py`, and `requirements.txt` as flat
 siblings at the DP root, then prints the `spec.py` wiring block.
 
-The four governed MCP tools (`list_models`, `semantic_model`, `describe_model`,
+The three governed MCP tools (`list_models`, `describe_model`,
 and `run_semantic_query`) are auto-generated at pod boot by
 `.semantic_tools(service=...)`. Author the vocabulary with the public `nxd.spec`
 DSL: physical bases use `field(..., primary_key()|dimension()|join())`, while
@@ -25,7 +25,7 @@ Wiring constraints:
 2. `.semantic_tools(service=...)` creates an RPC output when none exists. To
    combine semantic tools with bespoke RPC functions, declare
    `data_product_rpc_output()` with at least one port first; then
-   `.semantic_tools()` adds the four tools alongside them. Call
+   `.semantic_tools()` adds the three tools alongside them. Call
    `.semantic_tools()` only once: a second call raises `ValidationError` because
    the generated tool names already exist.
 3. The transform seeds physical base tables and writes a marker row for storage
@@ -192,7 +192,7 @@ def transform(snowflake: Snowflake) -> None:
 '''
 
 SPEC_SNIPPET = """\\
-# ── spec.py — .semantic_tools() auto-wires the four MCP tools ───────────────
+# ── spec.py — .semantic_tools() auto-wires the three MCP tools ───────────────
 from nxd.spec import code, data_product, data_product_output, storage
 from transform import transform
 from models import provision_marker, your_model, your_model_metrics
@@ -261,7 +261,7 @@ def scaffold(target_dir: Path) -> None:
     print()
     print("All modules are flat at the DP root (no transform/ subdir package).")
     print()
-    print("spec.py wiring (.semantic_tools() auto-generates all four MCP tools):")
+    print("spec.py wiring (.semantic_tools() auto-generates all three MCP tools):")
     print()
     print(SPEC_SNIPPET)
     print(
