@@ -18,6 +18,7 @@ do not fall back to a direct CLI or local substitute.
 - [Relay consent and capture](#relay-consent-and-capture)
 - [Run and report the review](#run-and-report-the-review)
 - [Follow returned actions through admission](#follow-returned-actions-through-admission)
+  - [Final check before validation](#final-check-before-validation)
 - [Mapper approval](#mapper-approval)
   - [Keep an accepted spending approval across a repair](#keep-an-accepted-spending-approval-across-a-repair)
   - [Provider credential access](#provider-credential-access)
@@ -306,7 +307,8 @@ not claims you can make without looking.
    fields) when the session has a shell. For a file, read or profile the file;
    for a database, use the connector's declared tables. If the session has no
    shell, you cannot run the probe, and the supervisor's validation scratch run
-   is the only contact with the live source, so make that run the probe. Put the
+   is the only contact with the live source, so make that run the probe (it publishes nothing, so it may run before the
+   [coverage check](#edits-that-lose-rows-on-a-refresh); that check gates `start_run`). Put the
    drift promises in the revised plan, so they go through approval, never in the
    closure alone: one that fails when a published measure is null in every current
    row, and one that checks each enumerated field against its accepted set. Have
@@ -409,31 +411,115 @@ empty `transform_state` bags (the mechanics:
 That is harmless when the source can still serve everything the release holds,
 and silently destructive when it cannot, for example a REST API that serves
 only its last two weeks: the rows it no longer serves are gone from the next
-release. So, **before any such edit to a published stateful product**:
+release. So the coverage check below applies **at every point where such a
+closure could run or publish, not only when you edit it**. Loss happens only
+when a run publishes, so a validation scratch run that publishes nothing may
+come first (it can serve as the probe); the check gates `start_run`.
+
+- before you make the edit to a published stateful product;
+- before you capture, validate or `start_run` any closure of a published
+  stateful product whose files outside `data/` differ from the published
+  release's (spec, models, transform, contracts, infra profile, mapper grant;
+  a comment-only or README-only change included). How to tell, in this order:
+  - **Live source with no `data/` rows:** the `definition_id` from
+    `check_data_product` against the one `list_data_products` shows for the
+    release is decisive both ways. A different id is a changed lineage, whatever
+    any notes say; the same id is an unchanged one. (`definition_id` also
+    digests `data/`, so it is not the signal for a file source whose rows
+    changed.)
+  - **File source, or a mapper closure** (whose structural check reports no
+    `definition_id`): when the published run's `retained_capture_root` (in that
+    capture's `review_input`) is known in this conversation, compare the files
+    outside `data/` with it by Read only (the runner guard rejects shell
+    commands on retained captures). That comparison is mandatory then.
+  - **Otherwise** (a new session, root unknown): the closure is changed if the
+    review ledger (`review-record.json`) lists applied files outside `data/`
+    since the last publication, or you made any other edit outside `data/`
+    yourself. Do not write extra entries into the ledger or the blueprint for
+    this (the ledger validator rejects unknown keys, and a blueprint edit after
+    consent can force re-approval). If you cannot establish that nothing outside
+    `data/` changed, treat it as changed.
+  A revert confirmed by the `definition_id` (live source) or by the
+  retained-capture comparison clears the changed flag;
+- before you run a closure left over from an earlier correction, review fix
+  or "reworded comment" that was captured but never published, even when the
+  user's later message only asks for fresh numbers or says to go ahead.
+  Asking for an update never chose to lose rows. Refresh on the published
+  closure instead: restore the files outside `data/` to the published version (read them from
+  the retained capture and write them into the authoring closure with Read and
+  Write, no shell), then capture, and for a live source confirm the check's
+  `definition_id` matches the release's before running; or run the coverage
+  check below first.
+
+**The coverage check:**
 
 1. Compare the earliest data in the current release with the earliest the
-   source still serves (probe the live source; count the rows involved).
-2. If the source serves everything, edit as the plan allows.
-3. If it does not, do not edit yet. Tell the user in plain words what the
-   edit would lose (the dates and how many rows or records) and that the
-   current numbers would then be wrong or incomplete for that period. When
-   the edit is optional to you (hardening, diagnostics), offer: refresh
-   without the edit (the default; recommend it), accept the loss, or keep the
-   current release and build a separate product (asked first, as below).
-   When the user asked for a change the refresh does not need, state the loss
-   and ask whether to make it anyway, keep the current release and build the change as a separate
-   product, or drop the change; recommend nothing against their request. When
-   the refresh cannot run without the edit, even if the user asked for it (an expired or exceeded mapper
-   grant, `validation/refresh_not_idempotent`, drift whose recovery is a
-   logic change), "refresh without the edit" is not an option: say so, and
-   say that waiting only postpones the loss, because every later refresh
-   needs the same edit while the source keeps dropping older rows that
-   nothing captures. When the lost period must stay available and the
-   product must keep refreshing, recommend keeping the current release and
-   building a separate product (asked first, as below), the only option that
-   keeps both; otherwise offer accepting the loss. Offer holding the refresh
-   only as a short pause while the user decides. Make the edit only on the
-   user's answer, never silently.
+   source still serves (probe the live source; count the rows involved). If
+   you cannot probe it, there are three cases, and only the first two have an
+   answer:
+   - It is documented or has been seen to serve only a limited window (what
+     the user said, what the first run's served range showed, such as "the
+     last two weeks"): assume that window and treat every period of the
+     release older than it as lost, saying plainly that it is an assumption.
+   - You have verified it serves everything the release holds, or it is
+     documented, or the user has stated, that it serves all history: proceed
+     (do not ask again).
+   - Anything else is **coverage unknown**, including "no sign of a limited
+     window". Unknown is never full coverage and never permission to proceed.
+     For a change that rebuilds from empty, take the ask path in step 3 with
+     the consequence stated plainly ("rows older than what the source still
+     serves could be lost, and I can't check this before publishing").
+   A total-count comparison after publishing does not prove nothing was lost,
+   because late-arriving rows can hide lost ones (630 new rows masked 600 lost
+   in a real run). Compare per period (the oldest day or week) if you compare
+   at all, and never rely on it in place of the choice below. When validation
+   shows no counts and you cannot probe, treat coverage as unknown.
+2. If the source serves everything, edit or run as the plan allows.
+3. If it does not, do not edit or run yet. Tell the user in plain words what
+   the change would lose (the dates and how many rows or records, or, when coverage is unknown, that it
+   cannot be checked) and that the
+   current numbers would then be wrong or incomplete for that period. What you
+   offer depends on why the change exists:
+   - **The refresh does not need the change** (hardening, diagnostics, a
+     wording or comment fix, a review finding you chose to fix, any
+     correction you started yourself that the refresh can run without): offer
+     refresh without the edit (the default; recommend it), accept the loss, or
+     keep the current release and build a separate product (asked first, as
+     below). Refreshing without the edit means capturing the published
+     closure unchanged.
+   - **The user asked for a change the refresh does not need:** state the loss
+     and ask whether to make it anyway, keep the current release and build the
+     change as a separate product, or drop the change; recommend nothing
+     against their request. Until they answer, hold the change (never drop it
+     yourself) and keep serving the current release.
+   - When the refresh cannot run without the edit, even if the user
+     asked for it (an expired or exceeded mapper grant,
+     `validation/refresh_not_idempotent`, drift whose recovery is a logic
+     change), including a repair you started yourself, "refresh without the
+     edit" is not an option: say so, and say that waiting only postpones the
+     loss, because every later refresh needs the same edit while the source
+     keeps dropping older rows that nothing captures. When the lost period
+     must stay available and the product must keep refreshing, recommend
+     keeping the current release and building a separate product (asked
+     first, as below), the only option that keeps both; otherwise offer
+     accepting the loss. Offer holding the refresh only as a short pause while
+     the user decides.
+4. Make the change or run the closure only on the user's explicit choice of one
+   named option, never silently. For a change the refresh can run without, with coverage unknown or loss expected, do not
+   publish a rebuilt release on a plan approval alone: refresh on the unchanged
+   published closure, or ask and proceed only on the explicit choice. **A generic approval is never that choice:**
+   "ok", "go ahead", "approved", "you're the expert", a review fix or spending
+   approval, and a request for updated numbers do not mean the user accepted
+   losing rows. Approving a revised plan authorizes the logic change (see
+   [Revise a published product in place](#revise-a-published-product-in-place)),
+   but losing rows needs its own explicit choice of the named option, even when
+   the plan text disclosed the loss; a repeated plan approval is not that
+   choice. If the answer does not name the loss, ask again with the dates and
+   counts and the options that apply to this change. Until it is chosen,
+   keep serving the current release; hold the change, then by branch: when it
+   is optional to the refresh, refresh without it; when the user asked for it,
+   hold it and ask again; when the refresh cannot run without it, hold the
+   refresh and ask again (there is nothing to refresh without it).
 
 Say it in consequences ("the source only keeps the last two weeks, so
 rebuilding now would drop April 8 to April 12, about 600 events"), not in
@@ -460,7 +546,9 @@ workflow, no successor product and no switch for them to make.
    requirement, a replacement blueprint and its matching inline
    `replacement_proposal`; [Reset after behavior changes](#reset-after-behavior-changes)).
    The user approves the revised plan through the returned consent action;
-   that approval is the authorization for the in-place change. A code fix
+   that approval is the authorization for the in-place change, but not for
+   losing rows: that needs its own named choice
+   ([coverage check](#edits-that-lose-rows-on-a-refresh)). A code fix
    that the approved plan already describes exactly needs no plan change:
    recapture it as a repair.
 3. **Then the ordinary flow:** capture, review, approval, validation and
@@ -1102,7 +1190,7 @@ check follows the last review report for this capture** (full preflight with no
 `mode` argument without the mapper; `mode:"structural"` for a mapper closure,
 since full mode is refused before admission with `mapper_approval_required`). Edit nothing between that check and the run. If it
 fails, the authoring closure no longer matches the capture: repair, reset and
-recapture rather than validate. Then start supervisor-owned validation with the
+recapture rather than validate. That check is the **full** one described in [Final check before validation](#final-check-before-validation). Before `start_run` of a closure that differs outside `data/` from the published release, the [coverage check](#edits-that-lose-rows-on-a-refresh) must have passed. Then start supervisor-owned validation with the
 returned `start_requirement` action and current revision. A queued or running
 operation is pending work: poll `inspect_workflow` without dispatching another
 validation. Continue only when validation is satisfied. Do not end the turn, or
@@ -1170,6 +1258,36 @@ hash, or completion claim. Do not claim completion from closure files, a local
 DuckDB, `build-record.json`, or a successful local self-check. Claim readiness
 only from the supervisor's structured response and its admitted publication
 state.
+
+### Final check before validation
+
+**Before every validation `start_requirement`, in any workflow or revision
+(a refresh capture and a late new workflow included), run one full
+`check_data_product` on the exact closure you then validate and publish, after
+the last review is clear.** The last successful check must come after the last
+review report and after the last change of any kind for this capture:
+
+- **Full, not structural.** Omit `mode`. A `mode:"structural"` result never
+  counts for a closure without the mapper; it is only for a mapper closure,
+  where full mode is refused before admission with `mapper_approval_required`.
+  A quicker structural pass is not a substitute for the full check.
+- **After the last edit.** A check made before an edit, before the review, or
+  before the capture is stale; it never covers the closure that was captured
+  after it. Any edit (a one-word comment included) or recapture restarts the
+  order: edit, record the round, reset, full check, capture, review, full
+  check again, validate, `start_run`.
+- **A reset that only re-opens validation** (after a busy, rejected or
+  "not pending" `start_requirement`) needs no recapture or new review, because
+  the captured closure is unchanged. But `reset_workflow` between the check and
+  the build makes the earlier check stale: first let any queued or running
+  validation settle (never run a check alongside validation), then run one full
+  check, then retry the validation.
+- **On the same closure.** Call it on the unchanged authoring closure, with the
+  same `definition` path and workflow id you capture and publish. Edit nothing
+  and reset nothing between that check and `start_run`, apart from the
+  validation re-open above, which is always followed by a fresh full check.
+- **Failure.** If it fails, the authoring closure no longer matches the
+  capture: repair, reset and recapture rather than validate.
 
 ## Mapper approval
 
@@ -1683,7 +1801,11 @@ subprocess output from that diagnostic.
   follow [failure-handling.md](failure-handling.md): localise it inside the
   existing verifier and revalidate before asking the user.
 - `recovery: retry_unchanged` means the capture is intact. Retry once with a fresh
-  request id.
+  request id, after one new full `check_data_product` on the unchanged closure
+  (any reset since the last check makes it stale; see
+  [Final check before validation](#final-check-before-validation)). Before
+  `start_run` of a closure that differs from the published release outside
+  `data/`, the [coverage check](#edits-that-lose-rows-on-a-refresh) applies.
 - `recovery: stop` is a blocker. Report the user-visible impact in plain words; keep the code internal.
 
 `check_data_product` is diagnosis only. It never substitutes for supervisor

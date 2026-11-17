@@ -33,6 +33,10 @@ validation round. For a mapper closure, full mode is refused
 before admission with `mapper_approval_required`; use `mode:"structural"` before
 capture and fix its findings. Runtime, contract and semantic findings for a
 mapper closure are only reported by trusted validation after spending approval.
+This is the check before capture. After the review is clear, the job loop
+requires a second, full check (structural only for a mapper closure) on the exact closure it validates and publishes
+([final check](../../nxd-run-job-loop/reference/workflow-v2.md#final-check-before-validation));
+a check before an edit or before the review is stale.
 Policy findings, including `policy.literal_duplicates_landed_value`, are
 reported only by trusted validation for every closure; MCP preflight does not
 report `policy.*` findings. Before every capture, also complete the [pre-capture
