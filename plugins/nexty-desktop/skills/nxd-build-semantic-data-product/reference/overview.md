@@ -3,7 +3,7 @@
 ## Contents
 - What this kit provides
 - How public roles reach the tools
-- The four auto-generated tools
+- The three auto-generated tools
 - Authoring boundary
 
 ---
@@ -39,7 +39,7 @@ models.py                         spec.py                 pod runtime
 ---------                         -------                 -----------
 field(..., primary_key())  ┐      promise(base model)  ┐
 field(..., dimension())    ├──→   model(metric view)   ├──→ compiled semantic
-field(..., join())         │      semantic_tools(...)  │    payloads → 4 MCP tools
+field(..., join())         │      semantic_tools(...)  │    payloads → 3 MCP tools
 metric_field(metric(...))  ┘                           ┘
 ```
 
@@ -94,12 +94,11 @@ produce-verification.
 
 ---
 
-## The four auto-generated tools
+## The three auto-generated tools
 
 | Tool | Purpose |
 |------|---------|
-| `list_models` | List semantic models, entity keys, metric/dimension counts, and joins. |
-| `semantic_model` | Return a model's compiled registry projection. |
+| `list_models` | List semantic models, entity keys, owning `data_product`, metric/dimension counts, and joins. |
 | `describe_model` | Explain metrics, compatible dimensions, PII flags, and joins. |
 | `run_semantic_query` | Compile concept selections to governed SQL and return rows. |
 
@@ -113,9 +112,14 @@ traps without banning all cross-model selections.
 `list_models` also lists a `semantic_composition` (the model that holds derived
 metrics) beside the physical models. `describe_model` on it returns one metric
 row per derived metric with `aggregation: "derived"`, its `expression`,
-`inputs` and `compatible_dimensions`; `semantic_model` carries a
-`derived_metrics` list. A model or metric with a native grain carries
+`inputs` and `compatible_dimensions`. A model or metric with a native grain carries
 `time_grain` as `{dimension: grain}`.
+
+Every `list_models` row carries `data_product`, the data product that owns the
+model. On a data product's own MCP, every row also carries `is_view`, a view's
+row carries `over` (the base model it reads), and a join row carries `to_data_product` when
+the join reaches another data product's model. The cross-DP query service shows
+`data_product` only.
 
 ---
 

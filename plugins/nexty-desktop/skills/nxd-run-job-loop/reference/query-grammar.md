@@ -228,7 +228,7 @@ the results yourself.
 - Find it in the catalog: `list_models` lists the `semantic_composition` that
   holds derived metrics beside the models; `describe_model(<composition>)`
   returns rows with `aggregation: "derived"`, the `expression`, its `inputs`
-  and `compatible_dimensions`. `semantic_model` carries `derived_metrics`. Read
+  and `compatible_dimensions`. Read
   the description and the expression: they say which populations it covers.
 - Group only by the row's `compatible_dimensions`.
 - A group one input has no rows for reads `0` for a count and `NULL` for any

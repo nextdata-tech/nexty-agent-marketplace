@@ -14,7 +14,7 @@ allowed-tools:
   - Task
 metadata:
   author: nextdata
-  version: 0.75.2
+  version: 0.75.3
 ---
 
 # nxd-generate-data-product skill
@@ -406,7 +406,7 @@ Contract facts baked into that shape — keep every one:
   every metric view via `.model(view)`, never `.promise(view)`: views are
   query-time only.
 - **No `.semantic_tools(...)`.** The supervisor's semantic child builds the MCP
-  catalog from compiled model roles, and the proven closure serves all four tools
+  catalog from compiled model roles, and the proven closure serves all three tools
   without it. `.semantic_tools()` emits a kernel RPC port needing a live RPC
   driver — a k8s artifact with no local equivalent: a port nothing serves.
 
