@@ -14,7 +14,7 @@ allowed-tools:
   - Task
 metadata:
   author: nextdata
-  version: 0.75.3
+  version: 0.75.4
 ---
 
 # nxd-generate-data-product skill
@@ -457,7 +457,7 @@ capture contract; `build-record.json` remains generated, never hand-authored.
 ### Step 6b — Defer adversarial review to the job loop after capture
 Under workflow-v2, call the `check_data_product` MCP tool on the authoring
 closure before returning it and fix every failing finding, following the
-[preflight before capture](reference/pre-capture-audit.md#preflight-before-capture).
+[preflight before capture](reference/pre-capture-audit.md#preflight-before-capture); after the review the job loop runs a fresh full check (structural only for a mapper closure) on the exact closure it publishes (an earlier check is stale after any edit).
 The developer self-check recipes are optional evidence outside this activated Desktop route.
 They must not create Desktop reserved records/checker copies, edit retained captures,
 or execute a paid mapper outside admission. Use the current MCP check in the applicable mode;

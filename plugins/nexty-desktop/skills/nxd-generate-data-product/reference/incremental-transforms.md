@@ -488,7 +488,17 @@ before the first prepare and write it as a Decision:
 - Say plainly what the user can expect: history older than the window is kept
   only because the product keeps it, and a rebuild from scratch cannot bring
   it back.
-- Later, before any edit outside `data/`, check what the source still serves
+- Later, before any edit outside `data/`, and again before running or
+  publishing a closure that differs outside `data/` from the published
+  release (a leftover correction included), check what the source still
+  serves. If you cannot probe it but know it serves only a limited window,
+  assume only that window, never full coverage. A change the refresh can run
+  without is refreshed without; one the user asked for is held and asked
+  about, never dropped; one the refresh needs keeps the current release
+  serving while you ask. A generic approval ("ok", "go ahead", a review or
+  spending approval, a request for fresh numbers) is never the user choosing
+  to lose rows, and a plan approval authorizes the logic change but not the
+  loss; the loss has to be named and chosen
   ([workflow-v2.md § Edits that lose rows](../../nxd-run-job-loop/reference/workflow-v2.md#edits-that-lose-rows-on-a-refresh)).
 
 ## Desktop specifics
