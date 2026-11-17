@@ -98,7 +98,7 @@ produce-verification.
 
 | Tool | Purpose |
 |------|---------|
-| `list_models` | List semantic models, entity keys, owning `data_product`, metric/dimension counts, and joins. |
+| `list_models` | List semantic models, entity keys, `data_product` (empty on a data product's own endpoint unless the model declares it), metric/dimension counts, and joins. |
 | `describe_model` | Explain metrics, compatible dimensions, PII flags, and joins. |
 | `run_semantic_query` | Compile concept selections to governed SQL and return rows. |
 
@@ -116,7 +116,8 @@ row per derived metric with `aggregation: "derived"`, its `expression`,
 `time_grain` as `{dimension: grain}`.
 
 Every `list_models` row carries `data_product`, the data product that owns the
-model. On a data product's own MCP, every row also carries `is_view`, a view's
+model; it is empty on a data product's own MCP unless the model declares it.
+On a data product's own MCP, every row also carries `is_view`, a view's
 row carries `over` (the base model it reads), and a join row carries `to_data_product` when
 the join reaches another data product's model. The cross-DP query service shows
 `data_product` only.
