@@ -42,10 +42,12 @@ It is informational and never part of this gate: `current`, `unknown` and
 `update.status` is exactly `available`. When it is, tell the user once per
 conversation, whichever of the two responses showed it first, briefly and
 without pausing the task: a newer Nexty Desktop is available, and they can open
-the link for the update steps for their setup. Never name a version in chat
+the link to download the update for their setup. Never name a version in chat
 (not `latest_version`, not `installed_version`). Present `download_url` for the
-user to open, verbatim, only when it starts with `https://`; it is the guide
-page at the site root. Without a usable link, point them to the page where they
+user to open, verbatim, only when it starts with `https://`. It is the exact
+installer for the user's platform (for example a `.msi` or `.pkg`) when the feed
+lists one, otherwise the guide page; present either the same way and do not
+describe or compare the two. Without a usable link, point them to the page where they
 first downloaded Nexty Desktop; never invent a URL. Never download, open or run
 the installer yourself. Never offer an update as the fix for an unrelated
 failure, including the Keychain, provider-credential and saved-state outcomes
@@ -1540,7 +1542,13 @@ workflow-state Keychain outcomes. A concurrent provider-key read returns
 `pending` immediately without opening a second prompt. After the user confirms
 the request completed or was dismissed, re-check once; without confirmation,
 one re-check after a short wait is allowed. If it is still pending, report
-that and stop. `provider_credential_status` is provider-only. After missing-key
+that and stop. `provider_credential_status` is provider-only. When it shows no
+key on macOS or Windows and `begin_provider_credential_entry` is advertised,
+call that tool (no arguments) and tell the user a native masked prompt will
+appear for their Anthropic key; never ask for, echo or log the key in chat. The
+status then reports the outcome as `entry`
+(`prompting`, `stored`, `cancelled`, `empty` or `failed`, with `entry_failure` on failure);
+the full handling is in the canonical table. After missing-key
 setup, check that it confirms the key is present, then resume the same request
 and revision. For an access error, retry only the same request and revision
 when `retryable: true`. A failed provider acquisition at `start_run` happens

@@ -10,7 +10,6 @@ existing references.
 
 - [Default boundary](#default-boundary)
 - [What may be communicated](#what-may-be-communicated)
-- [Message shape](#message-shape)
 - [Templates and cases](#templates-and-cases)
 - [Meaningful progress](#meaningful-progress)
 - [Approval or clarification](#approval-or-clarification)
@@ -172,8 +171,10 @@ contacts the provider. It cannot establish source-credential or protected
 workflow-state access. If it reports a missing provider key, say this is
 one-time setup, not access recovery; follow the provider setup directions in
 the canonical table. The status is `retryable: false`, so do not retry the
-missing-key outcome. The key never goes in chat, and the agent never runs the
-setup command or handles the key.
+missing-key outcome. On macOS and Windows, call `begin_provider_credential_entry`
+when advertised and say a native masked prompt will appear for the Anthropic
+key. The key never goes in chat, and the agent never asks for, echoes or logs it, and
+never runs the setup command or handles the key.
 
 For `access_not_granted`, the user allows the read when macOS asks, then the
 same action is retried only when `retryable: true`. A user confirmation that
