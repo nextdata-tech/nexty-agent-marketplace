@@ -3,9 +3,9 @@
 ## Contents
 
 - [What the generator emits, and why](#what-the-generator-emits-and-why)
-- [1. Byte-copy the approved spec](#1-byte-copy-the-approved-spec)
-- [2. Write the lock](#2-write-the-lock)
-- [3. Open the build record](#3-open-the-build-record)
+- [1. Byte-copy the approved spec](#1-byte-copy-the-approved-spec-supervisor-capture-implementation)
+- [2. Write the lock](#2-write-the-lock-supervisor-capture-implementation)
+- [3. Open the build record](#3-open-the-build-record-supervisor-capture-implementation)
 - [4. Render `README.md`](#4-render-readmemd)
 - [Required-capture fields: the plan half and the observed half](#required-capture-fields-the-plan-half-and-the-observed-half)
 - [`contracts/<name>.md` — one per model still to build](#contractsnamemd--one-per-model-still-to-build)

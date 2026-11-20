@@ -462,7 +462,7 @@ reports `retryable: false`.
 | `integrity` | The protected credential or saved state could not be verified, so access was refused. | Stop and report the refusal; do not attempt recovery. |
 | `unsupported` | This runtime does not support this Keychain read. | Stop and report the limitation; do not suggest reinstalling. |
 | `failed` | The bounded access check failed. | Retry the same action only when `retryable: true`; otherwise stop and report. |
-| Provider missing: `access: missing`, or `access: success` with `present: no` | No provider key is stored. This is one-time setup, not access recovery. | Re-run the installer with `ANTHROPIC_API_KEY` set, or pipe the key into `<bin> credentials set-provider-key --provider anthropic`. The key never goes in chat; the agent never runs the command or handles the key. |
+| Provider missing: `access: missing`, or `access: success` with `present: no` | No provider key is stored. This is one-time setup, not access recovery. | On macOS and Windows, when `begin_provider_credential_entry` is advertised (the missing-key response names it as `entry_tool`), call it with no arguments and tell the user a native masked prompt is about to appear on their computer; the key is typed there, never in chat, and the agent never asks for, echoes or logs it. Then check `provider_credential_status` and read its `entry` field (`prompting`, `stored`, `cancelled`, `empty`, `failed`). Only where the tool is not available, or if the user prefers a terminal, fall back: re-run the installer with `ANTHROPIC_API_KEY` set, or pipe the key into `<bin> credentials set-provider-key --provider anthropic`. The key never goes in chat; the agent never runs the command or handles the key. |
 | Source credential missing | No credential is stored for this source. | Inspect and reuse a compatible source connection. Native masked entry is available only for infra-profile source connections when the runtime offers it. |
 
 The user's confirmation that a macOS request was completed or dismissed is a
@@ -475,6 +475,17 @@ source-credential readability or protected workflow-state access. For a source
 or saved-state outcome, retry only that exact source/state action when it is
 retryable; inspect an uncertain native-entry request before retrying. Do not use
 the provider status tool as a source or saved-state check.
+
+`begin_provider_credential_entry` takes no arguments, opens the native masked
+window and returns at once, so the key never passes through chat, tool
+arguments or results. Only one window is open at a time. Call it only after
+`provider_credential_status` shows no key and the user has the context to
+expect a prompt. While `entry` is `prompting`, wait for the user to finish
+instead of calling the tool again. For `stored`, confirm `present: yes`. For
+`cancelled` or `empty`, say nothing was saved and offer one new prompt only if
+the user wants it. For `failed`, report `entry_failure` and use the terminal
+fallback. The mapper reads the stored key on its next call; no restart is
+needed.
 
 The provider mapper code `mapper_provider_credential_missing` identifies a
 missing-key setup outcome. After setup, check `provider_credential_status`; if
