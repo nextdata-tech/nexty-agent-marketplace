@@ -10,7 +10,7 @@ allowed-tools:
   - Grep
 metadata:
   author: nextdata
-  version: 0.75.7
+  version: 0.76.0
 ---
 
 # nxd-render-static-artifact

@@ -77,7 +77,9 @@ def ingest(duckdb: DuckDbOutput, secrets: dict[str, Any]) -> None:
 
     # dlt must write exactly the declared physical tables, except that an
     # explicitly optional zero-row resource has no table to write. Unexpected
-    # tables and missing required tables remain failures.
+    # tables and missing required tables remain failures. Current Nexty
+    # Desktop publishes an absent optional table as an empty one, so a query
+    # on it returns no rows; keep tolerating absence here regardless.
     actual = set(pipeline.default_schema.data_table_names())
     expected = {duckdb.model_tables[model] for model in PHYSICAL_MODELS}
     optional = {duckdb.model_tables[model] for model in OPTIONAL_EMPTY_MODELS}

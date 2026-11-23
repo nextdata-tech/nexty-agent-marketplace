@@ -111,7 +111,8 @@ column, metric or view, and no bespoke wording. Declare it as an optional
 `OPTIONAL_EMPTY_MODELS` (when nothing drifted it has no rows, so no table), and copy
 this block and its descriptions verbatim into `models.py` and, as one Output line
 ("`source_diagnostics`: fixed drift diagnostics, see custom-contracts.md"), into the
-blueprint. Its only role is a bare `primary_key()`, so the whole model is absent from
+blueprint. Current Nexty Desktop publishes the absent table as an empty one, so a
+query on it returns no rows. Its only role is a bare `primary_key()`, so the whole model is absent from
 `describe_models` and answers no user question. Self-check therefore reports
 `struct.key_not_groupable` and `struct.model_not_queryable` for it; both are expected
 here, so never add a dimension, metric or view to clear them:

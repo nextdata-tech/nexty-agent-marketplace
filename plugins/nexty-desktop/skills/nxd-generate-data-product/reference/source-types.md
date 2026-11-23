@@ -17,7 +17,10 @@ their service shape, companion artifacts, and detailed source recipe.
 ## Choosing a source type
 
 - Use `file-source` for a local JSON, JSONL, or Parquet file. Use `csv-source`
-  for the proven CSV closure shape.
+  for the proven CSV closure shape. A JSON/JSONL file whose records each hold
+  an array of objects is still one `file-source` landed as-is; the transform
+  unnests one level into a parent model plus a derived child model (see
+  [File source](file-source.md#one-level-of-nested-arrays-json--jsonl)).
 - Use `db-source` when the source is a database table or query. Do not export a
   database table into `data/`.
 - Use `api-source` for an HTTP API whose response is already a row-oriented

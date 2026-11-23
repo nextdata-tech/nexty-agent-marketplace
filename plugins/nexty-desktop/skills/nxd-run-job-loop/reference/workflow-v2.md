@@ -698,13 +698,16 @@ itself; do not change the proposal after consent.
 Find the consent action in `next_actions`. After the user approves the exact
 blueprint read-back, call `advance_workflow` with `session_decision`.
 
-At this consent point, ask once: "Would you like your consent to carry forward
-if the supervisor re-prepares this same plan after an update?" This is
-optional; never set `carry_forward_unchanged_plan` without the user's explicit
-opt-in. Omit the field unless the user opted in; older supervisors reject
-unknown fields. When opted in, include `"carry_forward_unchanged_plan": true`
-in the same approved `session_decision`. It is valid only with `approved: true`. Re-preparation always computes a new consent
-subject. Consent carries only when the blueprint semantics, policy, review
+Do not raise consent carry-over yourself: no question, no "optional extra"
+paragraph in the plan echo-back, and no mention of re-preparation or updates.
+Business users do not need it to approve a plan. Set
+`carry_forward_unchanged_plan` only when the user themselves asks for their
+approval to survive an update (for example, "keep my approval if Nexty
+updates", or anything equivalent). Never set it without that explicit opt-in.
+Otherwise omit the field; older supervisors reject unknown fields. When the
+user opted in, include `"carry_forward_unchanged_plan": true` in the same
+approved `session_decision`. It is valid only with `approved: true`.
+Re-preparation always computes a new consent subject. Consent carries only when the blueprint semantics, policy, review
 scope, budget, and proposal identity are unchanged and only supervisor tooling
 identity changed. Otherwise ask for fresh consent. Tell the user when the
 snapshot reports that consent was carried forward; a later denial still
@@ -766,7 +769,7 @@ request.
 }
 ```
 
-Only after the explicit opt-in, add this field to the parameters above:
+Only when the user asked for it, add this field to the parameters above:
 
 ```json
 "carry_forward_unchanged_plan": true
@@ -886,6 +889,15 @@ and `<data-dir>/blueprints` for approved blueprint content. The adapter exposes
 only those roots to the reviewer. If the supervisor returns paths outside them,
 or the roots are unavailable, the handoff fails closed with a distinct
 configuration/availability diagnostic; never create or use a fallback root.
+Current Nexty Desktop may instead return a hash-verified, read-only review copy
+inside the workflow's job folder, next to its `closure/` authoring root:
+`<job folder>/.nexty-review/<workflow>/<capture>/capture/` and
+`.../blueprint.md`, so it stays inside the folder the user shared. That pair is
+also allowed: it is supervisor-written, and the supervisor refuses the review
+report if the copy changed or disappeared. Older builds, or a job folder the
+copy cannot be written to, return the two retained-input roots above. Accept
+either pair exactly as returned and treat the paths as opaque; never write
+under `.nexty-review` or point the reviewer at it yourself.
 
 If either check fails, stop before dispatch and report an explicit incomplete
 blocker, for example: `INCOMPLETE — retained capture handoff blocked:

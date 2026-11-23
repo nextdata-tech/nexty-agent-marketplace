@@ -216,3 +216,24 @@ sequence. Never derive a definition path from an opaque attachment ID, a
 tool-internal ID, or a Linux workspace path. If no host-visible path is
 available, stop and explain that the local build cannot reach the materialized
 definition yet.
+
+### A folder to work in
+
+The job files (the plan, the data product and any staged source) need a folder
+the user has shared with Claude. When you have none, or cannot tell:
+
+- Ask the user to add one in the app, then continue. In Claude Desktop that is
+  the "+" menu, then "Add folder", choosing or creating a folder such as their
+  work folder. If you are unsure that menu name matches the user's client, say
+  "add a folder to this conversation" instead of naming menu items.
+- If you have a file tool for a shared folder, create any subfolders yourself
+  with it. Never ask the user to create folders or move files.
+- Never give the user terminal, PowerShell, cmd or other shell commands to
+  create folders, move files, install anything or set anything up, and never
+  ask them to run commands at all. In Claude Desktop chat you may have no shell,
+  and the user may be on a locked-down Windows desktop.
+- Never ask the user to create sample data. Use the files they supplied; if
+  there are none, ask what they want to analyze.
+- In Claude Cowork, the rule in SKILL.md's execution-surface section stands: its
+  `Bash` is an isolated Linux sandbox, so its paths are never host paths. Stage
+  files there only as that section allows.

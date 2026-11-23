@@ -13,7 +13,7 @@ allowed-tools:
   - Task
 metadata:
   author: nextdata
-  version: 0.75.7
+  version: 0.76.0
 ---
 
 # nxd-run-job-loop skill
@@ -98,7 +98,7 @@ Establish the following (ask the user for whatever is missing). Before asking fo
 - **Sources** — where the in-scope local data lives. Preserve each source
   exactly by default; for an in-scope file, use only the declared projection
   exception for unneeded personal data. Keep generated exports separate from
-  the supplied source. A REST API that serves only a recent window or revises past days, when the request implies repeated refreshes ("ready each morning"): settle the lookback and late-arrival handling with the user before the first build, and build it into the first transform ([incremental-transforms.md § Rolling-window sources](../nxd-generate-data-product/reference/incremental-transforms.md#rolling-window-sources-settle-the-lookback-before-the-first-build)).
+  the supplied source. **Shared folder:** job files need one the user has shared. If none, ask them to add one in the app (Desktop: "+" menu, "Add folder"; if unsure, "add a folder to this conversation"); never give them terminal or PowerShell commands, and create subfolders with your file tool ([details](reference/source-materialization.md#a-folder-to-work-in)). A REST API that serves only a recent window or revises past days, when the request implies repeated refreshes ("ready each morning"): settle the lookback and late-arrival handling with the user before the first build, and build it into the first transform ([incremental-transforms.md § Rolling-window sources](../nxd-generate-data-product/reference/incremental-transforms.md#rolling-window-sources-settle-the-lookback-before-the-first-build)).
 - **Questions** — the natural-language questions the DP must answer. These
   drive the whole inference (right-to-left): the model is judged by whether it
   answers them.
