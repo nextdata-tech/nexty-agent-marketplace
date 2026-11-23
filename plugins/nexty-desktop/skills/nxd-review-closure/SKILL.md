@@ -7,7 +7,7 @@ allowed-tools:
   - Grep
 metadata:
   author: nextdata
-  version: 0.75.7
+  version: 0.76.0
 ---
 
 # Review a generated closure — adversarially
@@ -63,7 +63,15 @@ full pass did not finish. Never invent a finding to fill the remaining time.
 ## What you are given
 
 1. **The supervisor-retained capture** — the exact read-only directory supplied
-   as `review_input.retained_capture_root`, containing
+   as `review_input.retained_capture_root`. Current Nexty Desktop supplies a
+   hash-verified read-only copy inside the workflow's job folder, next to its
+   `closure/` folder (`…/.nexty-review/wf-<id>/<digest>/capture/`, blueprint at
+   `…/blueprint.md`), so it is inside the folder the user shared and needs no
+   extra access; older versions, or a job folder the copy cannot be written to,
+   supply the sealed paths in Nexty's own data folder.
+   Treat whichever paths you are given identically, pass them exactly (a Glob or
+   Grep from the job folder may skip the hidden `.nexty-review` folder), and never
+   edit them. It contains
    `spec.py`, `models.py`, `infra-profile.yaml`, `transform/main.py`,
    `requirements.txt`, `dp-blueprint.approved.md`, `dp-blueprint.lock.json`,
    `build-record.json`, `README.md`, the connector companion artifact where the type has one — and,

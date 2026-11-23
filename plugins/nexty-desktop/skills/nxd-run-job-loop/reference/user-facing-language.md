@@ -19,6 +19,7 @@ existing references.
 - [Banned build-step words](#banned-build-step-words)
 - [Who blocked this](#who-blocked-this)
 - [Desktop folder-access prompts](#desktop-folder-access-prompts)
+- [Asking for a folder](#asking-for-a-folder)
 - [Mandatory gates are never skippable](#mandatory-gates-are-never-skippable)
 - [Decisions the user owns and decisions you own](#decisions-the-user-owns-and-decisions-you-own)
 - [Cleanup failed](#cleanup-failed)
@@ -263,6 +264,20 @@ prompt, ask once and explain plainly:
 If the user declines or the prompt does not appear, say what could not be
 checked and stop. Do not repeat the request in a loop, do not ask for a wider
 folder, and do not look for another way to read the same files.
+
+### Asking for a folder
+
+When no shared folder is available, ask for one in plain words and do not hand
+over commands:
+
+> I need a folder you've shared with me to keep the files for this report. Could
+> you add one in the app (in Claude Desktop, the "+" menu, then "Add folder")?
+> Pick or create any folder, such as your work folder. I'll take it from there.
+
+If you are unsure the menu name fits the user's client, say "add a folder to this
+conversation". Never ask a user to run terminal, PowerShell or cmd commands, or
+to create folders or sample data themselves
+([details](source-materialization.md#a-folder-to-work-in)).
 
 ### Mandatory gates are never skippable
 
