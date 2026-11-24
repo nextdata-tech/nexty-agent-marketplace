@@ -124,13 +124,14 @@ retained_capture_root: <exact retained_capture_root from review_input>
 retained_blueprint_path: <exact retained_blueprint_path from review_input>
 Load and follow nxd-review-closure.
 Sanitized original request: <complete request with credentials replaced>
-review_time_budget_seconds: 300
-review_inspection_cutoff_seconds: 240
+review_time_budget_seconds: 600
+review_inspection_cutoff_seconds: 540
 NXD_REVIEW_DISPATCH {"closure_path":"closure","request_contract":"sanitized_original_request","return":"claims_only","review_round_index":0}
 ```
 
 Replace only the example `closure_path` and `review_round_index` values in the
-marker. Keep both retained-path values byte-for-byte identical to the values
+marker, and the two budget values when the round is sized up after a round that
+ran out of time ([sizing rule](../../nxd-run-job-loop/reference/workflow-v2.md#run-and-report-the-review)). Keep both retained-path values byte-for-byte identical to the values
 that passed the pre-dispatch check; never rebase, shorten, normalize, or replace
 them for the child. Keep every other key/value unchanged and add no colon, slug
 or prose prefix. Invoke the child inline with `run_in_background: false` when the

@@ -7,7 +7,7 @@ allowed-tools:
   - Grep
 metadata:
   author: nextdata
-  version: 0.76.0
+  version: 0.77.0
 ---
 
 # Review a generated closure — adversarially
@@ -34,6 +34,23 @@ reachability. Reserve enough time to return the final claims response. The
 caller may enforce a separate finalization reserve by denying further
 inspection calls before the hard deadline; when that happens, stop reading
 and return complete or explicitly partial evidenced claims immediately.
+
+Spend the budget on reading, not on tool round trips. List the capture once
+with `Glob`, then issue the `Read` calls for every file you will need in one
+batch (several calls in a single turn) instead of one file per turn: the
+blueprint, `spec.py`, `models.py`, the infra profile and the small helpers
+first, the largest transform file last. A large file read in pages comes after
+everything small has been read, so an interrupted review has still seen every
+file at least in part. Name any file you did not finish in the partial-claims
+note, so the next round knows where to start.
+
+Know the decisions ledger's convention before you claim against it. In
+`nxd_decisions`, `provenance` records who proposed a ruling and `status`
+records whether the user settled it. A rule the agent suggested and the user
+then accepted ("follow your suggestion") is correctly `agent_authored` with
+`status = confirmed`; it does not become `user_confirmed`. That pairing is not
+a defect: do not claim it. Claim only a row whose `provenance` contradicts who
+actually proposed it, or whose `status` contradicts the user's answer.
 
 Read the retained capture and blueprint only with the `Read` tool, plus `Glob`
 and `Grep` with an explicit absolute `path` inside them. Never use Bash or any
