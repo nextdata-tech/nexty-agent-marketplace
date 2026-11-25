@@ -465,12 +465,17 @@ come first (it can serve as the probe); the check gates `start_run`.
      release older than it as lost, saying plainly that it is an assumption.
    - You have verified it serves everything the release holds, or it is
      documented, or the user has stated, that it serves all history: proceed
-     (do not ask again).
-   - Anything else is **coverage unknown**, including "no sign of a limited
-     window". Unknown is never full coverage and never permission to proceed.
-     For a change that rebuilds from empty, take the ask path in step 3 with
-     the consequence stated plainly ("rows older than what the source still
-     serves could be lost, and I can't check this before publishing").
+     (do not ask again). So does this evidence: the first build read the
+     source's whole requested range in one pass, with no contrary sign
+     (truncation, a documented or observed window, fewer rows on later reads).
+     That counts as seen to serve everything.
+   - Anything else is **coverage unknown**. Unknown is never full coverage and
+     never permission to publish a rebuild from empty. It never stalls the job
+     either: the default is to refresh now on the unchanged published closure
+     (the rows stay safe) and keep the pending change queued, telling the user
+     in plain words, then ask once about the change with the consequence named
+     ("rows older than what the source still serves could be lost, and I can't
+     check this before publishing").
    A total-count comparison after publishing does not prove nothing was lost,
    because late-arriving rows can hide lost ones (630 new rows masked 600 lost
    in a real run). Compare per period (the oldest day or week) if you compare
@@ -484,7 +489,9 @@ come first (it can serve as the probe); the check gates `start_run`.
    offer depends on why the change exists:
    - **The refresh does not need the change** (hardening, diagnostics, a
      wording or comment fix, a review finding you chose to fix, any
-     correction you started yourself that the refresh can run without): offer
+     correction you started or recommended yourself that the refresh can run
+     without; it stays here even after the user approves it, unless the refresh
+     actually needs it): offer
      refresh without the edit (the default; recommend it), accept the loss, or
      keep the current release and build a separate product (asked first, as
      below). Refreshing without the edit means capturing the published
@@ -507,7 +514,12 @@ come first (it can serve as the probe); the check gates `start_run`.
      accepting the loss. Offer holding the refresh only as a short pause while
      the user decides.
 4. Make the change or run the closure only on the user's explicit choice of one
-   named option, never silently. For a change the refresh can run without, with coverage unknown or loss expected, do not
+   named option, never silently. A reply that picks the option you
+   recommended in a question that named the loss ("go with your
+   recommendation", "approved" to that question) is that named choice; a bare
+   "you decide" or "you're the expert" is not (row loss keeps this rule). Ask at most twice; after that
+   take the safe path (refresh without the change, keep it queued) and
+   continue, never idle. For a change the refresh can run without, with coverage unknown or loss expected, do not
    publish a rebuilt release on a plan approval alone: refresh on the unchanged
    published closure, or ask and proceed only on the explicit choice. **A generic approval is never that choice:**
    "ok", "go ahead", "approved", "you're the expert", a review fix or spending
@@ -519,8 +531,8 @@ come first (it can serve as the probe); the check gates `start_run`.
    choice. If the answer does not name the loss, ask again with the dates and
    counts and the options that apply to this change. Until it is chosen,
    keep serving the current release; hold the change, then by branch: when it
-   is optional to the refresh, refresh without it; when the user asked for it,
-   hold it and ask again; when the refresh cannot run without it, hold the
+   is optional to the refresh, refresh without it now and keep it queued; when
+   the user asked for it, hold it and ask again (within the twice cap); when the refresh cannot run without it, hold the
    refresh and ask again (there is nothing to refresh without it).
 
 Say it in consequences ("the source only keeps the last two weeks, so
@@ -813,8 +825,9 @@ root, `<job>` is empty and the references are
 `closure/build-record.json#self_check` and
 `review-record.json#review_rounds/<index>`. Never add a directory prefix the
 captured path does not have. `<index>` is zero-based within the current
-workflow's `review-record.json`; reset it to `0` when a repair moves to a new
-workflow id.
+workflow's `review-record.json`: it equals the rounds already recorded there,
+and it keeps counting through reset, correct and recapture cycles. Start again
+at `0` only when a new workflow id starts a new `review-record.json`.
 The root array may also carry a positive-integer `turn` on an object, but no
 other keys. Keep one indexed review attestation for every external
 `review_rounds[]` entry, including after resets. This sidecar is a
@@ -937,6 +950,14 @@ review_time_budget_seconds: 600
 review_inspection_cutoff_seconds: 540
 NXD_REVIEW_DISPATCH {"closure_path":"closure","request_contract":"sanitized_original_request","return":"claims_only","review_round_index":0}
 ```
+
+Set `review_round_index` to the number of rounds already recorded in this
+workflow's `review-record.json` (the first round is `0`). It keeps counting
+through reset, correct and recapture cycles within the same workflow id; never
+restart it and never copy the example's `0`. After dispatching, compare the
+index you sent with the number of rounds recorded before this one (count
+before you land the returned round); if it was wrong, say so instead of
+continuing silently and do not re-dispatch the round.
 
 The `600` and `540` values above are the budget for the first review round
 of a workflow. Size each later round from the ledger, not from a guess about

@@ -131,7 +131,14 @@ NXD_REVIEW_DISPATCH {"closure_path":"closure","request_contract":"sanitized_orig
 
 Replace only the example `closure_path` and `review_round_index` values in the
 marker, and the two budget values when the round is sized up after a round that
-ran out of time ([sizing rule](../../nxd-run-job-loop/reference/workflow-v2.md#run-and-report-the-review)). Keep both retained-path values byte-for-byte identical to the values
+ran out of time ([sizing rule](../../nxd-run-job-loop/reference/workflow-v2.md#run-and-report-the-review)).
+Set `review_round_index` to the number of rounds already recorded in this
+workflow's `review-record.json` (the first round is `0`). It keeps counting
+through reset, correct and recapture cycles within the same workflow id; never
+restart it and never copy the example's `0`. After dispatching, compare the
+index you sent with the number of rounds recorded before this one (count
+before you land the returned round); if it was wrong, say so instead of
+continuing silently and do not re-dispatch the round. Keep both retained-path values byte-for-byte identical to the values
 that passed the pre-dispatch check; never rebase, shorten, normalize, or replace
 them for the child. Keep every other key/value unchanged and add no colon, slug
 or prose prefix. Invoke the child inline with `run_in_background: false` when the
@@ -261,6 +268,11 @@ claims are `LOW` or advisory is reported `clear` with an empty `findings` list
 Also record `deferred_finding_ids`: it is empty unless the cited user decision
 explicitly continues while leaving accepted `behavior_affecting` findings
 unapplied, in which case it names those finding IDs exactly.
+Offer each deferral as an option labelled exactly "Defer `<finding-id>`:
+publish with this limit disclosed", one per finding id. Record a finding in
+`deferred_finding_ids` only when the user chose that option, or replied with a
+delegation ("you're the expert", "your call") to a question where you
+recommended it. A retry, a rerun or any other choice is never a deferral.
 Only an explicitly authorized mutation is also recorded as its normal heal
 attempt. This keeps pending, rejected, denied and timed-out findings auditable.
 
@@ -283,9 +295,11 @@ A completed round that returned no findings is recorded too. "Reviewed, nothing
 found" is information; a missing or timed-out section is not a clean review.
 The marker is a declaration of the sanitization contract, not proof that the
 delegated request was faithful or credential-free. Number each dispatch from
-zero in array order within the current workflow/closure. Reset the index to
-`0` when a repair moves to a new workflow id; the index is local to that
-workflow's `review-record.json`, not a run-wide counter. The live attestation for that review carries the same
+zero in array order within the current workflow/closure: the index equals the
+rounds already recorded in `review-record.json`, and it keeps counting through
+reset, correct and recapture cycles of the same workflow id. Start again at `0`
+only when a new workflow id starts a new `review-record.json`; the index is
+local to that file, not a run-wide counter. The live attestation for that review carries the same
 `review_round_index` and uses the exact evidence reference
 `<normalized-job>/review-record.json#review_rounds/<review_round_index>`;
 it does not need a `turn` field. If an older recording carries `turn`, it is

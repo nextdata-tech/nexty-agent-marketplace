@@ -294,6 +294,12 @@ producing the identical error:
   transform reads that the source no longer has must be resolved, and when
   resolving it changes what a field or measure means, that is a plan decision put
   to the user, not a silent remap.
+  **Delegation to your recommendation.** A delegation reply ("you're the
+  expert", "your call", "use your judgement") to a question where you named a
+  recommended option authorises that recommendation: take it and say which
+  option you took. The exceptions are the choices the skills require to be
+  named explicitly (losing rows, credentials, spending): there a bare
+  delegation is not the choice.
   An explicit hand-back of a renamed-key decision ("you decide", "you tell me",
   "your call"), including after you explained the trade-off, is a delegation, not
   a non-answer: do not keep re-asking and do not default to stopping. A deferral
