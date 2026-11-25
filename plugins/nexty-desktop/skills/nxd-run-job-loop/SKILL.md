@@ -13,7 +13,7 @@ allowed-tools:
   - Task
 metadata:
   author: nextdata
-  version: 0.76.0
+  version: 0.77.0
 ---
 
 # nxd-run-job-loop skill
@@ -175,7 +175,7 @@ supervisor-derived typed proposal hashes plus Terms, contract-inventory, compile
 and delivery metadata. Lock each approved Decision by id and hash; extraction may not
 overwrite it. A conflicting edit becomes an explicit change proposal and
 revokes approval. The approved Markdown and typed proposal are byte-snapshotted
-into the closure, never referenced through `../dp-blueprint.md`.
+into the closure, never referenced through `../dp-blueprint.md`. **An approval that carries a change is not an approval.** When the reply both approves and changes the plan ("approved, but leave prod out for now"), write the change into the blueprint first, as a Decision quoting the user, then re-prepare and ask once for the amended plan. Never build on a change the blueprint does not yet say: the reviewer grades against the blueprint and will flag every difference, which costs a review round and a second approval anyway. Settle everything the build will need before the first approval, including the decisions ledger's columns ([dp-blueprint.md § Everything the build needs is in the first plan](reference/dp-blueprint.md#everything-the-build-needs-is-in-the-first-plan)).
 
 When a question needs a judgement read from each entity's evidence, model that
 decision as a versioned `apply_procedure` Transform step or reference Model.

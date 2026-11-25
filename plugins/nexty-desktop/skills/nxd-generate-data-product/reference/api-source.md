@@ -16,6 +16,7 @@
 - Naming
 - Why the endpoints live in the profile
 - `transform/main.py` diff from the CSV template
+  - Name the source that failed
 - `requirements.txt`
 - `spec.py` / `infra-profile.yaml` diffs
 - Self-check (connectivity smoke test)
@@ -825,8 +826,59 @@ for model in fetched_models:
     if flatten is not None:
         resource = resource.add_map(flatten)
     readers.append(resource.with_name(table_name))
-pipeline.run(readers, write_disposition="replace")
+try:
+    pipeline.run(readers, write_disposition="replace")
+except Exception as exc:
+    _report_failed_fetch(exc, {duckdb.model_tables[m]: m for m in fetched_models})
+    raise
 ```
+
+### Name the source that failed
+
+A run that fails inside `pipeline.run` otherwise reports only that the
+transform failed: the supervisor keeps the raw traceback private, so the agent
+and the user cannot tell which of several APIs broke, or whether it was a
+refused credential (`401`/`403`) or a slow endpoint. The `except` above calls
+this helper, which prints one `nxd-stage` marker naming the model and re-raises
+with the HTTP status. The supervisor reports the last marker as the run's
+`transform_stage`, so the failure names its source:
+
+```python
+def _failed_fetch(exc):
+    # dlt wraps the request error: PipelineStepFailed.exception ->
+    # ResourceExtractionError (pipe_name) -> requests.HTTPError (response).
+    # The innermost error names a failure that has no HTTP status. requests
+    # and urllib3 chain down to the socket error, so it reads TimeoutError,
+    # ConnectionRefusedError or gaierror (a DNS lookup that failed).
+    resource, status, leaf, seen = None, None, exc, set()
+    while exc is not None and id(exc) not in seen:
+        seen.add(id(exc))
+        leaf = exc
+        resource = resource or getattr(exc, "pipe_name", None)
+        status = status or getattr(getattr(exc, "response", None), "status_code", None)
+        exc = getattr(exc, "exception", None) or exc.__cause__ or exc.__context__
+    return resource, status, leaf
+
+
+def _report_failed_fetch(exc, model_for_table):
+    table, status, leaf = _failed_fetch(exc)
+    if table is None:
+        return
+    model = model_for_table.get(table, table)
+    print(f"nxd-stage stage=fetch_failed resource={model}", flush=True)
+    detail = f"HTTP {status}" if status else type(leaf).__name__
+    raise RuntimeError(f"fetching resource {model} failed: {detail}") from exc
+```
+
+When reporting it, translate the socket class for the user: `TimeoutError` is
+an endpoint that did not answer in time, `ConnectionRefusedError` a host that
+refused the connection, and `gaierror` a host name that did not resolve.
+
+Name the resource by its **model**, never by a URL, host, path or query: the
+marker keeps only one identifier token, and the message travels further than
+the run log. Do not catch per request or retry here; this runs once, after dlt
+has already given up.
+
 
 ### Deriving from a fetched source
 
@@ -858,7 +910,11 @@ Then land the derived models in a **second** `pipeline.run(...)`, after the
 fetch run has returned:
 
 ```python
-pipeline.run(readers, write_disposition="replace")     # fetch + reference data
+try:                                                   # fetch + reference data
+    pipeline.run(readers, write_disposition="replace")
+except Exception as exc:                               # see "Name the source that failed"
+    _report_failed_fetch(exc, {duckdb.model_tables[m]: m for m in fetched_models})
+    raise
 
 rows = _FETCHED["issues_landed"]                       # now fully populated
 derived = _derive(rows)

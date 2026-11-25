@@ -350,6 +350,29 @@ edits, or delivery-profile changes require a new approval. The closure stores
 the byte-identical `dp-blueprint.approved.md` and the approved typed proposal JSON;
 it never points back to the live document.
 
+### Everything the build needs is in the first plan
+
+Each re-approval costs the user a turn and their attention, so a plan should
+reach approval once. Before asking, check the plan against what the build will
+require, not only against what the user said:
+
+- **The decisions ledger.** When the plan records rulings (yours or the
+  user's), its Models section names `nxd_decisions` with all of its columns:
+  `decision_id`, `status` (`confirmed`, `proposed`, `blocked`), `provenance`
+  (`user_confirmed`, `agent_authored`, `source_derived`, `deferred`), `ruling`,
+  `applies_to` and `detail`. The self-check refuses a ledger missing `status`
+  or `provenance`, so leaving them out of the plan forces a second approval
+  mid-build ([shape](../../nxd-generate-data-product/reference/derivation-plan.md#the-decisions-model)).
+- **Small rules the code will have to pick anyway:** duplicate handling, what
+  a blank field falls back to, which link a row carries, how a record that
+  matches several targets is shown. If the build must choose, state the choice
+  in the plan as a default the user can see, not as a later amendment.
+- **Scope the user narrowed in conversation.** "Proceed without prod" is a
+  Decision quoting the user, written before approval, together with what it
+  changes in the results (which statuses become impossible, which rows are
+  missing). A plan that still describes the wider scope is reviewed against
+  that wider scope.
+
 ### Sharing the document
 
 What approval binds is normative in `docs/architecture/dp-spec-authoritative.md`

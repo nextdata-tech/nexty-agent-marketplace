@@ -933,16 +933,51 @@ retained_capture_root: <exact retained_capture_root from review_input>
 retained_blueprint_path: <exact retained_blueprint_path from review_input>
 Load and follow nxd-review-closure.
 Sanitized original request: <complete request with credentials replaced>
-review_time_budget_seconds: 300
-review_inspection_cutoff_seconds: 240
+review_time_budget_seconds: 600
+review_inspection_cutoff_seconds: 540
 NXD_REVIEW_DISPATCH {"closure_path":"closure","request_contract":"sanitized_original_request","return":"claims_only","review_round_index":0}
 ```
 
-The `300` and `240` values above are the current workflow-v2 runner policy; a
-caller with another enforced budget must substitute those values in the same
-fields. The inspection cutoff is advisory to callers that do not provide a
-runner-owned guard, but when present it preserves time for the terminal claims
-response.
+The `600` and `540` values above are the budget for the first review round
+of a workflow. Size each later round from the ledger, not from a guess about
+the closure:
+
+- The previous round ran out of time if it is `timed_out` in
+  `review-record.json`, or if the reviewer returned explicitly partial claims
+  that name files it did not finish. A partial return stops at the inspection
+  cutoff, inside the budget, so it is recorded `complete` or `needs_user` from
+  its claims (never `timed_out`, which must span the whole `budget_ms`), and
+  reported `indeterminate` for the files it did not finish. Its
+  `user_decision.citation` names those files (below), so a resumed session
+  reads the partial return from the ledger too.
+- After a round that ran out of time, double the previous `budget_ms` for the
+  next round, up to 1200 seconds. A round that read every file keeps the
+  budget it had.
+- The inspection cutoff is always the budget minus 60 seconds.
+- Write the same number into the round's `budget_ms`
+  (`review_time_budget_seconds` × 1000), so the ledger and the dispatch agree.
+- A round that ran out of time, `timed_out` or partial, needs the user's
+  decision before the workflow continues. Ask for it together with the larger
+  budget, in one question ("The review ran out of time before reading every
+  file. Run it again with 20 minutes?"), and record their answer as that
+  round's `user_decision`, naming the files the reviewer did not finish in its
+  `citation` (`approved_finding_ids` stays `[]` when the round has no
+  findings). When the round also holds unresolved `MEDIUM`/`HIGH` claims, put
+  their IDs in that same question, as the batch rule below asks, and write one
+  `user_decision` that resolves them (applied or deferred) and names the
+  unread files; never defer a claim only to get the ledger past validation. Never
+  shorten the budget to save time, and never recapture an unchanged closure
+  only to re-run a review at the same budget.
+- A round at 1200 seconds that again runs out of time gets no larger budget.
+  Report it `indeterminate` and name the files the reviewer did not finish
+  (from its partial-claims note). The workflow stops there until the user
+  narrows the closure or gives a larger budget that their runner enforces.
+  Never send a `clear` report that covers files the reviewer did not read.
+
+A caller with its own enforced budget (a runner policy or conduct rule that
+states these two lines) wins: copy its values verbatim instead. The inspection
+cutoff is advisory to callers that do not provide a runner-owned guard, but
+when present it preserves time for the terminal claims response.
 Keep both retained-path values byte-for-byte identical to the paths that passed
 the pre-dispatch check; do not rebase, shorten, normalize, or replace them for
 the child. The check proves handoff availability only; it is not review
@@ -1018,7 +1053,9 @@ authorizing `citation` and `approved_finding_ids`; move each finding to
 `applied` (with `applied_files`) or, if deferred, move it to `not_applied` and list
 it in `deferred_finding_ids`; then set the round `status` to `complete`. A
 round left at `needs_user` with `user_decision: null` after the user ruled is
-stale.
+stale. A partial round (one that ran out of time, above) is the exception to
+`user_decision: null` on a clear round: it carries the user's re-run decision,
+with the unread files in its `citation`.
 
 Ledger timestamps (`started_at_unix_ms`, `ended_at_unix_ms`, and, when set,
 `user_decision.approved_at_unix_ms`) are actual epoch milliseconds read from
@@ -1817,7 +1854,12 @@ subprocess output from that diagnostic.
   names the promise that failed, its model, and how many rows failed, and its
   `context` carries the verifier's identifiers (field names, stage values, counts); an
   `exception_class` such as `decimal.ConversionSyntax` names what the transform
-  raised on real source data. When a contract failure names no field or row,
+  raised on real source data. When the diagnostic also carries `exception`
+  (class, message with the HTTP status, host and path kept and query values
+  removed, and frames) or `transform_stage` (an API closure's `fetch_failed`
+  marker names the model), name the failing source and status to the user
+  before changing anything: a `401`/`403` is a credential to re-enter, not code
+  to repair. Older supervisors return only `exception_class`. When a contract failure names no field or row,
   follow [failure-handling.md](failure-handling.md): localise it inside the
   existing verifier and revalidate before asking the user.
 - `recovery: retry_unchanged` means the capture is intact. Retry once with a fresh
@@ -1900,6 +1942,8 @@ the diagnostic recovery value and follow this table:
 | `workflow/capture_proposal_integrity` | The retained proposal is missing, unreadable, malformed, or has a digest mismatch. | Stop and tell the user in plain words; keep the code internal. Recovery requires a full replacement blueprint plus regenerated proposal and renewed consent; retained re-preparation is refused. |
 | `workflow/capture_blueprint_integrity` | Retained blueprint bytes do not match their content address. | Stop and tell the user in plain words; keep the code internal. |
 | `workflow/capture_retained_integrity` | The retained capture is unreadable, conflicts with its digest, or changed while sealing. | Stop and tell the user in plain words; keep the code internal. |
+| `workflow/capture_storage_failed` | The host briefly refused a file operation while sealing (another program held a file open). | Follow `recovery: retry_unchanged`: retry once with a fresh request id. If it fails again, handle it like `workflow/capture_storage_unavailable`. |
+| `workflow/capture_storage_unavailable` | The host refused a file operation for a lasting reason: no write permission, a full disk or quota, or a read-only volume. | Tell the user what the detail names (the operation and folder) and ask them to fix it; retry once only after they say it is fixed. |
 
 Other capture codes identify input limits, reserved artifacts, or a specific
 materialization failure and carry their own recovery disposition. Do not infer
