@@ -485,6 +485,13 @@ before the first prepare and write it as a Decision:
   record id, deduplicate on it, and reread the lookback on every run, so a
   later refresh needs no logic edit. Choose the lookback now: changing it later is itself a
   logic edit.
+- Anchor the lookback (the late-arrival re-read window) to the latest landed
+  event time, or the source's own as-of date, never to the wall clock or the
+  run date. A window counted back from today re-reads nothing on a historical
+  or lagging source, so a late event is missed. If you find that your own
+  window re-reads nothing, that is a defect against the user's late-arrival
+  rule: put the fix in the plan as a correction to approve, not as an optional
+  yes/no question.
 - Say plainly what the user can expect: history older than the window is kept
   only because the product keeps it, and a rebuild from scratch cannot bring
   it back.
