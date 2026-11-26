@@ -465,17 +465,18 @@ come first (it can serve as the probe); the check gates `start_run`.
      release older than it as lost, saying plainly that it is an assumption.
    - You have verified it serves everything the release holds, or it is
      documented, or the user has stated, that it serves all history: proceed
-     (do not ask again). So does this evidence: the first build read the
-     source's whole requested range in one pass, with no contrary sign
-     (truncation, a documented or observed window, fewer rows on later reads).
-     That counts as seen to serve everything.
+     (do not ask again). A first build that read the whole requested range
+     is not this evidence: it shows what the source served then, not what it
+     still serves, so a source with an undocumented retention can since have
+     aged out the oldest rows.
    - Anything else is **coverage unknown**. Unknown is never full coverage and
      never permission to publish a rebuild from empty. It never stalls the job
-     either: the default is to refresh now on the unchanged published closure
-     (the rows stay safe) and keep the pending change queued, telling the user
+     either: when the refresh can run without the change, the default is to
+     refresh now on the unchanged published closure (the rows stay safe) and keep the pending change queued, telling the user
      in plain words, then ask once about the change with the consequence named
      ("rows older than what the source still serves could be lost, and I can't
-     check this before publishing").
+     check this before publishing"). When the refresh cannot run without the
+     change, follow the last branch of step 3 instead.
    A total-count comparison after publishing does not prove nothing was lost,
    because late-arriving rows can hide lost ones (630 new rows masked 600 lost
    in a real run). Compare per period (the oldest day or week) if you compare
@@ -514,12 +515,18 @@ come first (it can serve as the probe); the check gates `start_run`.
      accepting the loss. Offer holding the refresh only as a short pause while
      the user decides.
 4. Make the change or run the closure only on the user's explicit choice of one
-   named option, never silently. A reply that picks the option you
-   recommended in a question that named the loss ("go with your
-   recommendation", "approved" to that question) is that named choice; a bare
-   "you decide" or "you're the expert" is not (row loss keeps this rule). Ask at most twice; after that
-   take the safe path (refresh without the change, keep it queued) and
-   continue, never idle. For a change the refresh can run without, with coverage unknown or loss expected, do not
+   named option, never silently. A reply that picks an option by its content
+   ("refresh without the edit", "build it as a separate product", "accept
+   losing April 8 to 12") is that named choice. "Go with your recommendation"
+   counts only when the option you recommended loses no rows; accepting a loss
+   always needs the user to name it. A bare "approved", "you decide" or
+   "you're the expert" is not the choice (row loss keeps this rule). Ask at
+   most twice; after that take the safe path for the branch and continue,
+   never idle: when the change is optional to the refresh, refresh without it
+   and keep it queued; when the user asked for it, keep serving the current
+   release, keep the change held and report it; when the refresh cannot run
+   without it, keep serving the current release, do not run, report the
+   pending decision and stop as blocked. For a change the refresh can run without, with coverage unknown or loss expected, do not
    publish a rebuilt release on a plan approval alone: refresh on the unchanged
    published closure, or ask and proceed only on the explicit choice. **A generic approval is never that choice:**
    "ok", "go ahead", "approved", "you're the expert", a review fix or spending
@@ -533,7 +540,8 @@ come first (it can serve as the probe); the check gates `start_run`.
    keep serving the current release; hold the change, then by branch: when it
    is optional to the refresh, refresh without it now and keep it queued; when
    the user asked for it, hold it and ask again (within the twice cap); when the refresh cannot run without it, hold the
-   refresh and ask again (there is nothing to refresh without it).
+   refresh and ask again within the twice cap, then stop as blocked (there is
+   nothing to refresh without it).
 
 Say it in consequences ("the source only keeps the last two weeks, so
 rebuilding now would drop April 8 to April 12, about 600 events"), not in

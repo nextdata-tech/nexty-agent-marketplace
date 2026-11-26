@@ -270,9 +270,8 @@ explicitly continues while leaving accepted `behavior_affecting` findings
 unapplied, in which case it names those finding IDs exactly.
 Offer each deferral as an option labelled exactly "Defer `<finding-id>`:
 publish with this limit disclosed", one per finding id. Record a finding in
-`deferred_finding_ids` only when the user chose that option, or replied with a
-delegation ("you're the expert", "your call") to a question where you
-recommended it. A retry, a rerun or any other choice is never a deferral.
+`deferred_finding_ids` only when the user chose that option; a delegation
+("you're the expert", "your call") is a deflection, not a deferral. A retry, a rerun or any other choice is never a deferral.
 Only an explicitly authorized mutation is also recorded as its normal heal
 attempt. This keeps pending, rejected, denied and timed-out findings auditable.
 

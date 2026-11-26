@@ -295,11 +295,14 @@ producing the identical error:
   resolving it changes what a field or measure means, that is a plan decision put
   to the user, not a silent remap.
   **Delegation to your recommendation.** A delegation reply ("you're the
-  expert", "your call", "use your judgement") to a question where you named a
-  recommended option authorises that recommendation: take it and say which
-  option you took. The exceptions are the choices the skills require to be
-  named explicitly (losing rows, credentials, spending): there a bare
-  delegation is not the choice.
+  expert", "your call") to a design question within the plan, before or after
+  its approval, where you named a recommended option (a window, a default, a
+  renamed key) authorises
+  that recommendation: take it and say which option you took. It does not
+  reach the choices other rules require the user to make: the policy read-back
+  ("use your judgement" licenses authoring the proposal, then show it and
+  wait), plan approval, approving or deferring a review finding (a delegation
+  stays a deflection there), losing rows, credentials and spending.
   An explicit hand-back of a renamed-key decision ("you decide", "you tell me",
   "your call"), including after you explained the trade-off, is a delegation, not
   a non-answer: do not keep re-asking and do not default to stopping. A deferral
