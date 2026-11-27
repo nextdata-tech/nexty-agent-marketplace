@@ -2956,9 +2956,12 @@ if profile.exists():
             if key[1] == "credential_env":
                 value = re.fullmatch(r"([\"']?)([A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+)\1", mapping["value"])
                 return bool(value and len(value[2]) <= 64)
+            # Other header_* keys are admitted here and narrowed per profile
+            # kind in local_public_only: only a no-auth profile may carry them.
             if not (key[1] in ("base_url", "auth_type", "auth_key_name", "auth_key_location",
                                "header_user_agent")
-                    or re.fullmatch(r"endpoint_[a-z][a-z0-9_]*", key[1])):
+                    or re.fullmatch(r"endpoint_[a-z][a-z0-9_]*", key[1])
+                    or re.fullmatch(r"header_[a-z][a-z0-9_]*", key[1])):
                 return False
             plain = mapping["value"].strip("'\"")
             if key[1] == "auth_type" and plain not in (
@@ -3053,7 +3056,9 @@ if profile.exists():
             # environment variable). Exempt only when no secret ref is spelled
             # in any case, the file is one document, the service carries only
             # structural keys, and the attributes are the closed allowlist with
-            # exactly one valid credential_env (checked below).
+            # exactly one valid credential_env, or, for an API that needs no
+            # authentication, no credential_env and no auth_* key at all
+            # (checked below).
             if re.search(r"attributessecretref", section, re.IGNORECASE):
                 return False
             # One document: a single leading `---` is fine, any other
@@ -3077,8 +3082,19 @@ if profile.exists():
             if not re.fullmatch(r"(?:nxd-desktop-keychain:v1:[A-Za-z0-9_-]+|'nxd-desktop-keychain:v1:[A-Za-z0-9_-]+'|\"nxd-desktop-keychain:v1:[A-Za-z0-9_-]+\")", ref):
                 return False
         if set(direct) == {"attributes"}:
-            return (public_attributes(lines[start:stop], indent, seen)
-                    and seen.count("credential_env") == 1)
+            if not public_attributes(lines[start:stop], indent, seen):
+                return False
+            headers = [key for key in seen
+                       if key.startswith("header_") and key != "header_user_agent"]
+            if seen.count("credential_env") == 1:
+                return not headers
+            # No-auth profile: nothing to authenticate with, so nothing to leak.
+            # Plain request headers (Accept, an API version, a trace id) are
+            # topology; a header whose name suggests a session or key is not.
+            return ("credential_env" not in seen
+                    and not any(key.startswith("auth_") for key in seen)
+                    and not any(re.search(r"cookie|session|subscription|key|sig|auth",
+                                          key[len("header_"):]) for key in headers))
         return public_attributes(lines[start:stop], indent)
 
     # Only actual service-list items delimit services; key order is immaterial.
