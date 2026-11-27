@@ -470,7 +470,12 @@ already been resolved.
   credential**, and `chmod 0600 infra-profile.yaml` where a shell can reach
   the closure. The trigger is a legacy literal secret value in a `*-source`
   service's populated `attributes` list; public topology attributes paired
-  with a Desktop-local `attributesSecretRef` do not trigger these files. Templated
+  with a Desktop-local `attributesSecretRef` do not trigger these files, and
+  neither does a no-auth profile whose attributes are all `public: true`
+  topology (`base_url`, `endpoint_<model>`, and plain `header_*` request
+  headers such as `header_accept` or `header_x_trace_id`) with no `auth_*` key
+  and no secret ref. A header named for a cookie, session, key, signature or
+  auth value still triggers the files. Templated
   endpoint paths such as `/repos/{owner}/{repo}` count as public topology in
   block form, quoted or not, so a Desktop-local profile never needs
   `.gitignore` or `SENSITIVE`; do not add them to satisfy the check. Phase C
