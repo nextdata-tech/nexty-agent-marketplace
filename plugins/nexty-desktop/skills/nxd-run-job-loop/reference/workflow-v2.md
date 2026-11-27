@@ -911,14 +911,22 @@ only those roots to the reviewer. If the supervisor returns paths outside them,
 or the roots are unavailable, the handoff fails closed with a distinct
 configuration/availability diagnostic; never create or use a fallback root.
 Current Nexty Desktop may instead return a hash-verified, read-only review copy
-inside the workflow's job folder, next to its `closure/` authoring root:
-`<job folder>/.nexty-review/<workflow>/<capture>/capture/` and
-`.../blueprint.md`, so it stays inside the folder the user shared. That pair is
+inside the product's own folder (under the `closure/` authoring root):
+`<product folder>/.nexty-review/<workflow>/<capture>/capture/` and
+`.../blueprint.md`, inside the authoring root itself, so it stays inside the
+folder the user shared and with its product. Capture skips `.nexty-review`, so a
+recapture never absorbs an earlier round's copy. That pair is
 also allowed: it is supervisor-written, and the supervisor refuses the review
-report if the copy changed or disappeared. Older builds, or a job folder the
+report if the copy changed or disappeared. Older builds, or a product folder the
 copy cannot be written to, return the two retained-input roots above. Accept
 either pair exactly as returned and treat the paths as opaque; never write
-under `.nexty-review` or point the reviewer at it yourself.
+under `.nexty-review` or point the reviewer at it yourself. A reviewer that
+cannot read the returned paths even though your own check above passed (for
+example a Windows path from the Linux container) returns `scope_refused`.
+Report it as `rejected` with `rejection_code: "scope_refused"`, record the
+round, and tell the user about the host limitation. The requirement stays
+unsatisfied and the workflow stops there. Do not stage, copy or substitute the
+capture, and do not reset or recapture an unchanged closure to retry.
 
 If either check fails, stop before dispatch and report an explicit incomplete
 blocker, for example: `INCOMPLETE — retained capture handoff blocked:
